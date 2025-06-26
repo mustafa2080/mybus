@@ -25,7 +25,6 @@ class _BusesManagementScreenState extends State<BusesManagementScreen> {
   void initState() {
     super.initState();
     _testConnection();
-    _debugStudentBusAssignments();
   }
 
   Future<void> _testConnection() async {
@@ -49,58 +48,7 @@ class _BusesManagementScreenState extends State<BusesManagementScreen> {
     }
   }
 
-  Future<void> _debugStudentBusAssignments() async {
-    try {
-      debugPrint('🔍 === DEBUG: Student-Bus Assignments ===');
 
-      // Get all students
-      final studentsSnapshot = await _databaseService.getAllStudents().first;
-      debugPrint('📊 Total students found: ${studentsSnapshot.length}');
-
-      // Get all buses
-      final busesSnapshot = await _databaseService.getAllBuses().first;
-      debugPrint('🚌 Total buses found: ${busesSnapshot.length}');
-
-      // Print bus IDs
-      for (var bus in busesSnapshot) {
-        debugPrint('🚌 Bus: ${bus.plateNumber} - ID: ${bus.id}');
-      }
-
-      // Group students by busId
-      Map<String, List<StudentModel>> studentsByBus = {};
-      for (var student in studentsSnapshot) {
-        final busId = student.busId;
-        if (busId.isNotEmpty) {
-          studentsByBus[busId] = studentsByBus[busId] ?? [];
-          studentsByBus[busId]!.add(student);
-        }
-        debugPrint('👤 Student: ${student.name} - BusId: "${student.busId}" - Status: ${student.currentStatus}');
-      }
-
-      // Print assignments summary
-      debugPrint('📈 === Assignment Summary ===');
-      for (var bus in busesSnapshot) {
-        final assignedStudents = studentsByBus[bus.id] ?? [];
-        debugPrint('🚌 ${bus.plateNumber}: ${assignedStudents.length} students');
-        for (var student in assignedStudents) {
-          debugPrint('   👤 ${student.name} (${student.currentStatus})');
-        }
-      }
-
-      // Find students without bus assignment
-      final studentsWithoutBus = studentsSnapshot.where((s) => s.busId.isEmpty).toList();
-      if (studentsWithoutBus.isNotEmpty) {
-        debugPrint('⚠️ Students without bus assignment: ${studentsWithoutBus.length}');
-        for (var student in studentsWithoutBus) {
-          debugPrint('   👤 ${student.name}');
-        }
-      }
-
-      debugPrint('🔍 === END DEBUG ===');
-    } catch (e) {
-      debugPrint('❌ Debug error: $e');
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -153,7 +101,7 @@ class _BusesManagementScreenState extends State<BusesManagementScreen> {
           padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
           child: Column(
             children: [
-              // Top Row - Simplified
+              // Header Row with better layout
               Row(
                 children: [
                   // Back Button
@@ -196,80 +144,88 @@ class _BusesManagementScreenState extends State<BusesManagementScreen> {
                     ),
                   ),
 
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 12),
 
-                  // Title - Single Line
-                  const Expanded(
-                    child: Text(
-                      'إدارة السيارات',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                  // Title with icon
+                  Expanded(
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withAlpha(51),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.directions_bus,
+                            color: Colors.white,
+                            size: 20,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'إدارة السيارات',
+                                style: TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              Text(
+                                'إضافة وتعديل السيارات والسائقين',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.white70,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ),
 
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 12),
 
-                  // Action Buttons
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Debug Button
-                      Material(
-                        color: Colors.white.withAlpha(51), // 0.2 * 255 = 51
-                        borderRadius: BorderRadius.circular(10),
-                        child: InkWell(
-                          onTap: _debugStudentBusAssignments,
-                          borderRadius: BorderRadius.circular(10),
-                          child: Container(
-                            padding: const EdgeInsets.all(10),
-                            child: const Icon(
-                              Icons.bug_report,
+                  // Add Bus Button
+                  Material(
+                    color: const Color(0xFFFF9800),
+                    borderRadius: BorderRadius.circular(12),
+                    elevation: 4,
+                    child: InkWell(
+                      onTap: _showAddBusDialog,
+                      borderRadius: BorderRadius.circular(12),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              Icons.add,
                               color: Colors.white,
                               size: 18,
                             ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-
-                      // Add Bus Button
-                      Material(
-                        color: const Color(0xFFFF9800),
-                        borderRadius: BorderRadius.circular(12),
-                        elevation: 4,
-                        child: InkWell(
-                          onTap: _showAddBusDialog,
-                          borderRadius: BorderRadius.circular(12),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                            child: const Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  Icons.add,
-                                  color: Colors.white,
-                                  size: 18,
-                                ),
-                                SizedBox(width: 6),
-                                Text(
-                                  'إضافة',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.w600,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ],
+                            SizedBox(width: 6),
+                            Text(
+                              'إضافة',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                              ),
                             ),
-                          ),
+                          ],
                         ),
                       ),
-                    ],
+                    ),
                   ),
                 ],
               ),
