@@ -1677,7 +1677,7 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
                       trailing: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                         decoration: BoxDecoration(
-                          color: _getStatusColor(student.currentStatus),
+                          color: _getStudentStatusColor(student.currentStatus),
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
@@ -1703,8 +1703,8 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
     );
   }
 
-  // Get status color
-  Color _getStatusColor(StudentStatus status) {
+  // Get student status color
+  Color _getStudentStatusColor(StudentStatus status) {
     switch (status) {
       case StudentStatus.home:
         return Colors.green;
