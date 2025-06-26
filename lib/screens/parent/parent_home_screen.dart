@@ -1,10 +1,14 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../services/auth_service.dart';
 import '../../services/database_service.dart';
 
 import '../../models/student_model.dart';
+import '../../models/bus_model.dart';
+import '../../models/trip_model.dart';
+import '../../models/user_model.dart';
 
 import '../../widgets/custom_button.dart';
 import '../../widgets/curved_app_bar.dart';
@@ -13,6 +17,7 @@ import '../../models/absence_model.dart';
 import 'school_info_screen.dart';
 import 'report_absence_screen.dart';
 import 'update_student_photo_screen.dart';
+import 'add_student_screen.dart';
 
 class ParentHomeScreen extends StatefulWidget {
   const ParentHomeScreen({super.key});
@@ -27,10 +32,17 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
   List<StudentModel> _students = [];
   int _refreshKey = 0;
 
+  // User and school data
+  UserModel? _currentUser;
+  Map<String, dynamic> _schoolInfo = {};
+  List<BusModel> _allBuses = [];
+
   @override
   void initState() {
     super.initState();
     _checkProfileCompletion();
+    _loadUserData();
+    _loadSchoolData();
   }
 
   Future<void> _checkProfileCompletion() async {
@@ -43,6 +55,50 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         context.go('/parent/complete-profile');
       });
+    }
+  }
+
+  // Load current user data
+  Future<void> _loadUserData() async {
+    final currentUser = _authService.currentUser;
+    if (currentUser == null) return;
+
+    try {
+      final userData = await _databaseService.getUserData(currentUser.uid);
+      if (userData != null && mounted) {
+        setState(() {
+          _currentUser = UserModel.fromMap(userData);
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading user data: $e');
+    }
+  }
+
+  // Load school information and buses
+  Future<void> _loadSchoolData() async {
+    try {
+      // Load school info
+      final schoolDoc = await FirebaseFirestore.instance
+          .collection('settings')
+          .doc('school')
+          .get();
+
+      if (schoolDoc.exists && mounted) {
+        setState(() {
+          _schoolInfo = schoolDoc.data() ?? {};
+        });
+      }
+
+      // Load all buses for emergency contacts
+      final buses = await _databaseService.getBusesWithFallback();
+      if (mounted) {
+        setState(() {
+          _allBuses = buses;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading school data: $e');
     }
   }
 
@@ -298,9 +354,9 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'مرحباً بك',
-                      style: TextStyle(
+                    Text(
+                      _currentUser != null ? 'مرحباً بك ${_currentUser!.name}' : 'مرحباً بك',
+                      style: const TextStyle(
                         color: Colors.white,
                         fontSize: 22,
                         fontWeight: FontWeight.bold,
@@ -653,7 +709,17 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
                   },
                 ),
               ),
-
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildQuickActionButton(
+                  icon: Icons.person_add,
+                  label: 'إضافة طالب',
+                  color: Colors.blue,
+                  onTap: () {
+                    _navigateToAddStudent();
+                  },
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -695,7 +761,17 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
                   },
                 ),
               ),
-
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildQuickActionButton(
+                  icon: Icons.location_on,
+                  label: 'حالة الطلاب',
+                  color: Colors.teal,
+                  onTap: () {
+                    _showStudentsStatusDialog();
+                  },
+                ),
+              ),
             ],
           ),
 
@@ -1314,48 +1390,105 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
             Text('اتصال طارئ'),
           ],
         ),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(Icons.emergency, size: 64, color: Colors.red),
-            SizedBox(height: 16),
-            Text(
-              'أرقام الطوارئ',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            SizedBox(height: 16),
-            Row(
-              children: [
-                Icon(Icons.local_hospital, color: Colors.red, size: 20),
-                SizedBox(width: 12),
-                Text('الإسعاف: 997'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.emergency, size: 64, color: Colors.red),
+              const SizedBox(height: 16),
+              const Text(
+                'أرقام الطوارئ',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+
+              // Emergency numbers
+              const Row(
+                children: [
+                  Icon(Icons.local_hospital, color: Colors.red, size: 20),
+                  SizedBox(width: 12),
+                  Text('الإسعاف: 997'),
+                ],
+              ),
+              const SizedBox(height: 8),
+              const Row(
+                children: [
+                  Icon(Icons.local_police, color: Colors.blue, size: 20),
+                  SizedBox(width: 12),
+                  Text('الشرطة: 999'),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // School contact
+              if (_schoolInfo.isNotEmpty) ...[
+                const Divider(),
+                const Text(
+                  'معلومات المدرسة',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    const Icon(Icons.school, color: Colors.green, size: 20),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text('${_schoolInfo['name'] ?? 'المدرسة'}: ${_schoolInfo['phone'] ?? 'غير متوفر'}'),
+                    ),
+                  ],
+                ),
+                if (_schoolInfo['email'] != null) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      const Icon(Icons.email, color: Colors.green, size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(child: Text(_schoolInfo['email'])),
+                    ],
+                  ),
+                ],
               ],
-            ),
-            SizedBox(height: 8),
-            Row(
-              children: [
-                Icon(Icons.local_police, color: Colors.blue, size: 20),
-                SizedBox(width: 12),
-                Text('الشرطة: 999'),
+
+              // Drivers contacts
+              if (_allBuses.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                const Divider(),
+                const Text(
+                  'أرقام السائقين',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                ..._allBuses.map((bus) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.directions_bus, color: Colors.orange, size: 20),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('${bus.driverName} - ${bus.route}'),
+                            Text(
+                              bus.driverPhone,
+                              style: const TextStyle(
+                                color: Colors.blue,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.phone, color: Colors.green),
+                        onPressed: () => _makePhoneCall(bus.driverPhone),
+                      ),
+                    ],
+                  ),
+                )),
               ],
-            ),
-            SizedBox(height: 8),
-            Row(
-              children: [
-                Icon(Icons.school, color: Colors.green, size: 20),
-                SizedBox(width: 12),
-                Text('المدرسة: 011-234-5678'),
-              ],
-            ),
-            SizedBox(height: 8),
-            Row(
-              children: [
-                Icon(Icons.directions_bus, color: Colors.orange, size: 20),
-                SizedBox(width: 12),
-                Text('السائق: 050-123-4567'),
-              ],
-            ),
-          ],
+            ],
+          ),
         ),
         actions: [
           TextButton(
@@ -1380,6 +1513,16 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
   }
 
   void _showTripHistoryDialog() {
+    if (_students.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('لا يوجد طلاب مسجلين لعرض سجل الرحلات'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -1390,55 +1533,87 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
             Text('سجل الرحلات'),
           ],
         ),
-        content: const Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'آخر 5 رحلات:',
-              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-            ),
-            SizedBox(height: 12),
-            Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.green, size: 16),
-                SizedBox(width: 8),
-                Text('اليوم - 6:30 ص (مكتملة)'),
-              ],
-            ),
-            SizedBox(height: 6),
-            Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.green, size: 16),
-                SizedBox(width: 8),
-                Text('أمس - 6:30 ص (مكتملة)'),
-              ],
-            ),
-            SizedBox(height: 6),
-            Row(
-              children: [
-                Icon(Icons.cancel, color: Colors.red, size: 16),
-                SizedBox(width: 8),
-                Text('الأحد - غائب'),
-              ],
-            ),
-            SizedBox(height: 6),
-            Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.green, size: 16),
-                SizedBox(width: 8),
-                Text('السبت - 6:30 ص (مكتملة)'),
-              ],
-            ),
-            SizedBox(height: 6),
-            Row(
-              children: [
-                Icon(Icons.check_circle, color: Colors.green, size: 16),
-                SizedBox(width: 8),
-                Text('الخميس - 6:30 ص (مكتملة)'),
-              ],
-            ),
-          ],
+        content: SizedBox(
+          width: double.maxFinite,
+          height: 400,
+          child: StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('trips')
+                .where('studentId', whereIn: _students.map((s) => s.id).toList())
+                .orderBy('timestamp', descending: true)
+                .limit(20)
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (snapshot.hasError) {
+                return Center(
+                  child: Text('خطأ في تحميل البيانات: ${snapshot.error}'),
+                );
+              }
+
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                return const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.history, size: 64, color: Colors.grey),
+                      SizedBox(height: 16),
+                      Text(
+                        'لا يوجد سجل رحلات',
+                        style: TextStyle(fontSize: 16, color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              final trips = snapshot.data!.docs;
+
+              return ListView.builder(
+                itemCount: trips.length,
+                itemBuilder: (context, index) {
+                  final tripData = trips[index].data() as Map<String, dynamic>;
+                  final trip = TripModel.fromMap(tripData);
+
+                  return Card(
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: _getTripActionColor(trip.action),
+                        child: Icon(
+                          _getTripActionIcon(trip.action),
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      ),
+                      title: Text(trip.studentName),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(trip.actionDisplayText),
+                          Text(
+                            '${trip.formattedDate} - ${trip.formattedTime}',
+                            style: const TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                      trailing: Text(
+                        trip.busRoute,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
         ),
         actions: [
           TextButton(
@@ -1457,9 +1632,151 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
     );
   }
 
+  // Navigate to add student screen
+  void _navigateToAddStudent() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const AddStudentScreen(),
+      ),
+    ).then((_) {
+      // Refresh the students list after adding a new student
+      setState(() {
+        _refreshKey++;
+      });
+    });
+  }
 
+  // Show students status dialog
+  void _showStudentsStatusDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.location_on, color: Colors.teal),
+            SizedBox(width: 8),
+            Text('حالة الطلاب الحالية'),
+          ],
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: _students.isEmpty
+              ? const Text('لا يوجد طلاب مسجلين')
+              : Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: _students.map((student) {
+                    return ListTile(
+                      leading: StudentAvatar(
+                        photoUrl: student.photoUrl,
+                        studentName: student.name,
+                        radius: 20,
+                      ),
+                      title: Text(student.name),
+                      subtitle: Text('الصف: ${student.grade}'),
+                      trailing: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: _getStatusColor(student.currentStatus),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          student.statusDisplayText,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('إغلاق'),
+          ),
+        ],
+      ),
+    );
+  }
 
+  // Get status color
+  Color _getStatusColor(StudentStatus status) {
+    switch (status) {
+      case StudentStatus.home:
+        return Colors.green;
+      case StudentStatus.onBus:
+        return Colors.orange;
+      case StudentStatus.atSchool:
+        return Colors.blue;
+    }
+  }
 
+  // Make phone call
+  Future<void> _makePhoneCall(String phoneNumber) async {
+    final Uri launchUri = Uri(
+      scheme: 'tel',
+      path: phoneNumber,
+    );
+    try {
+      if (await canLaunchUrl(launchUri)) {
+        await launchUrl(launchUri);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('لا يمكن الاتصال بالرقم: $phoneNumber'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ في الاتصال: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  // Get trip action color
+  Color _getTripActionColor(TripAction action) {
+    switch (action) {
+      case TripAction.boardBusToSchool:
+      case TripAction.boardBus:
+        return Colors.blue;
+      case TripAction.arriveAtSchool:
+        return Colors.green;
+      case TripAction.boardBusToHome:
+        return Colors.orange;
+      case TripAction.arriveAtHome:
+      case TripAction.leaveBus:
+        return Colors.purple;
+    }
+  }
+
+  // Get trip action icon
+  IconData _getTripActionIcon(TripAction action) {
+    switch (action) {
+      case TripAction.boardBusToSchool:
+      case TripAction.boardBus:
+        return Icons.directions_bus;
+      case TripAction.arriveAtSchool:
+        return Icons.school;
+      case TripAction.boardBusToHome:
+        return Icons.home;
+      case TripAction.arriveAtHome:
+      case TripAction.leaveBus:
+        return Icons.home_filled;
+    }
+  }
 }
 
 
