@@ -695,27 +695,7 @@ class _AbsenceManagementScreenState extends State<AbsenceManagementScreen>
     );
   }
 
-  Widget _buildEmptyState(String title, String subtitle, IconData icon, Color color) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, size: 64, color: color),
-          const SizedBox(height: 16),
-          Text(
-            title,
-            style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            subtitle,
-            style: const TextStyle(color: Colors.grey),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
+
 
   Color _getStatusColor(AbsenceStatus status) {
     switch (status) {
