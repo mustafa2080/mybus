@@ -736,54 +736,6 @@ class _AbsenceManagementScreenState extends State<AbsenceManagementScreen>
   String _formatDateTime(DateTime dateTime) {
     return DateFormat('yyyy/MM/dd HH:mm').format(dateTime);
   }
-}
-                SizedBox(width: 8),
-                Text('معلومات التشخيص'),
-              ],
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('ًں“ٹ ط¥ط¬ظ…ط§ظ„ظٹ ط§ظ„ط¥ط´ط¹ط§ط±ط§طھ: ${allAbsences.length}'),
-                const SizedBox(height: 8),
-                Text('ًں‘¨â€چًں‘©â€چًں‘§â€چًں‘¦ ظ…ظ† ط£ظˆظ„ظٹط§ط، ط§ظ„ط£ظ…ظˆط±: $parentAbsences'),
-                const SizedBox(height: 8),
-                Text('✅ مقبولة: $approvedAbsences'),
-                const SizedBox(height: 8),
-                Text('❌ مرفوضة: $rejectedAbsences'),
-                const SizedBox(height: 8),
-                Text('⏳ معلقة: $pendingAbsences'),
-                const SizedBox(height: 16),
-                if (allAbsences.isNotEmpty) ...[
-                  const Text('ًں“‹ ط¢ط®ط± ط¥ط´ط¹ط§ط±:', style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  Text('الطالب: ${allAbsences.first.studentName}'),
-                  Text('السبب: ${allAbsences.first.reason}'),
-                  Text('الحالة: ${allAbsences.first.statusDisplayText}'),
-                ],
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('إغلاق'),
-              ),
-            ],
-          ),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('خطأ في جلب المعلومات: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
 
   Color _getStatusColor(AbsenceStatus status) {
     switch (status) {
