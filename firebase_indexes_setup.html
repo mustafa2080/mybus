@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إعداد Firebase Indexes</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .setup-container {
+            max-width: 1000px;
+            margin: 30px auto;
+            padding: 20px;
+        }
+        
+        .setup-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+        
+        .solution-card {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        
+        .btn-copy {
+            background: #007bff;
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            cursor: pointer;
+            float: left;
+            margin-bottom: 10px;
+        }
+        
+        .btn-copy:hover {
+            background: #0056b3;
+        }
+        
+        .step-number {
+            background: #007bff;
+            color: white;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="setup-container">
+        <!-- Header -->
+        <div class="setup-card">
+            <div class="text-center">
+                <h1 class="text-primary mb-3">
+                    <i class="fas fa-database me-3"></i>
+                    إعداد Firebase Indexes
+                </h1>
+                <p class="lead text-muted">
+                    حل مشكلة "The query requires an index" في نظام الشكاوى
+                </p>
+            </div>
+        </div>
+
+        <!-- Problem Description -->
+        <div class="setup-card">
+            <div class="alert alert-danger">
+                <h4 class="alert-heading">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    المشكلة
+                </h4>
+                <p><strong>الخطأ:</strong></p>
+                <code>[cloud_firestore/failed-precondition] The query requires an index</code>
+                
+                <h5 class="mt-3">السبب:</h5>
+                <p>Firebase Firestore يتطلب إنشاء indexes مركبة عند استخدام عدة شروط مع orderBy في نفس الاستعلام.</p>
+            </div>
+        </div>
+
+        <!-- Solution Applied -->
+        <div class="setup-card">
+            <div class="solution-card">
+                <h3 class="text-success mb-3">
+                    <i class="fas fa-check-circle me-2"></i>
+                    الحل المطبق
+                </h3>
+                <p>تم حل المشكلة بطريقتين:</p>
+                <ol>
+                    <li><strong>تبسيط الاستعلامات:</strong> إزالة orderBy من الاستعلامات وترتيب النتائج محلياً</li>
+                    <li><strong>إنشاء Indexes:</strong> إنشاء الفهارس المطلوبة في Firebase Console</li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- Quick Fix -->
+        <div class="setup-card">
+            <h3 class="mb-4">
+                <span class="step-number">1</span>
+                الحل السريع (مطبق بالفعل)
+            </h3>
+            
+            <p>تم تعديل الكود لتجنب الحاجة للـ indexes المعقدة:</p>
+            
+            <h5>قبل التعديل (يسبب خطأ):</h5>
+            <button class="btn-copy" onclick="copyToClipboard('beforeCode')">
+                <i class="fas fa-copy me-1"></i> نسخ
+            </button>
+            <div class="code-block" id="beforeCode">// ❌ يتطلب compound index
+return _firestore
+    .collection('complaints')
+    .where('parentId', isEqualTo: parentId)
+    .where('isActive', isEqualTo: true)
+    .orderBy('createdAt', descending: true)  // ❌ مشكلة هنا
+    .snapshots();</div>
+
+            <h5>بعد التعديل (يعمل بنجاح):</h5>
+            <button class="btn-copy" onclick="copyToClipboard('afterCode')">
+                <i class="fas fa-copy me-1"></i> نسخ
+            </button>
+            <div class="code-block" id="afterCode">// ✅ لا يتطلب compound index
+return _firestore
+    .collection('complaints')
+    .where('parentId', isEqualTo: parentId)
+    .where('isActive', isEqualTo: true)
+    .snapshots()
+    .map((snapshot) {
+      final complaints = snapshot.docs
+          .map((doc) => ComplaintModel.fromMap(doc.data()))
+          .toList();
+      
+      // ✅ ترتيب محلي بدلاً من orderBy
+      complaints.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      return complaints;
+    });</div>
+        </div>
+
+        <!-- Manual Index Creation -->
+        <div class="setup-card">
+            <h3 class="mb-4">
+                <span class="step-number">2</span>
+                إنشاء Indexes يدوياً (اختياري)
+            </h3>
+            
+            <p>إذا كنت تريد استخدام orderBy في الاستعلامات، يمكنك إنشاء الفهارس التالية:</p>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <h5>Index للشكاوى حسب ولي الأمر:</h5>
+                    <ul>
+                        <li><strong>Collection:</strong> complaints</li>
+                        <li><strong>Field 1:</strong> parentId (Ascending)</li>
+                        <li><strong>Field 2:</strong> isActive (Ascending)</li>
+                        <li><strong>Field 3:</strong> createdAt (Descending)</li>
+                    </ul>
+                </div>
+                
+                <div class="col-md-6">
+                    <h5>Index للشكاوى حسب الحالة:</h5>
+                    <ul>
+                        <li><strong>Collection:</strong> complaints</li>
+                        <li><strong>Field 1:</strong> status (Ascending)</li>
+                        <li><strong>Field 2:</strong> isActive (Ascending)</li>
+                        <li><strong>Field 3:</strong> createdAt (Descending)</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <div class="alert alert-info mt-3">
+                <h5 class="alert-heading">
+                    <i class="fas fa-info-circle me-2"></i>
+                    ملاحظة مهمة
+                </h5>
+                <p class="mb-0">الحل الحالي يعمل بدون الحاجة لإنشاء هذه الفهارس. الترتيب يتم محلياً وهو سريع للبيانات الصغيرة والمتوسطة.</p>
+            </div>
+        </div>
+
+        <!-- Firebase Console Links -->
+        <div class="setup-card">
+            <h3 class="mb-4">
+                <span class="step-number">3</span>
+                روابط Firebase Console
+            </h3>
+            
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <a href="https://console.firebase.google.com/project/mybus-5a992/firestore/indexes" 
+                       target="_blank" class="btn btn-primary w-100">
+                        <i class="fas fa-database me-2"></i>
+                        Firestore Indexes
+                    </a>
+                </div>
+                
+                <div class="col-md-4 mb-3">
+                    <a href="https://console.firebase.google.com/project/mybus-5a992/firestore/data" 
+                       target="_blank" class="btn btn-success w-100">
+                        <i class="fas fa-table me-2"></i>
+                        Firestore Data
+                    </a>
+                </div>
+                
+                <div class="col-md-4 mb-3">
+                    <a href="https://console.firebase.google.com/project/mybus-5a992/firestore/rules" 
+                       target="_blank" class="btn btn-warning w-100">
+                        <i class="fas fa-shield-alt me-2"></i>
+                        Firestore Rules
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Testing -->
+        <div class="setup-card">
+            <h3 class="mb-4">
+                <span class="step-number">4</span>
+                اختبار الحل
+            </h3>
+            
+            <div class="alert alert-success">
+                <h5 class="alert-heading">
+                    <i class="fas fa-play-circle me-2"></i>
+                    اختبار نظام الشكاوى
+                </h5>
+                
+                <p>بعد تطبيق الحل، اختبر النظام:</p>
+                
+                <ol>
+                    <li><strong>شغل التطبيق:</strong> <code>flutter run</code></li>
+                    <li><strong>سجل دخول كولي أمر</strong></li>
+                    <li><strong>اذهب إلى الشكاوى</strong></li>
+                    <li><strong>أضف شكوى جديدة</strong></li>
+                    <li><strong>تأكد من ظهور الشكوى في القائمة</strong></li>
+                </ol>
+                
+                <p class="mb-0">أو شغل اختبار منفصل:</p>
+                <button class="btn-copy" onclick="copyToClipboard('testCommand')">
+                    <i class="fas fa-copy me-1"></i> نسخ
+                </button>
+                <div class="code-block" id="testCommand">flutter run lib/test_complaints_system.dart</div>
+            </div>
+        </div>
+
+        <!-- Performance Notes -->
+        <div class="setup-card">
+            <h3 class="mb-4">
+                <i class="fas fa-tachometer-alt me-2"></i>
+                ملاحظات الأداء
+            </h3>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card border-success">
+                        <div class="card-body">
+                            <h5 class="card-title text-success">
+                                <i class="fas fa-thumbs-up me-2"></i>
+                                المزايا
+                            </h5>
+                            <ul class="mb-0">
+                                <li>لا يتطلب إنشاء indexes</li>
+                                <li>يعمل فوراً بدون انتظار</li>
+                                <li>مرونة في التعديل</li>
+                                <li>أقل تعقيداً</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card border-warning">
+                        <div class="card-body">
+                            <h5 class="card-title text-warning">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                اعتبارات
+                            </h5>
+                            <ul class="mb-0">
+                                <li>الترتيب يتم على الجهاز</li>
+                                <li>مناسب للبيانات المتوسطة</li>
+                                <li>قد يحتاج indexes للبيانات الكبيرة</li>
+                                <li>استهلاك bandwidth أكثر قليلاً</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Alternative Solutions -->
+        <div class="setup-card">
+            <h3 class="mb-4">
+                <i class="fas fa-lightbulb me-2"></i>
+                حلول بديلة
+            </h3>
+            
+            <div class="accordion" id="solutionsAccordion">
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#solution1">
+                            الحل 1: استخدام Pagination
+                        </button>
+                    </h2>
+                    <div id="solution1" class="accordion-collapse collapse show" data-bs-parent="#solutionsAccordion">
+                        <div class="accordion-body">
+                            <p>تقسيم النتائج إلى صفحات صغيرة:</p>
+                            <ul>
+                                <li>جلب 20 شكوى في كل مرة</li>
+                                <li>استخدام startAfter للصفحة التالية</li>
+                                <li>تحسين الأداء للبيانات الكبيرة</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#solution2">
+                            الحل 2: استخدام Cloud Functions
+                        </button>
+                    </h2>
+                    <div id="solution2" class="accordion-collapse collapse" data-bs-parent="#solutionsAccordion">
+                        <div class="accordion-body">
+                            <p>معالجة البيانات على الخادم:</p>
+                            <ul>
+                                <li>إنشاء Cloud Function للاستعلامات المعقدة</li>
+                                <li>ترتيب وتصفية على الخادم</li>
+                                <li>إرجاع النتائج جاهزة</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="accordion-item">
+                    <h2 class="accordion-header">
+                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#solution3">
+                            الحل 3: تحسين هيكل البيانات
+                        </button>
+                    </h2>
+                    <div id="solution3" class="accordion-collapse collapse" data-bs-parent="#solutionsAccordion">
+                        <div class="accordion-body">
+                            <p>إعادة تصميم هيكل البيانات:</p>
+                            <ul>
+                                <li>فصل الشكاوى حسب الحالة في collections منفصلة</li>
+                                <li>استخدام subcollections</li>
+                                <li>تقليل الحاجة للاستعلامات المعقدة</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status -->
+        <div class="setup-card">
+            <div class="text-center">
+                <h2 class="text-success mb-3">
+                    <i class="fas fa-check-circle me-2"></i>
+                    تم حل مشكلة Firebase Index!
+                </h2>
+                <p class="lead text-muted">
+                    نظام الشكاوى يعمل الآن بدون أخطاء
+                </p>
+                
+                <div class="mt-4">
+                    <span class="badge bg-success fs-6 me-2">
+                        <i class="fas fa-database me-1"></i>
+                        Queries: محسنة
+                    </span>
+                    <span class="badge bg-success fs-6 me-2">
+                        <i class="fas fa-sort me-1"></i>
+                        Sorting: محلي
+                    </span>
+                    <span class="badge bg-success fs-6">
+                        <i class="fas fa-mobile-alt me-1"></i>
+                        App: يعمل
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            const text = element.textContent;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = event.target.closest('.btn-copy');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-check me-1"></i> تم النسخ!';
+                btn.style.background = '#28a745';
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.style.background = '#007bff';
+                }, 2000);
+            }).catch(err => {
+                alert('فشل في النسخ: ' + err);
+            });
+        }
+    </script>
+</body>
+</html>

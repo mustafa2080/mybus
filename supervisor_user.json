@@ -1,0 +1,22 @@
+{
+  "users": [
+    {
+      "localId": "supervisor_001",
+      "email": "supervisor@mybus.com",
+      "emailVerified": true,
+      "passwordHash": "UkVEQUNURUQ=",
+      "salt": "c2FsdA==",
+      "displayName": "أحمد المشرف",
+      "photoUrl": "",
+      "createdAt": "2024-01-01T00:00:00.000Z",
+      "lastLoginAt": "2024-01-01T00:00:00.000Z",
+      "providerUserInfo": [
+        {
+          "providerId": "password",
+          "email": "supervisor@mybus.com",
+          "displayName": "أحمد المشرف"
+        }
+      ]
+    }
+  ]
+}

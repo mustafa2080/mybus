@@ -1,0 +1,79 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- خلفية دائرية -->
+  <circle cx="256" cy="256" r="240" fill="#1E88E5" stroke="#1565C0" stroke-width="8"/>
+  
+  <!-- جسم الباص -->
+  <rect x="80" y="180" width="352" height="180" rx="20" ry="20" fill="#FFD54F" stroke="#FF8F00" stroke-width="4"/>
+  
+  <!-- مقدمة الباص -->
+  <rect x="60" y="200" width="40" height="140" rx="15" ry="15" fill="#FFD54F" stroke="#FF8F00" stroke-width="4"/>
+  
+  <!-- النوافذ -->
+  <rect x="100" y="200" width="60" height="50" rx="8" ry="8" fill="#81D4FA" stroke="#0277BD" stroke-width="2"/>
+  <rect x="180" y="200" width="60" height="50" rx="8" ry="8" fill="#81D4FA" stroke="#0277BD" stroke-width="2"/>
+  <rect x="260" y="200" width="60" height="50" rx="8" ry="8" fill="#81D4FA" stroke="#0277BD" stroke-width="2"/>
+  <rect x="340" y="200" width="60" height="50" rx="8" ry="8" fill="#81D4FA" stroke="#0277BD" stroke-width="2"/>
+  
+  <!-- الباب -->
+  <rect x="420" y="220" width="30" height="80" rx="5" ry="5" fill="#FF8F00" stroke="#E65100" stroke-width="2"/>
+  <circle cx="445" cy="260" r="3" fill="#E65100"/>
+  
+  <!-- العجلات -->
+  <circle cx="140" cy="380" r="35" fill="#424242" stroke="#212121" stroke-width="4"/>
+  <circle cx="140" cy="380" r="20" fill="#757575"/>
+  <circle cx="140" cy="380" r="8" fill="#BDBDBD"/>
+  
+  <circle cx="372" cy="380" r="35" fill="#424242" stroke="#212121" stroke-width="4"/>
+  <circle cx="372" cy="380" r="20" fill="#757575"/>
+  <circle cx="372" cy="380" r="8" fill="#BDBDBD"/>
+  
+  <!-- المصابيح الأمامية -->
+  <circle cx="75" cy="220" r="12" fill="#FFEB3B" stroke="#F57F17" stroke-width="2"/>
+  <circle cx="75" cy="280" r="12" fill="#FFEB3B" stroke="#F57F17" stroke-width="2"/>
+  
+  <!-- المصابيح الخلفية -->
+  <circle cx="437" cy="220" r="8" fill="#F44336" stroke="#C62828" stroke-width="2"/>
+  <circle cx="437" cy="280" r="8" fill="#F44336" stroke="#C62828" stroke-width="2"/>
+  
+  <!-- علامة "SCHOOL BUS" -->
+  <rect x="120" y="270" width="200" height="30" rx="5" ry="5" fill="#FF5722"/>
+  <text x="220" y="290" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="16" font-weight="bold">SCHOOL BUS</text>
+  
+  <!-- أيقونة الطلاب -->
+  <g transform="translate(350, 270)">
+    <!-- طالب 1 -->
+    <circle cx="10" cy="8" r="6" fill="#FFAB91"/>
+    <rect x="6" y="14" width="8" height="12" rx="2" fill="#2196F3"/>
+    
+    <!-- طالب 2 -->
+    <circle cx="25" cy="8" r="6" fill="#FFAB91"/>
+    <rect x="21" y="14" width="8" height="12" rx="2" fill="#E91E63"/>
+  </g>
+  
+  <!-- خط تحت الباص للطريق -->
+  <rect x="40" y="420" width="432" height="8" rx="4" fill="#616161"/>
+  <rect x="50" y="424" width="20" height="2" fill="#FFEB3B"/>
+  <rect x="90" y="424" width="20" height="2" fill="#FFEB3B"/>
+  <rect x="130" y="424" width="20" height="2" fill="#FFEB3B"/>
+  <rect x="170" y="424" width="20" height="2" fill="#FFEB3B"/>
+  <rect x="210" y="424" width="20" height="2" fill="#FFEB3B"/>
+  <rect x="250" y="424" width="20" height="2" fill="#FFEB3B"/>
+  <rect x="290" y="424" width="20" height="2" fill="#FFEB3B"/>
+  <rect x="330" y="424" width="20" height="2" fill="#FFEB3B"/>
+  <rect x="370" y="424" width="20" height="2" fill="#FFEB3B"/>
+  <rect x="410" y="424" width="20" height="2" fill="#FFEB3B"/>
+  <rect x="450" y="424" width="20" height="2" fill="#FFEB3B"/>
+  
+  <!-- أيقونة GPS/التتبع -->
+  <g transform="translate(200, 120)">
+    <circle cx="56" cy="20" r="15" fill="#4CAF50" stroke="#2E7D32" stroke-width="2"/>
+    <circle cx="56" cy="20" r="8" fill="#81C784"/>
+    <circle cx="56" cy="20" r="3" fill="#FFFFFF"/>
+    <!-- خطوط الإشارة -->
+    <path d="M 56 5 Q 66 10 66 20 Q 66 30 56 35 Q 46 30 46 20 Q 46 10 56 5" fill="none" stroke="#4CAF50" stroke-width="2" opacity="0.6"/>
+  </g>
+  
+  <!-- نص التطبيق -->
+  <text x="256" y="480" text-anchor="middle" fill="white" font-family="Arial, sans-serif" font-size="24" font-weight="bold">MyBus</text>
+</svg>

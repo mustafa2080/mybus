@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>اختبار نظام إضافة الطلاب من أولياء الأمور</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .test-container {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        
+        .test-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+        
+        .test-header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .test-header h1 {
+            color: #333;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        
+        .test-header p {
+            color: #666;
+            font-size: 1.1rem;
+        }
+        
+        .feature-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid #007bff;
+        }
+        
+        .feature-card h5 {
+            color: #007bff;
+            margin-bottom: 15px;
+        }
+        
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .feature-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .feature-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .feature-list li i {
+            color: #28a745;
+            margin-left: 10px;
+        }
+        
+        .btn-test {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 10px;
+            padding: 12px 30px;
+            color: white;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-test:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            color: white;
+        }
+        
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        
+        .status-success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .status-warning {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <!-- Header -->
+        <div class="test-card">
+            <div class="test-header">
+                <h1>
+                    <i class="fas fa-graduation-cap text-primary me-3"></i>
+                    نظام إضافة الطلاب من أولياء الأمور
+                </h1>
+                <p>اختبار شامل للمميزات الجديدة المضافة للنظام</p>
+            </div>
+        </div>
+
+        <!-- Features Overview -->
+        <div class="test-card">
+            <h3 class="text-center mb-4">
+                <i class="fas fa-star text-warning me-2"></i>
+                المميزات المنجزة
+            </h3>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="feature-card">
+                        <h5>
+                            <i class="fas fa-mobile-alt me-2"></i>
+                            تطبيق الموبايل
+                        </h5>
+                        <ul class="feature-list">
+                            <li><i class="fas fa-check"></i> صفحة إضافة الطلاب</li>
+                            <li><i class="fas fa-check"></i> رفع وضغط الصور</li>
+                            <li><i class="fas fa-check"></i> نماذج شاملة للبيانات</li>
+                            <li><i class="fas fa-check"></i> ربط مع قاعدة البيانات</li>
+                            <li><i class="fas fa-check"></i> عرض الصور في البطاقات</li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="feature-card">
+                        <h5>
+                            <i class="fas fa-desktop me-2"></i>
+                            الداشبورد الإداري
+                        </h5>
+                        <ul class="feature-list">
+                            <li><i class="fas fa-check"></i> صفحة طلاب أولياء الأمور</li>
+                            <li><i class="fas fa-check"></i> إحصائيات شاملة</li>
+                            <li><i class="fas fa-check"></i> فلترة وبحث متقدم</li>
+                            <li><i class="fas fa-check"></i> اعتماد/رفض الطلاب</li>
+                            <li><i class="fas fa-check"></i> تعيين السيارات</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Database Features -->
+        <div class="test-card">
+            <h3 class="text-center mb-4">
+                <i class="fas fa-database text-success me-2"></i>
+                مميزات قاعدة البيانات
+            </h3>
+            
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="text-center mb-3">
+                        <i class="fas fa-users fa-3x text-primary mb-3"></i>
+                        <h5>ربط الأولياء والطلاب</h5>
+                        <p class="text-muted">ربط تلقائي بين الطلاب وأولياء الأمور في قاعدة البيانات</p>
+                        <span class="status-badge status-success">مكتمل</span>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="text-center mb-3">
+                        <i class="fas fa-cloud-upload-alt fa-3x text-info mb-3"></i>
+                        <h5>رفع الصور</h5>
+                        <p class="text-muted">رفع وضغط صور الطلاب في Firebase Storage</p>
+                        <span class="status-badge status-success">مكتمل</span>
+                    </div>
+                </div>
+                
+                <div class="col-md-4">
+                    <div class="text-center mb-3">
+                        <i class="fas fa-sync-alt fa-3x text-warning mb-3"></i>
+                        <h5>المزامنة</h5>
+                        <p class="text-muted">مزامنة البيانات بين الموبايل والداشبورد</p>
+                        <span class="status-badge status-success">مكتمل</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Test Instructions -->
+        <div class="test-card">
+            <h3 class="text-center mb-4">
+                <i class="fas fa-play-circle text-success me-2"></i>
+                تعليمات الاختبار
+            </h3>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <h5 class="text-primary mb-3">
+                        <i class="fas fa-mobile-alt me-2"></i>
+                        اختبار التطبيق
+                    </h5>
+                    <ol class="list-group list-group-numbered">
+                        <li class="list-group-item">شغل التطبيق على الموبايل أو المحاكي</li>
+                        <li class="list-group-item">سجل دخول كولي أمر</li>
+                        <li class="list-group-item">اضغط على "إضافة طالب جديد"</li>
+                        <li class="list-group-item">املأ البيانات وأضف صورة</li>
+                        <li class="list-group-item">احفظ البيانات</li>
+                        <li class="list-group-item">تأكد من ظهور الطالب في القائمة</li>
+                    </ol>
+                </div>
+                
+                <div class="col-md-6">
+                    <h5 class="text-primary mb-3">
+                        <i class="fas fa-desktop me-2"></i>
+                        اختبار الداشبورد
+                    </h5>
+                    <ol class="list-group list-group-numbered">
+                        <li class="list-group-item">افتح الداشبورد في المتصفح</li>
+                        <li class="list-group-item">سجل دخول كأدمن</li>
+                        <li class="list-group-item">اذهب لـ "طلاب أولياء الأمور"</li>
+                        <li class="list-group-item">شاهد الطلاب المضافين</li>
+                        <li class="list-group-item">اعتمد أو ارفض الطلاب</li>
+                        <li class="list-group-item">عين سيارات للطلاب</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Links -->
+        <div class="test-card">
+            <h3 class="text-center mb-4">
+                <i class="fas fa-link text-info me-2"></i>
+                روابط سريعة
+            </h3>
+            
+            <div class="row text-center">
+                <div class="col-md-4 mb-3">
+                    <a href="web_admin/index.html" class="btn btn-test w-100">
+                        <i class="fas fa-desktop me-2"></i>
+                        فتح الداشبورد
+                    </a>
+                </div>
+                
+                <div class="col-md-4 mb-3">
+                    <button class="btn btn-test w-100" onclick="runFlutterApp()">
+                        <i class="fas fa-mobile-alt me-2"></i>
+                        تشغيل التطبيق
+                    </button>
+                </div>
+                
+                <div class="col-md-4 mb-3">
+                    <button class="btn btn-test w-100" onclick="showTestData()">
+                        <i class="fas fa-database me-2"></i>
+                        عرض البيانات التجريبية
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status -->
+        <div class="test-card">
+            <div class="text-center">
+                <h4 class="text-success mb-3">
+                    <i class="fas fa-check-circle me-2"></i>
+                    النظام جاهز للاختبار!
+                </h4>
+                <p class="text-muted">
+                    جميع المميزات تم تطويرها وهي جاهزة للاختبار والاستخدام
+                </p>
+                <div class="mt-4">
+                    <span class="status-badge status-success me-2">
+                        <i class="fas fa-mobile-alt me-1"></i>
+                        تطبيق الموبايل
+                    </span>
+                    <span class="status-badge status-success me-2">
+                        <i class="fas fa-desktop me-1"></i>
+                        الداشبورد
+                    </span>
+                    <span class="status-badge status-success">
+                        <i class="fas fa-database me-1"></i>
+                        قاعدة البيانات
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function runFlutterApp() {
+            alert('لتشغيل التطبيق:\n\n1. افتح Terminal في مجلد المشروع\n2. شغل الأمر: flutter run\n3. اختر الجهاز المطلوب\n4. انتظر حتى يتم تشغيل التطبيق');
+        }
+        
+        function showTestData() {
+            const testData = {
+                students: [
+                    {
+                        name: 'أحمد محمد',
+                        grade: 'الصف الثالث',
+                        school: 'مدرسة النور',
+                        parent: 'محمد أحمد',
+                        phone: '0501234567',
+                        status: 'pending'
+                    },
+                    {
+                        name: 'فاطمة علي',
+                        grade: 'الصف الخامس',
+                        school: 'مدرسة الأمل',
+                        parent: 'علي حسن',
+                        phone: '0507654321',
+                        status: 'approved'
+                    }
+                ]
+            };
+            
+            alert('بيانات تجريبية:\n\n' + JSON.stringify(testData, null, 2));
+        }
+    </script>
+</body>
+</html>

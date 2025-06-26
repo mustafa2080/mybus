@@ -1,0 +1,438 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>إعداد Firebase Storage</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        .setup-container {
+            max-width: 900px;
+            margin: 30px auto;
+            padding: 20px;
+        }
+        
+        .setup-card {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            margin-bottom: 30px;
+        }
+        
+        .step-card {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-left: 4px solid #007bff;
+        }
+        
+        .code-block {
+            background: #2d3748;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            overflow-x: auto;
+            margin: 15px 0;
+        }
+        
+        .btn-copy {
+            background: #007bff;
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            cursor: pointer;
+            float: left;
+            margin-bottom: 10px;
+        }
+        
+        .btn-copy:hover {
+            background: #0056b3;
+        }
+        
+        .status-badge {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+        
+        .status-success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+        
+        .status-warning {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-danger {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+        
+        .alert-custom {
+            border-radius: 15px;
+            border: none;
+            padding: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="setup-container">
+        <!-- Header -->
+        <div class="setup-card">
+            <div class="text-center">
+                <h1 class="text-primary mb-3">
+                    <i class="fas fa-cloud-upload-alt me-3"></i>
+                    إعداد Firebase Storage
+                </h1>
+                <p class="lead text-muted">
+                    دليل شامل لحل مشكلة رفع الصور في تطبيق MyBus
+                </p>
+            </div>
+        </div>
+
+        <!-- Quick Fix -->
+        <div class="setup-card">
+            <div class="alert alert-warning alert-custom">
+                <h4 class="alert-heading">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    حل سريع للمشكلة
+                </h4>
+                <p>إذا كنت تواجه مشكلة في رفع الصور، اتبع هذه الخطوات السريعة:</p>
+                <ol>
+                    <li>اذهب إلى <a href="https://console.firebase.google.com/" target="_blank">Firebase Console</a></li>
+                    <li>اختر مشروع <strong>mybus-5a992</strong></li>
+                    <li>اذهب إلى <strong>Storage</strong> → <strong>Rules</strong></li>
+                    <li>استبدل القواعد بالقواعد المؤقتة أدناه</li>
+                </ol>
+            </div>
+        </div>
+
+        <!-- Step 1: Temporary Rules -->
+        <div class="setup-card">
+            <div class="step-card">
+                <h3 class="text-primary mb-3">
+                    <span class="badge bg-primary me-2">1</span>
+                    تطبيق قواعد مؤقتة للاختبار
+                </h3>
+                
+                <p>انسخ هذه القواعد وطبقها في Firebase Console:</p>
+                
+                <button class="btn-copy" onclick="copyToClipboard('tempRules')">
+                    <i class="fas fa-copy me-1"></i> نسخ
+                </button>
+                
+                <div class="code-block" id="tempRules">rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if true;
+    }
+  }
+}</div>
+
+                <div class="alert alert-danger mt-3">
+                    <strong>تحذير:</strong> هذه القواعد غير آمنة وللاختبار فقط. لا تستخدمها في الإنتاج!
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Test Connection -->
+        <div class="setup-card">
+            <div class="step-card">
+                <h3 class="text-success mb-3">
+                    <span class="badge bg-success me-2">2</span>
+                    اختبار الاتصال
+                </h3>
+                
+                <p>بعد تطبيق القواعد، اختبر الاتصال:</p>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <h5>من التطبيق:</h5>
+                        <ul>
+                            <li>شغل التطبيق</li>
+                            <li>جرب إضافة طالب مع صورة</li>
+                            <li>راقب الـ console للأخطاء</li>
+                        </ul>
+                    </div>
+                    <div class="col-md-6">
+                        <h5>اختبار منفصل:</h5>
+                        <button class="btn btn-primary" onclick="runStorageTest()">
+                            <i class="fas fa-play me-2"></i>
+                            تشغيل اختبار Storage
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: Secure Rules -->
+        <div class="setup-card">
+            <div class="step-card">
+                <h3 class="text-warning mb-3">
+                    <span class="badge bg-warning me-2">3</span>
+                    تطبيق قواعد آمنة (بعد نجاح الاختبار)
+                </h3>
+                
+                <p>بعد التأكد من عمل الرفع، طبق هذه القواعد الآمنة:</p>
+                
+                <button class="btn-copy" onclick="copyToClipboard('secureRules')">
+                    <i class="fas fa-copy me-1"></i> نسخ
+                </button>
+                
+                <div class="code-block" id="secureRules">rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Student Photos - Allow authenticated users
+    match /student_photos/{imageId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+                   && request.resource.size < 5 * 1024 * 1024  // Max 5MB
+                   && request.resource.contentType.matches('image/.*');
+    }
+    
+    // Bus Photos - Allow authenticated users
+    match /bus_photos/{imageId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+                   && request.resource.size < 10 * 1024 * 1024  // Max 10MB
+                   && request.resource.contentType.matches('image/.*');
+    }
+    
+    // Profile Photos - Allow authenticated users
+    match /profile_photos/{imageId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null
+                   && request.resource.size < 3 * 1024 * 1024  // Max 3MB
+                   && request.resource.contentType.matches('image/.*');
+    }
+    
+    // Test Images - For testing only
+    match /test_images/{imageId} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Deny all other access
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}</div>
+            </div>
+        </div>
+
+        <!-- Troubleshooting -->
+        <div class="setup-card">
+            <h3 class="text-danger mb-4">
+                <i class="fas fa-tools me-2"></i>
+                استكشاف الأخطاء
+            </h3>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title text-danger">
+                                <i class="fas fa-ban me-2"></i>
+                                permission-denied
+                            </h5>
+                            <p class="card-text">المستخدم غير مصرح له بالرفع</p>
+                            <ul class="list-unstyled">
+                                <li>✓ تحقق من تسجيل الدخول</li>
+                                <li>✓ طبق القواعد المؤقتة</li>
+                                <li>✓ تحقق من Authentication</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title text-warning">
+                                <i class="fas fa-wifi me-2"></i>
+                                network error
+                            </h5>
+                            <p class="card-text">مشكلة في الاتصال بالإنترنت</p>
+                            <ul class="list-unstyled">
+                                <li>✓ تحقق من الإنترنت</li>
+                                <li>✓ جرب شبكة مختلفة</li>
+                                <li>✓ تحقق من Firewall</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row mt-3">
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title text-info">
+                                <i class="fas fa-search me-2"></i>
+                                object-not-found
+                            </h5>
+                            <p class="card-text">المجلد أو الملف غير موجود</p>
+                            <ul class="list-unstyled">
+                                <li>✓ تحقق من مسار الملف</li>
+                                <li>✓ تحقق من صلاحيات القراءة</li>
+                                <li>✓ أنشئ المجلد يدوي<|im_start|></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-md-6">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title text-secondary">
+                                <i class="fas fa-redo me-2"></i>
+                                retry-limit-exceeded
+                            </h5>
+                            <p class="card-text">تم تجاوز حد المحاولات</p>
+                            <ul class="list-unstyled">
+                                <li>✓ انتظر قليلاً</li>
+                                <li>✓ قلل حجم الصورة</li>
+                                <li>✓ أعد تشغيل التطبيق</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Links -->
+        <div class="setup-card">
+            <h3 class="text-primary mb-4">
+                <i class="fas fa-link me-2"></i>
+                روابط مفيدة
+            </h3>
+            
+            <div class="row">
+                <div class="col-md-4 mb-3">
+                    <a href="https://console.firebase.google.com/project/mybus-5a992/storage" 
+                       target="_blank" class="btn btn-primary w-100">
+                        <i class="fas fa-external-link-alt me-2"></i>
+                        Firebase Console
+                    </a>
+                </div>
+                
+                <div class="col-md-4 mb-3">
+                    <button class="btn btn-success w-100" onclick="openTestFile()">
+                        <i class="fas fa-play me-2"></i>
+                        تشغيل ملف الاختبار
+                    </button>
+                </div>
+                
+                <div class="col-md-4 mb-3">
+                    <button class="btn btn-info w-100" onclick="showProjectInfo()">
+                        <i class="fas fa-info-circle me-2"></i>
+                        معلومات المشروع
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status -->
+        <div class="setup-card">
+            <div class="text-center">
+                <h4 class="text-success mb-3">
+                    <i class="fas fa-check-circle me-2"></i>
+                    حالة النظام
+                </h4>
+                
+                <div class="row">
+                    <div class="col-md-4">
+                        <span class="status-badge status-success">
+                            <i class="fas fa-code me-1"></i>
+                            الكود جاهز
+                        </span>
+                    </div>
+                    <div class="col-md-4">
+                        <span class="status-badge status-warning">
+                            <i class="fas fa-cog me-1"></i>
+                            يحتاج إعداد Firebase
+                        </span>
+                    </div>
+                    <div class="col-md-4">
+                        <span class="status-badge status-success">
+                            <i class="fas fa-mobile-alt me-1"></i>
+                            التطبيق جاهز
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function copyToClipboard(elementId) {
+            const element = document.getElementById(elementId);
+            const text = element.textContent;
+            
+            navigator.clipboard.writeText(text).then(() => {
+                // Show success message
+                const btn = event.target.closest('.btn-copy');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<i class="fas fa-check me-1"></i> تم النسخ!';
+                btn.style.background = '#28a745';
+                
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.style.background = '#007bff';
+                }, 2000);
+            }).catch(err => {
+                alert('فشل في النسخ: ' + err);
+            });
+        }
+        
+        function runStorageTest() {
+            alert('لتشغيل اختبار Storage:\n\n1. افتح Terminal\n2. شغل: flutter run lib/test_firebase_storage.dart\n3. اختبر الاتصال والرفع');
+        }
+        
+        function openTestFile() {
+            alert('لفتح ملف الاختبار:\n\n1. افتح VS Code\n2. اذهب إلى lib/test_firebase_storage.dart\n3. شغل الملف بـ F5 أو flutter run');
+        }
+        
+        function showProjectInfo() {
+            const info = `معلومات مشروع Firebase:
+
+Project ID: mybus-5a992
+Storage Bucket: mybus-5a992.firebasestorage.app
+Region: us-central1 (default)
+
+URLs مهمة:
+- Console: https://console.firebase.google.com/project/mybus-5a992
+- Storage: https://console.firebase.google.com/project/mybus-5a992/storage
+- Rules: https://console.firebase.google.com/project/mybus-5a992/storage/rules`;
+            
+            alert(info);
+        }
+        
+        // Auto-scroll to top on load
+        window.addEventListener('load', () => {
+            window.scrollTo(0, 0);
+        });
+    </script>
+</body>
+</html>
