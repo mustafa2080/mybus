@@ -41,14 +41,15 @@ class _AbsenceManagementScreenState extends State<AbsenceManagementScreen>
       ),
       body: Column(
         children: [
-          const SizedBox(height: 20),
-          
+          const SizedBox(height: 16),
+
           // Header with Statistics
           _buildHeader(),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
 
-          // Tab Bar
+          // Tab Bar - Enhanced for better visibility
           Container(
+            width: double.infinity,
             margin: const EdgeInsets.symmetric(horizontal: 16),
             decoration: BoxDecoration(
               color: Colors.white,
@@ -61,32 +62,48 @@ class _AbsenceManagementScreenState extends State<AbsenceManagementScreen>
                 ),
               ],
             ),
-            child: TabBar(
-              controller: _tabController,
-              labelColor: const Color(0xFF1E88E5),
-              unselectedLabelColor: Colors.grey[600],
-              indicatorColor: const Color(0xFF1E88E5),
-              indicatorWeight: 3,
-              labelStyle: const TextStyle(fontSize: 12),
-              unselectedLabelStyle: const TextStyle(fontSize: 11),
-              isScrollable: true,
-              tabs: const [
-                Tab(
-                  icon: Icon(Icons.notifications_active, size: 18),
-                  text: 'إشعارات حديثة',
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: TabBar(
+                controller: _tabController,
+                labelColor: const Color(0xFF1E88E5),
+                unselectedLabelColor: Colors.grey[600],
+                indicatorColor: const Color(0xFF1E88E5),
+                indicatorWeight: 3,
+                labelStyle: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  height: 1.2,
                 ),
-                Tab(
-                  icon: Icon(Icons.history, size: 18),
-                  text: 'جميع الإشعارات',
+                unselectedLabelStyle: const TextStyle(
+                  fontSize: 13,
+                  height: 1.2,
                 ),
-                Tab(
-                  icon: Icon(Icons.analytics, size: 18),
-                  text: 'الإحصائيات',
-                ),
-              ],
+                isScrollable: true,
+                tabAlignment: TabAlignment.start,
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                indicatorPadding: const EdgeInsets.symmetric(horizontal: 8),
+                tabs: const [
+                  Tab(
+                    icon: Icon(Icons.notifications_active, size: 20),
+                    text: 'إشعارات حديثة',
+                    height: 70,
+                  ),
+                  Tab(
+                    icon: Icon(Icons.history, size: 20),
+                    text: 'جميع الإشعارات',
+                    height: 70,
+                  ),
+                  Tab(
+                    icon: Icon(Icons.analytics, size: 20),
+                    text: 'الإحصائيات',
+                    height: 70,
+                  ),
+                ],
+              ),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 16),
 
           // Tab Views
           Expanded(
@@ -107,7 +124,7 @@ class _AbsenceManagementScreenState extends State<AbsenceManagementScreen>
   Widget _buildHeader() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
@@ -131,18 +148,18 @@ class _AbsenceManagementScreenState extends State<AbsenceManagementScreen>
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: Colors.white.withAlpha(51),
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 child: const Icon(
                   Icons.person_off,
                   color: Colors.white,
-                  size: 28,
+                  size: 24,
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
               const Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -151,7 +168,7 @@ class _AbsenceManagementScreenState extends State<AbsenceManagementScreen>
                       'إشعارات الغياب',
                       style: TextStyle(
                         color: Colors.white,
-                        fontSize: 24,
+                        fontSize: 20,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -159,7 +176,7 @@ class _AbsenceManagementScreenState extends State<AbsenceManagementScreen>
                       'متابعة إشعارات الغياب من أولياء الأمور',
                       style: TextStyle(
                         color: Colors.white70,
-                        fontSize: 14,
+                        fontSize: 13,
                       ),
                     ),
                   ],
@@ -167,8 +184,8 @@ class _AbsenceManagementScreenState extends State<AbsenceManagementScreen>
               ),
             ],
           ),
-          const SizedBox(height: 20),
-          
+          const SizedBox(height: 16),
+
           // Quick Stats
           StreamBuilder<List<AbsenceModel>>(
             stream: _databaseService.getAllAbsencesStream(),
