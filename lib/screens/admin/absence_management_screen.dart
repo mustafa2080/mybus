@@ -344,12 +344,11 @@ class _AbsenceManagementScreenState extends State<AbsenceManagementScreen>
                 recentParentNotifications.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
                 if (recentParentNotifications.isEmpty) {
-                  return _buildEmptyStateWithDemo(
+                  return _buildEmptyState(
                     'لا توجد إشعارات حديثة',
                     'لم يتم إرسال إشعارات غياب في آخر 7 أيام',
                     Icons.notifications_off,
                     Colors.blue,
-                    'recent',
                   );
                 }
 
@@ -414,12 +413,11 @@ class _AbsenceManagementScreenState extends State<AbsenceManagementScreen>
                 parentAbsences.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
                 if (parentAbsences.isEmpty) {
-                  return _buildEmptyStateWithDemo(
+                  return _buildEmptyState(
                     'لا توجد إشعارات غياب',
                     'لم يرسل أولياء الأمور أي إشعارات غياب بعد',
                     Icons.notifications_off,
                     Colors.green,
-                    'all',
                   );
                 }
 
@@ -481,12 +479,11 @@ class _AbsenceManagementScreenState extends State<AbsenceManagementScreen>
                     .toList();
 
                 if (parentAbsences.isEmpty) {
-                  return _buildEmptyStateWithDemo(
+                  return _buildEmptyState(
                     'لا توجد بيانات للإحصائيات',
                     'لا توجد إشعارات غياب لعرض الإحصائيات',
                     Icons.analytics,
                     Colors.purple,
-                    'stats',
                   );
                 }
 
@@ -569,88 +566,7 @@ class _AbsenceManagementScreenState extends State<AbsenceManagementScreen>
     );
   }
 
-  Widget _buildEmptyStateWithDemo(String title, String subtitle, IconData icon, Color color, String tabType) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: color.withAlpha(25),
-                borderRadius: BorderRadius.circular(50),
-              ),
-              child: Icon(
-                icon,
-                size: 64,
-                color: color,
-              ),
-            ),
-            const SizedBox(height: 24),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey[700],
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              subtitle,
-              style: TextStyle(
-                fontSize: 16,
-                color: Colors.grey[500],
-              ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: color.withOpacity(0.3)),
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    'معاينة التاب: $tabType',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: color,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    _getDemoContent(tabType),
-                    style: const TextStyle(fontSize: 14),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 
-  String _getDemoContent(String tabType) {
-    switch (tabType) {
-      case 'recent':
-        return 'هنا ستظهر الإشعارات الحديثة من آخر 7 أيام\nمثل: إشعار غياب أحمد محمد - مرض\nإشعار غياب فاطمة علي - ظروف عائلية';
-      case 'all':
-        return 'هنا ستظهر جميع إشعارات الغياب\nمرتبة من الأحدث إلى الأقدم\nمع إمكانية الموافقة أو الرفض';
-      case 'stats':
-        return 'هنا ستظهر الإحصائيات التفصيلية\nعدد الإشعارات اليومية والأسبوعية\nتوزيع أنواع الغياب والحالات';
-      default:
-        return 'محتوى تجريبي للتاب';
-    }
-  }
 
   Widget _buildSimpleAbsenceCard(AbsenceModel absence) {
     return Container(

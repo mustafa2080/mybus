@@ -239,6 +239,13 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                 color: const Color(0xFFE91E63),
                 onTap: () => context.push('/admin/absence-management'),
               ),
+              _buildManagementCard(
+                icon: Icons.directions_bus,
+                label: 'إدارة السيارات',
+                description: 'إضافة وتعديل السيارات والسائقين',
+                color: const Color(0xFF4CAF50),
+                onTap: () => context.push('/admin/buses-management'),
+              ),
             ],
           ),
         ],
