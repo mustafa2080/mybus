@@ -275,149 +275,253 @@ class _AbsenceManagementScreenState extends State<AbsenceManagementScreen>
   }
 
   Widget _buildRecentAbsences() {
-    return StreamBuilder<List<AbsenceModel>>(
-      stream: _databaseService.getAllAbsencesStream(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (snapshot.hasError) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.blue.withOpacity(0.05),
+        border: Border.all(color: Colors.blue.withOpacity(0.2)),
+      ),
+      child: Column(
+        children: [
+          // Header indicator
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            color: Colors.blue.withOpacity(0.1),
+            child: const Row(
               children: [
-                const Icon(Icons.error, size: 64, color: Colors.red),
-                const SizedBox(height: 16),
-                Text('خطأ: ${snapshot.error}'),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () {
-                    setState(() {});
-                  },
-                  child: const Text('إعادة المحاولة'),
+                Icon(Icons.notifications_active, color: Colors.blue),
+                SizedBox(width: 8),
+                Text(
+                  'الإشعارات الحديثة (آخر 7 أيام)',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blue,
+                  ),
                 ),
               ],
             ),
-          );
-        }
+          ),
+          // Content
+          Expanded(
+            child: StreamBuilder<List<AbsenceModel>>(
+              stream: _databaseService.getAllAbsencesStream(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-        if (!snapshot.hasData || snapshot.data!.isEmpty) {
-          return _buildEmptyState(
-            'لا توجد إشعارات غياب',
-            'لم يتم إرسال أي إشعارات غياب بعد',
-            Icons.notifications_off,
-            Colors.grey,
-          );
-        }
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error, size: 64, color: Colors.red),
+                        const SizedBox(height: 16),
+                        Text('خطأ: ${snapshot.error}'),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () {
+                            setState(() {});
+                          },
+                          child: const Text('إعادة المحاولة'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
 
-        final allAbsences = snapshot.data!;
+                final allAbsences = snapshot.data ?? [];
 
-        // فلترة الإشعارات الحديثة من أولياء الأمور (آخر 7 أيام)
-        final recentDate = DateTime.now().subtract(const Duration(days: 7));
-        final recentParentNotifications = allAbsences
-            .where((absence) =>
-                absence.source == AbsenceSource.parent &&
-                absence.createdAt.isAfter(recentDate))
-            .toList();
+                // فلترة الإشعارات الحديثة من أولياء الأمور (آخر 7 أيام)
+                final recentDate = DateTime.now().subtract(const Duration(days: 7));
+                final recentParentNotifications = allAbsences
+                    .where((absence) =>
+                        absence.source == AbsenceSource.parent &&
+                        absence.createdAt.isAfter(recentDate))
+                    .toList();
 
-        // ترتيب حسب التاريخ (الأحدث أولاً)
-        recentParentNotifications.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+                // ترتيب حسب التاريخ (الأحدث أولاً)
+                recentParentNotifications.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-        if (recentParentNotifications.isEmpty) {
-          return _buildEmptyState(
-            'لا توجد إشعارات حديثة',
-            'لم يتم إرسال إشعارات غياب في آخر 7 أيام',
-            Icons.notifications_off,
-            Colors.grey,
-          );
-        }
+                if (recentParentNotifications.isEmpty) {
+                  return _buildEmptyStateWithDemo(
+                    'لا توجد إشعارات حديثة',
+                    'لم يتم إرسال إشعارات غياب في آخر 7 أيام',
+                    Icons.notifications_off,
+                    Colors.blue,
+                    'recent',
+                  );
+                }
 
-        final absences = recentParentNotifications;
-        return ListView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          itemCount: absences.length,
-          itemBuilder: (context, index) {
-            final absence = absences[index];
-            return _buildSimpleAbsenceCard(absence);
-          },
-        );
-      },
+                return ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  itemCount: recentParentNotifications.length,
+                  itemBuilder: (context, index) {
+                    final absence = recentParentNotifications[index];
+                    return _buildSimpleAbsenceCard(absence);
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildAllAbsences() {
-    return StreamBuilder<List<AbsenceModel>>(
-      stream: _databaseService.getAllAbsencesStream(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.green.withOpacity(0.05),
+        border: Border.all(color: Colors.green.withOpacity(0.2)),
+      ),
+      child: Column(
+        children: [
+          // Header indicator
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            color: Colors.green.withOpacity(0.1),
+            child: const Row(
+              children: [
+                Icon(Icons.history, color: Colors.green),
+                SizedBox(width: 8),
+                Text(
+                  'جميع الإشعارات',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.green,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          // Content
+          Expanded(
+            child: StreamBuilder<List<AbsenceModel>>(
+              stream: _databaseService.getAllAbsencesStream(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-        final allAbsences = snapshot.data ?? [];
-        final parentAbsences = allAbsences
-            .where((absence) => absence.source == AbsenceSource.parent)
-            .toList();
+                final allAbsences = snapshot.data ?? [];
+                final parentAbsences = allAbsences
+                    .where((absence) => absence.source == AbsenceSource.parent)
+                    .toList();
 
-        // ترتيب حسب التاريخ (الأحدث أولاً)
-        parentAbsences.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+                // ترتيب حسب التاريخ (الأحدث أولاً)
+                parentAbsences.sort((a, b) => b.createdAt.compareTo(a.createdAt));
 
-        if (parentAbsences.isEmpty) {
-          return _buildEmptyState(
-            'لا توجد إشعارات غياب',
-            'لم يرسل أولياء الأمور أي إشعارات غياب بعد',
-            Icons.notifications_off,
-            Colors.grey,
-          );
-        }
+                if (parentAbsences.isEmpty) {
+                  return _buildEmptyStateWithDemo(
+                    'لا توجد إشعارات غياب',
+                    'لم يرسل أولياء الأمور أي إشعارات غياب بعد',
+                    Icons.notifications_off,
+                    Colors.green,
+                    'all',
+                  );
+                }
 
-        return ListView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          itemCount: parentAbsences.length,
-          itemBuilder: (context, index) {
-            final absence = parentAbsences[index];
-            return _buildSimpleAbsenceCard(absence);
-          },
-        );
-      },
+                return ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  itemCount: parentAbsences.length,
+                  itemBuilder: (context, index) {
+                    final absence = parentAbsences[index];
+                    return _buildSimpleAbsenceCard(absence);
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   Widget _buildAbsenceStatistics() {
-    return StreamBuilder<List<AbsenceModel>>(
-      stream: _databaseService.getAllAbsencesStream(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        final allAbsences = snapshot.data ?? [];
-        final parentAbsences = allAbsences
-            .where((absence) => absence.source == AbsenceSource.parent)
-            .toList();
-
-        return SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            children: [
-              _buildStatisticsCard('إحصائيات الغياب', [
-                _buildStatRow('إجمالي الإشعارات', parentAbsences.length.toString()),
-                _buildStatRow('إشعارات اليوم', _getTodayAbsencesCount(parentAbsences).toString()),
-                _buildStatRow('إشعارات هذا الأسبوع', _getWeekAbsencesCount(parentAbsences).toString()),
-                _buildStatRow('إشعارات هذا الشهر', _getMonthAbsencesCount(parentAbsences).toString()),
-              ]),
-              const SizedBox(height: 16),
-              _buildStatisticsCard('أنواع الغياب', [
-                _buildStatRow('مرض', _getAbsenceTypeCount(parentAbsences, AbsenceType.sick).toString()),
-                _buildStatRow('ظروف عائلية', _getAbsenceTypeCount(parentAbsences, AbsenceType.family).toString()),
-                _buildStatRow('سفر', _getAbsenceTypeCount(parentAbsences, AbsenceType.travel).toString()),
-                _buildStatRow('طوارئ', _getAbsenceTypeCount(parentAbsences, AbsenceType.emergency).toString()),
-                _buildStatRow('أخرى', _getAbsenceTypeCount(parentAbsences, AbsenceType.other).toString()),
-              ]),
-            ],
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.purple.withOpacity(0.05),
+        border: Border.all(color: Colors.purple.withOpacity(0.2)),
+      ),
+      child: Column(
+        children: [
+          // Header indicator
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            color: Colors.purple.withOpacity(0.1),
+            child: const Row(
+              children: [
+                Icon(Icons.analytics, color: Colors.purple),
+                SizedBox(width: 8),
+                Text(
+                  'الإحصائيات والتقارير',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.purple,
+                  ),
+                ),
+              ],
+            ),
           ),
-        );
-      },
+          // Content
+          Expanded(
+            child: StreamBuilder<List<AbsenceModel>>(
+              stream: _databaseService.getAllAbsencesStream(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                final allAbsences = snapshot.data ?? [];
+                final parentAbsences = allAbsences
+                    .where((absence) => absence.source == AbsenceSource.parent)
+                    .toList();
+
+                if (parentAbsences.isEmpty) {
+                  return _buildEmptyStateWithDemo(
+                    'لا توجد بيانات للإحصائيات',
+                    'لا توجد إشعارات غياب لعرض الإحصائيات',
+                    Icons.analytics,
+                    Colors.purple,
+                    'stats',
+                  );
+                }
+
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      _buildStatisticsCard('إحصائيات الغياب', [
+                        _buildStatRow('إجمالي الإشعارات', parentAbsences.length.toString()),
+                        _buildStatRow('إشعارات اليوم', _getTodayAbsencesCount(parentAbsences).toString()),
+                        _buildStatRow('إشعارات هذا الأسبوع', _getWeekAbsencesCount(parentAbsences).toString()),
+                        _buildStatRow('إشعارات هذا الشهر', _getMonthAbsencesCount(parentAbsences).toString()),
+                      ]),
+                      const SizedBox(height: 16),
+                      _buildStatisticsCard('أنواع الغياب', [
+                        _buildStatRow('مرض', _getAbsenceTypeCount(parentAbsences, AbsenceType.sick).toString()),
+                        _buildStatRow('ظروف عائلية', _getAbsenceTypeCount(parentAbsences, AbsenceType.family).toString()),
+                        _buildStatRow('سفر', _getAbsenceTypeCount(parentAbsences, AbsenceType.travel).toString()),
+                        _buildStatRow('طوارئ', _getAbsenceTypeCount(parentAbsences, AbsenceType.emergency).toString()),
+                        _buildStatRow('أخرى', _getAbsenceTypeCount(parentAbsences, AbsenceType.other).toString()),
+                      ]),
+                      const SizedBox(height: 16),
+                      _buildStatisticsCard('حالة الإشعارات', [
+                        _buildStatRow('معلقة', parentAbsences.where((a) => a.status == AbsenceStatus.pending).length.toString()),
+                        _buildStatRow('مقبولة', parentAbsences.where((a) => a.status == AbsenceStatus.approved).length.toString()),
+                        _buildStatRow('مرفوضة', parentAbsences.where((a) => a.status == AbsenceStatus.rejected).length.toString()),
+                      ]),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -463,6 +567,89 @@ class _AbsenceManagementScreenState extends State<AbsenceManagementScreen>
         ),
       ),
     );
+  }
+
+  Widget _buildEmptyStateWithDemo(String title, String subtitle, IconData icon, Color color, String tabType) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: color.withAlpha(25),
+                borderRadius: BorderRadius.circular(50),
+              ),
+              child: Icon(
+                icon,
+                size: 64,
+                color: color,
+              ),
+            ),
+            const SizedBox(height: 24),
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.grey[700],
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              subtitle,
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[500],
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: color.withOpacity(0.3)),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    'معاينة التاب: $tabType',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _getDemoContent(tabType),
+                    style: const TextStyle(fontSize: 14),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  String _getDemoContent(String tabType) {
+    switch (tabType) {
+      case 'recent':
+        return 'هنا ستظهر الإشعارات الحديثة من آخر 7 أيام\nمثل: إشعار غياب أحمد محمد - مرض\nإشعار غياب فاطمة علي - ظروف عائلية';
+      case 'all':
+        return 'هنا ستظهر جميع إشعارات الغياب\nمرتبة من الأحدث إلى الأقدم\nمع إمكانية الموافقة أو الرفض';
+      case 'stats':
+        return 'هنا ستظهر الإحصائيات التفصيلية\nعدد الإشعارات اليومية والأسبوعية\nتوزيع أنواع الغياب والحالات';
+      default:
+        return 'محتوى تجريبي للتاب';
+    }
   }
 
   Widget _buildSimpleAbsenceCard(AbsenceModel absence) {
