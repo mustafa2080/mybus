@@ -1116,47 +1116,46 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
         );
       }
     }
-  }
 
-  // Helper method to build info rows with icon, label and value
-  Widget _buildInfoRow(IconData icon, String label, String value) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(4),
-          decoration: BoxDecoration(
-            color: Colors.blue.withAlpha(25),
-            borderRadius: BorderRadius.circular(4),
-          ),
-          child: Icon(
-            icon,
-            size: 14,
-            color: Colors.blue[700],
-          ),
-        ),
-        const SizedBox(width: 8),
-        Text(
-          '$label: ',
-          style: TextStyle(
-            color: Colors.grey[700],
-            fontSize: 12,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF2D3748),
+    // Helper method to build info rows with icon, label and value
+    Widget _buildInfoRow(IconData icon, String label, String value) {
+      return Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: Colors.blue.withAlpha(25),
+              borderRadius: BorderRadius.circular(4),
             ),
-            overflow: TextOverflow.ellipsis,
+            child: Icon(
+              icon,
+              size: 14,
+              color: Colors.blue[700],
+            ),
           ),
-        ),
-      ],
-    );
+          const SizedBox(width: 8),
+          Text(
+            '$label: ',
+            style: TextStyle(
+              color: Colors.grey[700],
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF2D3748),
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      );
+    }
   }
-}
 
 
