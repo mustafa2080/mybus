@@ -25,6 +25,17 @@ class _SupervisorNotificationsScreenState extends State<SupervisorNotificationsS
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    // Mark all notifications as read when opening the screen
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _markAllAsRead();
+    });
+  }
+
+  Future<void> _markAllAsRead() async {
+    final userId = _authService.currentUser?.uid;
+    if (userId != null) {
+      await _databaseService.markAllNotificationsAsRead(userId);
+    }
   }
 
   @override

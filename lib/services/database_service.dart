@@ -1426,32 +1426,130 @@ class DatabaseService {
 
   // Get parent notifications count (for parent home screen)
   Stream<int> getParentNotificationsCount(String parentId) {
-    final yesterday = DateTime.now().subtract(const Duration(hours: 24));
+    if (parentId.isEmpty) return Stream.value(0);
 
     return _firestore
         .collection('notifications')
         .where('recipientId', isEqualTo: parentId)
-        .where('timestamp', isGreaterThan: Timestamp.fromDate(yesterday))
         .where('isRead', isEqualTo: false)
         .snapshots()
         .map((snapshot) {
-          debugPrint('🔔 Parent notifications count for $parentId: ${snapshot.docs.length}');
-          return snapshot.docs.length;
+          final count = snapshot.docs.length;
+          debugPrint('🔔 Parent notifications count for $parentId: $count');
+          return count;
         });
   }
 
   // Get admin notifications count (for admin home screen)
   Stream<int> getAdminNotificationsCount() {
-    final yesterday = DateTime.now().subtract(const Duration(hours: 24));
-
-    // Combine pending absences and recent notifications
     return _firestore
         .collection('absences')
         .where('status', isEqualTo: 'pending')
         .snapshots()
         .map((snapshot) {
-          debugPrint('🔔 Admin notifications count (pending absences): ${snapshot.docs.length}');
-          return snapshot.docs.length;
+          final count = snapshot.docs.length;
+          debugPrint('🔔 Admin notifications count (pending absences): $count');
+          return count;
+        });
+  }
+
+  // Get supervisor notifications count (for supervisor home screen)
+  Stream<int> getSupervisorNotificationsCount(String supervisorId) {
+    if (supervisorId.isEmpty) return Stream.value(0);
+
+    return _firestore
+        .collection('notifications')
+        .where('recipientId', isEqualTo: supervisorId)
+        .where('isRead', isEqualTo: false)
+        .snapshots()
+        .map((snapshot) {
+          final count = snapshot.docs.length;
+          debugPrint('🔔 Supervisor notifications count for $supervisorId: $count');
+          return count;
+        });
+  }
+
+  // Mark notification as read
+  Future<void> markNotificationAsRead(String notificationId) async {
+    try {
+      await _firestore
+          .collection('notifications')
+          .doc(notificationId)
+          .update({'isRead': true});
+      debugPrint('✅ Notification marked as read: $notificationId');
+    } catch (e) {
+      debugPrint('❌ Error marking notification as read: $e');
+    }
+  }
+
+  // Mark all notifications as read for a user
+  Future<void> markAllNotificationsAsRead(String userId) async {
+    try {
+      final batch = _firestore.batch();
+      final snapshot = await _firestore
+          .collection('notifications')
+          .where('recipientId', isEqualTo: userId)
+          .where('isRead', isEqualTo: false)
+          .get();
+
+      for (final doc in snapshot.docs) {
+        batch.update(doc.reference, {'isRead': true});
+      }
+
+      await batch.commit();
+      debugPrint('✅ All notifications marked as read for user: $userId');
+    } catch (e) {
+      debugPrint('❌ Error marking all notifications as read: $e');
+    }
+  }
+
+  // Get supervisor notifications
+  Stream<List<NotificationModel>> getSupervisorNotifications(String supervisorId) {
+    if (supervisorId.isEmpty) return Stream.value([]);
+
+    return _firestore
+        .collection('notifications')
+        .where('recipientId', isEqualTo: supervisorId)
+        .orderBy('timestamp', descending: true)
+        .limit(50)
+        .snapshots()
+        .map((snapshot) {
+          final notifications = <NotificationModel>[];
+          for (final doc in snapshot.docs) {
+            try {
+              final notification = NotificationModel.fromMap(doc.data());
+              notifications.add(notification);
+            } catch (e) {
+              debugPrint('❌ Error parsing notification ${doc.id}: $e');
+            }
+          }
+          debugPrint('📱 Supervisor notifications loaded: ${notifications.length}');
+          return notifications;
+        });
+  }
+
+  // Get parent notifications
+  Stream<List<NotificationModel>> getParentNotifications(String parentId) {
+    if (parentId.isEmpty) return Stream.value([]);
+
+    return _firestore
+        .collection('notifications')
+        .where('recipientId', isEqualTo: parentId)
+        .orderBy('timestamp', descending: true)
+        .limit(50)
+        .snapshots()
+        .map((snapshot) {
+          final notifications = <NotificationModel>[];
+          for (final doc in snapshot.docs) {
+            try {
+              final notification = NotificationModel.fromMap(doc.data());
+              notifications.add(notification);
+            } catch (e) {
+              debugPrint('❌ Error parsing notification ${doc.id}: $e');
+            }
+          }
+          debugPrint('📱 Parent notifications loaded: ${notifications.length}');
+          return notifications;
         });
   }
 

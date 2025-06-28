@@ -46,10 +46,10 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen> {
         actions: [
           // إشعار طلبات الغياب والإشعارات العامة
           StreamBuilder<int>(
-            stream: _databaseService.getRecentNotificationsCount(),
+            stream: _databaseService.getSupervisorNotificationsCount(_authService.currentUser?.uid ?? ''),
             builder: (context, snapshot) {
               // Add debug information
-              debugPrint('🔔 Notification StreamBuilder - Connection: ${snapshot.connectionState}, Data: ${snapshot.data}, Error: ${snapshot.error}');
+              debugPrint('🔔 Supervisor Notification StreamBuilder - Connection: ${snapshot.connectionState}, Data: ${snapshot.data}, Error: ${snapshot.error}');
 
               final notificationCount = snapshot.data ?? 0;
               final hasNotifications = notificationCount > 0;
