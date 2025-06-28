@@ -1,0 +1,10 @@
+# نسخة احتياطية من إعدادات Gradle الأصلية
+# يمكن استخدامها في حالة وجود مشاكل مع الإعدادات الجديدة
+
+org.gradle.jvmargs=-Xmx2G -XX:MaxMetaspaceSize=1G
+android.useAndroidX=true
+android.enableJetifier=true
+org.gradle.daemon=true
+org.gradle.parallel=true
+org.gradle.configureondemand=true
+org.gradle.caching=true
