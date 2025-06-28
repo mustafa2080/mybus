@@ -527,7 +527,7 @@ class _BusesManagementScreenState extends State<BusesManagementScreen> {
     try {
       if (isEditing && busId != null) {
         // Update existing bus
-        final existingBus = await _databaseService.getBusById(busId);
+        final existingBus = await _databaseService.getBus(busId);
         if (existingBus != null) {
           final updatedBus = existingBus.copyWith(
             plateNumber: plateNumber.trim(),

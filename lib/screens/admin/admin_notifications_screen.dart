@@ -386,8 +386,8 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
       final status = approve ? AbsenceStatus.approved : AbsenceStatus.rejected;
       final updatedAbsence = absence.copyWith(
         status: status,
-        reviewedAt: DateTime.now(),
-        reviewedBy: _authService.currentUser?.uid ?? '',
+        approvedAt: DateTime.now(),
+        approvedBy: _authService.currentUser?.uid ?? '',
       );
 
       await _databaseService.updateAbsence(updatedAbsence);
@@ -518,5 +518,406 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
         );
       }
     }
+  }
+
+  Widget _buildNotificationCard(NotificationModel notification) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  _getNotificationIcon(notification.type),
+                  color: _getNotificationColor(notification.type),
+                  size: 24,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    notification.title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+                Text(
+                  notification.formattedTime,
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              notification.body,
+              style: TextStyle(
+                color: Colors.grey[700],
+                fontSize: 14,
+              ),
+            ),
+            if (notification.studentName != null) ...[
+              const SizedBox(height: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'الطالب: ${notification.studentName}',
+                  style: TextStyle(
+                    color: Colors.blue[700],
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAbsenceRequestCard(AbsenceModel absence) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.event_busy,
+                  color: _getAbsenceStatusColor(absence.status),
+                  size: 24,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'طلب غياب - ${absence.studentName}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _getAbsenceStatusColor(absence.status).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    absence.statusDisplayText,
+                    style: TextStyle(
+                      color: _getAbsenceStatusColor(absence.status),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _buildDetailRow('نوع الغياب', absence.typeDisplayText),
+            _buildDetailRow('التاريخ', DateFormat('yyyy/MM/dd').format(absence.date)),
+            if (absence.endDate != null)
+              _buildDetailRow('تاريخ الانتهاء', DateFormat('yyyy/MM/dd').format(absence.endDate!)),
+            _buildDetailRow('السبب', absence.reason),
+            if (absence.notes != null && absence.notes!.isNotEmpty)
+              _buildDetailRow('ملاحظات', absence.notes!),
+            if (absence.status == AbsenceStatus.pending) ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => _approveAbsence(absence),
+                      icon: const Icon(Icons.check, size: 18),
+                      label: const Text('موافقة'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => _rejectAbsence(absence),
+                      icon: const Icon(Icons.close, size: 18),
+                      label: const Text('رفض'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildComplaintCard(ComplaintModel complaint) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.report_problem,
+                  color: _getComplaintPriorityColor(complaint.priority),
+                  size: 24,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    complaint.title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _getComplaintStatusColor(complaint.status).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    complaint.statusDisplayText,
+                    style: TextStyle(
+                      color: _getComplaintStatusColor(complaint.status),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            _buildDetailRow('ولي الأمر', complaint.parentName),
+            _buildDetailRow('رقم الهاتف', complaint.parentPhone),
+            if (complaint.studentName != null)
+              _buildDetailRow('الطالب', complaint.studentName!),
+            _buildDetailRow('نوع الشكوى', complaint.typeDisplayText),
+            _buildDetailRow('الأولوية', complaint.priorityDisplayText),
+            const SizedBox(height: 8),
+            Text(
+              complaint.description,
+              style: TextStyle(
+                color: Colors.grey[700],
+                fontSize: 14,
+              ),
+            ),
+            if (complaint.status == ComplaintStatus.pending) ...[
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => _respondToComplaint(complaint),
+                  icon: const Icon(Icons.reply, size: 18),
+                  label: const Text('الرد على الشكوى'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue,
+                    foregroundColor: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 80,
+            child: Text(
+              '$label:',
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                color: Colors.grey[600],
+                fontSize: 13,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 13,
+                color: Color(0xFF2D3748),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  IconData _getNotificationIcon(NotificationType type) {
+    switch (type) {
+      case NotificationType.studentBoarded:
+        return Icons.directions_bus;
+      case NotificationType.studentLeft:
+        return Icons.home;
+      case NotificationType.tripStarted:
+        return Icons.play_arrow;
+      case NotificationType.tripEnded:
+        return Icons.stop;
+      case NotificationType.general:
+        return Icons.info;
+    }
+  }
+
+  Color _getNotificationColor(NotificationType type) {
+    switch (type) {
+      case NotificationType.studentBoarded:
+        return Colors.green;
+      case NotificationType.studentLeft:
+        return Colors.blue;
+      case NotificationType.tripStarted:
+        return Colors.orange;
+      case NotificationType.tripEnded:
+        return Colors.red;
+      case NotificationType.general:
+        return Colors.grey;
+    }
+  }
+
+  Color _getAbsenceStatusColor(AbsenceStatus status) {
+    switch (status) {
+      case AbsenceStatus.pending:
+        return Colors.orange;
+      case AbsenceStatus.approved:
+        return Colors.green;
+      case AbsenceStatus.rejected:
+        return Colors.red;
+    }
+  }
+
+  Color _getComplaintStatusColor(ComplaintStatus status) {
+    switch (status) {
+      case ComplaintStatus.pending:
+        return Colors.orange;
+      case ComplaintStatus.inProgress:
+        return Colors.blue;
+      case ComplaintStatus.resolved:
+        return Colors.green;
+      case ComplaintStatus.closed:
+        return Colors.grey;
+    }
+  }
+
+  Color _getComplaintPriorityColor(ComplaintPriority priority) {
+    switch (priority) {
+      case ComplaintPriority.low:
+        return Colors.green;
+      case ComplaintPriority.medium:
+        return Colors.orange;
+      case ComplaintPriority.high:
+        return Colors.red;
+      case ComplaintPriority.urgent:
+        return Colors.purple;
+    }
+  }
+
+  Future<void> _approveAbsence(AbsenceModel absence) async {
+    try {
+      await _databaseService.updateAbsenceStatus(
+        absence.id,
+        AbsenceStatus.approved,
+        _authService.currentUser?.uid ?? '',
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم قبول طلب الغياب'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ في قبول الطلب: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _rejectAbsence(AbsenceModel absence) async {
+    try {
+      await _databaseService.updateAbsenceStatus(
+        absence.id,
+        AbsenceStatus.rejected,
+        _authService.currentUser?.uid ?? '',
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم رفض طلب الغياب'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ في رفض الطلب: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _respondToComplaint(ComplaintModel complaint) async {
+    // This would open a dialog to respond to the complaint
+    // Implementation would depend on your specific requirements
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('سيتم إضافة نافذة الرد على الشكوى قريباً'),
+        backgroundColor: Colors.blue,
+      ),
+    );
   }
 }

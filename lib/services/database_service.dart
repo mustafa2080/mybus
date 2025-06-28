@@ -891,6 +891,24 @@ class DatabaseService {
     }
   }
 
+  /// Get pending complaints for admin review
+  Stream<List<ComplaintModel>> getPendingComplaints() {
+    return _firestore
+        .collection('complaints')
+        .where('status', isEqualTo: 'pending')
+        .where('isActive', isEqualTo: true)
+        .snapshots()
+        .map((snapshot) {
+          final complaints = snapshot.docs
+              .map((doc) => ComplaintModel.fromMap(doc.data()))
+              .toList();
+
+          // Sort locally to avoid index requirement
+          complaints.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          return complaints;
+        });
+  }
+
   /// Generate unique complaint ID
   String generateComplaintId() {
     return _uuid.v4();
@@ -1508,6 +1526,25 @@ class DatabaseService {
     } catch (e) {
       debugPrint('❌ Error rejecting absence: $e');
       throw Exception('فشل في رفض الغياب: $e');
+    }
+  }
+
+  // Update absence status (generic method)
+  Future<void> updateAbsenceStatus(String absenceId, AbsenceStatus status, String userId) async {
+    try {
+      debugPrint('🔄 Updating absence status: $absenceId to ${status.toString().split('.').last}');
+
+      await _firestore.collection('absences').doc(absenceId).update({
+        'status': status.toString().split('.').last,
+        'approvedBy': userId,
+        'approvedAt': Timestamp.now(),
+        'updatedAt': Timestamp.now(),
+      });
+
+      debugPrint('✅ Absence status updated successfully: $absenceId');
+    } catch (e) {
+      debugPrint('❌ Error updating absence status: $e');
+      throw Exception('فشل في تحديث حالة الغياب: $e');
     }
   }
 

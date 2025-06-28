@@ -162,7 +162,7 @@ class _ParentsManagementScreenState extends State<ParentsManagementScreen> {
                       id: parentId,
                       name: parentData['fullName'] ?? '',
                       email: parentData['email'] ?? '',
-                      phone: parentData['fatherPhone'] ?? '',
+                      phone: parentData['phone'] ?? parentData['fatherPhone'] ?? '',
                       userType: UserType.parent,
                       createdAt: DateTime.now(),
                       updatedAt: DateTime.now(),
@@ -183,7 +183,7 @@ class _ParentsManagementScreenState extends State<ParentsManagementScreen> {
                       ),
                       child: ExpansionTile(
                         leading: CircleAvatar(
-                          backgroundColor: parentData['isProfileComplete'] == true
+                          backgroundColor: (parentData['phone'] ?? parentData['fatherPhone'] ?? '').isNotEmpty
                               ? Colors.green
                               : Colors.orange,
                           child: Text(
@@ -219,28 +219,28 @@ class _ParentsManagementScreenState extends State<ParentsManagementScreen> {
                               children: [
                                 const Icon(Icons.phone, size: 16, color: Colors.grey),
                                 const SizedBox(width: 4),
-                                Text(parentData['fatherPhone'] ?? 'غير محدد'),
+                                Text(parentData['phone'] ?? parentData['fatherPhone'] ?? 'غير محدد'),
                               ],
                             ),
                             const SizedBox(height: 2),
                             Row(
                               children: [
                                 Icon(
-                                  parentData['isProfileComplete'] == true
+                                  (parentData['phone'] ?? parentData['fatherPhone'] ?? '').isNotEmpty
                                       ? Icons.check_circle
                                       : Icons.warning,
                                   size: 16,
-                                  color: parentData['isProfileComplete'] == true
+                                  color: (parentData['phone'] ?? parentData['fatherPhone'] ?? '').isNotEmpty
                                       ? Colors.green
                                       : Colors.orange,
                                 ),
                                 const SizedBox(width: 4),
                                 Text(
-                                  parentData['isProfileComplete'] == true
-                                      ? 'البروفايل مكتمل'
-                                      : 'البروفايل غير مكتمل',
+                                  (parentData['phone'] ?? parentData['fatherPhone'] ?? '').isNotEmpty
+                                      ? 'معلومات الاتصال متوفرة'
+                                      : 'معلومات الاتصال مفقودة',
                                   style: TextStyle(
-                                    color: parentData['isProfileComplete'] == true
+                                    color: (parentData['phone'] ?? parentData['fatherPhone'] ?? '').isNotEmpty
                                         ? Colors.green
                                         : Colors.orange,
                                     fontSize: 12,
@@ -365,7 +365,7 @@ class _ParentsManagementScreenState extends State<ParentsManagementScreen> {
                         ),
                         children: [
                           // عرض البيانات الإضافية للوالد
-                          if (parentData['isProfileComplete'] == true) ...[
+                          if ((parentData['phone'] ?? parentData['fatherPhone'] ?? '').isNotEmpty) ...[
                             Container(
                               padding: const EdgeInsets.all(16),
                               margin: const EdgeInsets.all(8),
@@ -388,7 +388,7 @@ class _ParentsManagementScreenState extends State<ParentsManagementScreen> {
                                   const SizedBox(height: 8),
                                   _buildDetailRow('العنوان', parentData['address'] ?? 'غير محدد'),
                                   _buildDetailRow('الوظيفة', parentData['occupation'] ?? 'غير محدد'),
-                                  _buildDetailRow('هاتف الوالد', parentData['fatherPhone'] ?? 'غير محدد'),
+                                  _buildDetailRow('رقم الهاتف', parentData['phone'] ?? parentData['fatherPhone'] ?? 'غير محدد'),
                                   _buildDetailRow('هاتف الوالدة', parentData['motherPhone'] ?? 'غير محدد'),
                                   _buildDetailRow('تاريخ التسجيل',
                                     parentData['createdAt'] != null
@@ -529,34 +529,7 @@ class _ParentsManagementScreenState extends State<ParentsManagementScreen> {
     }
   }
 
-  Widget _buildDetailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 100,
-            child: Text(
-              '$label:',
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF1E88E5),
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: TextStyle(
-                color: Colors.grey[700],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+
 
 
 
@@ -1093,8 +1066,7 @@ class _ParentsManagementScreenState extends State<ParentsManagementScreen> {
                   children: [
                     _buildDetailRow('الاسم الكامل', parent.name.isNotEmpty ? parent.name : 'غير محدد'),
                     _buildDetailRow('البريد الإلكتروني', parent.email),
-                    _buildDetailRow('رقم الهاتف', parent.fatherPhone.isNotEmpty ? parent.fatherPhone : 'غير محدد'),
-                    _buildDetailRow('العنوان', parent.address.isNotEmpty ? parent.address : 'غير محدد'),
+                    _buildDetailRow('رقم الهاتف', parent.phone.isNotEmpty ? parent.phone : 'غير محدد'),
                     _buildDetailRow('تاريخ التسجيل', _formatDate(parent.createdAt)),
                     _buildDetailRow('آخر تحديث', _formatDate(parent.updatedAt)),
                   ],
@@ -1102,17 +1074,12 @@ class _ParentsManagementScreenState extends State<ParentsManagementScreen> {
 
                 const SizedBox(height: 16),
 
-                // Profile Status Section
+                // Account Status Section
                 _buildDetailSection(
-                  title: 'حالة البروفايل',
-                  icon: parent.isProfileComplete ? Icons.check_circle : Icons.warning,
-                  color: parent.isProfileComplete ? Colors.green : Colors.orange,
+                  title: 'حالة الحساب',
+                  icon: parent.isActive ? Icons.check_circle : Icons.warning,
+                  color: parent.isActive ? Colors.green : Colors.orange,
                   children: [
-                    _buildDetailRow(
-                      'حالة البروفايل',
-                      parent.isProfileComplete ? 'مكتمل' : 'غير مكتمل',
-                      valueColor: parent.isProfileComplete ? Colors.green : Colors.orange,
-                    ),
                     _buildDetailRow('نوع المستخدم', _getUserTypeDisplay(parent.userType)),
                     _buildDetailRow('حالة الحساب', parent.isActive ? 'نشط' : 'غير نشط'),
                   ],

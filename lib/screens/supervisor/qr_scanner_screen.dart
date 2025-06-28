@@ -736,12 +736,12 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
       switch (action) {
         case TripAction.boardBus:
         case TripAction.boardBusToSchool:
-        case TripAction.boardBusFromSchool:
+        case TripAction.boardBusToHome:
           _studentsOnBusCount++;
           break;
         case TripAction.leaveBus:
-        case TripAction.leaveBusAtSchool:
-        case TripAction.leaveBusAtHome:
+        case TripAction.arriveAtSchool:
+        case TripAction.arriveAtHome:
           if (_studentsOnBusCount > 0) {
             _studentsOnBusCount--;
           }
