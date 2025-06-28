@@ -392,66 +392,124 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            PopupMenuButton(
-              icon: const Icon(Icons.more_vert),
-              itemBuilder: (context) => [
-                PopupMenuItem(
-                  value: 'edit',
-                  child: const Row(
-                    children: [
-                      Icon(Icons.edit, size: 20),
-                      SizedBox(width: 8),
-                      Text('تعديل'),
-                    ],
-                  ),
+            Container(
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: PopupMenuButton<String>(
+                icon: Icon(
+                  Icons.more_vert,
+                  color: Colors.grey[700],
+                  size: 20,
                 ),
-                PopupMenuItem(
-                  value: 'assign_bus',
-                  child: const Row(
-                    children: [
-                      Icon(Icons.directions_bus, size: 20, color: Colors.blue),
-                      SizedBox(width: 8),
-                      Text('تسكين الباص'),
-                    ],
-                  ),
+                padding: const EdgeInsets.all(8),
+                splashRadius: 20,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
                 ),
-                PopupMenuItem(
-                  value: 'view',
-                  child: const Row(
-                    children: [
-                      Icon(Icons.visibility, size: 20, color: Colors.blue),
-                      SizedBox(width: 8),
-                      Text('عرض التفاصيل'),
-                    ],
+                elevation: 8,
+                offset: const Offset(0, 40),
+                itemBuilder: (context) => [
+                  PopupMenuItem<String>(
+                    value: 'view',
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.visibility_outlined, size: 18, color: Colors.blue),
+                          SizedBox(width: 12),
+                          Text(
+                            'عرض التفاصيل',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-                PopupMenuItem(
-                  value: 'delete',
-                  child: const Row(
-                    children: [
-                      Icon(Icons.delete, size: 20, color: Colors.red),
-                      SizedBox(width: 8),
-                      Text('حذف', style: TextStyle(color: Colors.red)),
-                    ],
+                  PopupMenuItem<String>(
+                    value: 'edit',
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.edit_outlined, size: 18, color: Colors.orange),
+                          SizedBox(width: 12),
+                          Text(
+                            'تعديل البيانات',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
-                ),
-              ],
-              onSelected: (value) {
-                switch (value) {
-                  case 'edit':
-                    context.push('/admin/students/edit/${student.id}');
-                    break;
-                  case 'assign_bus':
-                    _showBusAssignmentDialog(student);
-                    break;
-                  case 'view':
-                    _showStudentDetails(student);
-                    break;
-                  case 'delete':
-                    _showDeleteConfirmation(student);
-                    break;
-                }
-              },
+                  PopupMenuItem<String>(
+                    value: 'assign_bus',
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.directions_bus_outlined, size: 18, color: Colors.green),
+                          SizedBox(width: 12),
+                          Text(
+                            'تسكين الباص',
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const PopupMenuDivider(),
+                  PopupMenuItem<String>(
+                    value: 'delete',
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(vertical: 4),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.delete_outline, size: 18, color: Colors.red),
+                          SizedBox(width: 12),
+                          Text(
+                            'حذف الطالب',
+                            style: TextStyle(
+                              color: Colors.red,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+                onSelected: (String value) {
+                  // Add a small delay to ensure the menu closes properly
+                  Future.delayed(const Duration(milliseconds: 100), () {
+                    switch (value) {
+                      case 'edit':
+                        context.push('/admin/students/edit/${student.id}');
+                        break;
+                      case 'assign_bus':
+                        _showBusAssignmentDialog(student);
+                        break;
+                      case 'view':
+                        _showStudentDetails(student);
+                        break;
+                      case 'delete':
+                        _showDeleteConfirmation(student);
+                        break;
+                    }
+                  });
+                },
+              ),
             ),
           ],
         ),
@@ -561,14 +619,58 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
 
     showDialog(
       context: context,
+      barrierDismissible: false, // Prevent accidental dismissal
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => AlertDialog(
-          title: Row(
-            children: [
-              const Icon(Icons.directions_bus, color: Colors.blue),
-              const SizedBox(width: 8),
-              Text('تسكين الباص - ${student.name}'),
-            ],
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.blue.withAlpha(25),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.blue,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.directions_bus,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'تسكين الباص',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue,
+                        ),
+                      ),
+                      Text(
+                        student.name,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.normal,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
           content: SizedBox(
             width: double.maxFinite,
@@ -576,11 +678,40 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                // Current assignment info
+                if (student.busId.isNotEmpty) ...[
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.withAlpha(25),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.orange.withAlpha(76)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.info, color: Colors.orange[700], size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            'الطالب مسكن حالياً في خط: ${student.busRoute}',
+                            style: TextStyle(
+                              color: Colors.orange[700],
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
                 const Text(
                   'اختر الباص المناسب للطالب:',
                   style: TextStyle(
                     fontSize: 16,
-                    fontWeight: FontWeight.w500,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF2D3748),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -588,33 +719,138 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
                   stream: _databaseService.getAllBuses(),
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
+                      return Container(
+                        padding: const EdgeInsets.all(20),
+                        child: const Center(
+                          child: Column(
+                            children: [
+                              CircularProgressIndicator(),
+                              SizedBox(height: 8),
+                              Text('جاري تحميل الباصات...'),
+                            ],
+                          ),
+                        ),
+                      );
                     }
 
-                    final buses = snapshot.data ?? [];
+                    if (snapshot.hasError) {
+                      return Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withAlpha(25),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.red.withAlpha(76)),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.error, color: Colors.red[700]),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'خطأ في تحميل الباصات: ${snapshot.error}',
+                                style: TextStyle(color: Colors.red[700]),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+
+                    final buses = snapshot.data?.where((bus) => bus.isActive).toList() ?? [];
 
                     if (buses.isEmpty) {
-                      return const Text('لا توجد باصات متاحة');
+                      return Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.withAlpha(25),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.grey.withAlpha(76)),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.warning, color: Colors.grey[700]),
+                            const SizedBox(width: 8),
+                            const Expanded(
+                              child: Text('لا توجد باصات نشطة متاحة'),
+                            ),
+                          ],
+                        ),
+                      );
                     }
 
                     return DropdownButtonFormField<String>(
                       value: selectedBusId,
                       decoration: InputDecoration(
                         labelText: 'اختيار الباص',
+                        hintText: 'اختر باص من القائمة',
                         border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey[300]!),
                         ),
-                        prefixIcon: const Icon(Icons.directions_bus),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide(color: Colors.grey[300]!),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: const BorderSide(color: Colors.blue, width: 2),
+                        ),
+                        prefixIcon: const Icon(Icons.directions_bus, color: Colors.blue),
+                        filled: true,
+                        fillColor: Colors.grey[50],
                       ),
                       items: [
                         const DropdownMenuItem<String>(
                           value: null,
-                          child: Text('بدون باص'),
+                          child: Row(
+                            children: [
+                              Icon(Icons.remove_circle_outline, color: Colors.grey, size: 20),
+                              SizedBox(width: 8),
+                              Text('بدون باص', style: TextStyle(color: Colors.grey)),
+                            ],
+                          ),
                         ),
                         ...buses.map((bus) {
                           return DropdownMenuItem<String>(
                             value: bus.id,
-                            child: Text('${bus.plateNumber} - ${bus.route}'),
+                            child: Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.blue.withAlpha(25),
+                                    borderRadius: BorderRadius.circular(4),
+                                  ),
+                                  child: const Icon(
+                                    Icons.directions_bus,
+                                    color: Colors.blue,
+                                    size: 16,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        bus.plateNumber,
+                                        style: const TextStyle(
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                      Text(
+                                        bus.route,
+                                        style: TextStyle(
+                                          color: Colors.grey[600],
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           );
                         }),
                       ],
@@ -636,24 +872,63 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
                 if (selectedBusId != null) ...[
                   const SizedBox(height: 16),
                   Container(
-                    padding: const EdgeInsets.all(12),
+                    padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: Colors.blue.withAlpha(25),
-                      borderRadius: BorderRadius.circular(8),
+                      gradient: LinearGradient(
+                        colors: [Colors.blue.withAlpha(25), Colors.blue.withAlpha(51)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
                       border: Border.all(color: Colors.blue.withAlpha(76)),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text(
-                          'معلومات الباص المختار:',
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: Colors.blue,
-                          ),
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: Colors.blue,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: const Icon(
+                                Icons.info,
+                                color: Colors.white,
+                                size: 16,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'معلومات الباص المختار',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.blue,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 8),
-                        Text('خط السير: $selectedBusRoute'),
+                        const SizedBox(height: 12),
+                        _buildInfoRow(Icons.route, 'خط السير', selectedBusRoute),
+                        const SizedBox(height: 4),
+                        FutureBuilder<BusModel?>(
+                          future: _databaseService.getBus(selectedBusId!),
+                          builder: (context, busSnapshot) {
+                            if (busSnapshot.hasData) {
+                              final bus = busSnapshot.data!;
+                              return Column(
+                                children: [
+                                  _buildInfoRow(Icons.person, 'السائق', bus.driverName),
+                                  const SizedBox(height: 4),
+                                  _buildInfoRow(Icons.people, 'السعة', '${bus.capacity} طالب'),
+                                ],
+                              );
+                            }
+                            return const SizedBox.shrink();
+                          },
+                        ),
                       ],
                     ),
                   ),
@@ -664,15 +939,42 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('إلغاء'),
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.grey[600],
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              ),
+              child: const Text(
+                'إلغاء',
+                style: TextStyle(fontSize: 16),
+              ),
             ),
             ElevatedButton(
-              onPressed: () => _assignStudentToBus(student, selectedBusId, selectedBusRoute),
+              onPressed: selectedBusId != null || student.busId.isNotEmpty
+                  ? () => _assignStudentToBus(student, selectedBusId, selectedBusRoute)
+                  : null,
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.blue,
                 foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                elevation: 2,
               ),
-              child: const Text('حفظ التسكين'),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    selectedBusId != null ? Icons.save : Icons.remove_circle,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    selectedBusId != null ? 'حفظ التسكين' : 'إلغاء التسكين',
+                    style: const TextStyle(fontSize: 16),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -682,33 +984,111 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
 
   Future<void> _assignStudentToBus(StudentModel student, String? busId, String busRoute) async {
     try {
+      // Show loading indicator
+      if (mounted) {
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const Center(
+            child: CircularProgressIndicator(),
+          ),
+        );
+      }
+
+      // Validate input data
+      if (busId != null && busId.isEmpty) {
+        throw Exception('معرف الباص غير صحيح');
+      }
+
+      if (busId != null && busRoute.isEmpty) {
+        throw Exception('خط السير مطلوب عند اختيار باص');
+      }
+
+      // Create updated student with proper validation
       final updatedStudent = student.copyWith(
         busId: busId ?? '',
-        busRoute: busRoute,
+        busRoute: busRoute.trim(),
         updatedAt: DateTime.now(),
       );
 
+      // Validate student data before update
+      if (updatedStudent.id.isEmpty) {
+        throw Exception('معرف الطالب مفقود');
+      }
+
+      // Update student in database
       await _databaseService.updateStudent(updatedStudent);
 
+      // Close loading dialog
       if (mounted) {
-        Navigator.of(context).pop();
+        Navigator.of(context).pop(); // Close loading
+        Navigator.of(context).pop(); // Close assignment dialog
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              busId != null
-                  ? 'تم تسكين ${student.name} في الباص بنجاح'
-                  : 'تم إلغاء تسكين ${student.name} من الباص',
+            content: Row(
+              children: [
+                Icon(
+                  busId != null ? Icons.check_circle : Icons.remove_circle,
+                  color: Colors.white,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    busId != null
+                        ? 'تم تسكين ${student.name} في الباص بنجاح'
+                        : 'تم إلغاء تسكين ${student.name} من الباص',
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                ),
+              ],
             ),
             backgroundColor: Colors.green,
+            duration: const Duration(seconds: 3),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
         );
       }
     } catch (e) {
+      // Close loading dialog if open
+      if (mounted && Navigator.canPop(context)) {
+        Navigator.of(context).pop();
+      }
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('خطأ في تحديث تسكين الباص: $e'),
+            content: Row(
+              children: [
+                const Icon(
+                  Icons.error,
+                  color: Colors.white,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'خطأ في تحديث تسكين الباص: ${e.toString().replaceAll('Exception: ', '')}',
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                ),
+              ],
+            ),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 4),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
+            action: SnackBarAction(
+              label: 'إعادة المحاولة',
+              textColor: Colors.white,
+              onPressed: () => _assignStudentToBus(student, busId, busRoute),
+            ),
           ),
         );
       }
