@@ -7,6 +7,7 @@ class BusModel {
   final String description;
   final String driverName;
   final String driverPhone;
+  final String driverNationalId; // Driver's national ID
   final bool hasAirConditioning;
   final int capacity;
   final String route;
@@ -21,6 +22,7 @@ class BusModel {
     required this.description,
     required this.driverName,
     required this.driverPhone,
+    this.driverNationalId = '', // Default empty national ID
     this.hasAirConditioning = false,
     this.capacity = 30,
     required this.route,
@@ -38,6 +40,7 @@ class BusModel {
       'description': description,
       'driverName': driverName,
       'driverPhone': driverPhone,
+      'driverNationalId': driverNationalId,
       'hasAirConditioning': hasAirConditioning,
       'capacity': capacity,
       'route': route,
@@ -57,6 +60,7 @@ class BusModel {
         description: map['description'] ?? '',
         driverName: map['driverName'] ?? '',
         driverPhone: map['driverPhone'] ?? '',
+        driverNationalId: map['driverNationalId'] ?? '',
         hasAirConditioning: map['hasAirConditioning'] ?? false,
         capacity: map['capacity'] ?? 30,
         route: map['route'] ?? '',
@@ -104,6 +108,7 @@ class BusModel {
     String? description,
     String? driverName,
     String? driverPhone,
+    String? driverNationalId,
     bool? hasAirConditioning,
     int? capacity,
     String? route,
@@ -118,6 +123,7 @@ class BusModel {
       description: description ?? this.description,
       driverName: driverName ?? this.driverName,
       driverPhone: driverPhone ?? this.driverPhone,
+      driverNationalId: driverNationalId ?? this.driverNationalId,
       hasAirConditioning: hasAirConditioning ?? this.hasAirConditioning,
       capacity: capacity ?? this.capacity,
       route: route ?? this.route,

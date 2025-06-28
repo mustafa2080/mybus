@@ -4,6 +4,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/student_model.dart';
 import '../../models/bus_model.dart';
 import '../../services/database_service.dart';
+import '../../utils/app_constants.dart';
 
 
 class EditStudentScreen extends StatefulWidget {
@@ -25,6 +26,8 @@ class _EditStudentScreenState extends State<EditStudentScreen> {
   final _gradeController = TextEditingController();
   final _parentNameController = TextEditingController();
   final _parentPhoneController = TextEditingController();
+  final _addressController = TextEditingController();
+  final _notesController = TextEditingController();
 
   StudentModel? _student;
   bool _isLoading = true;
@@ -33,23 +36,7 @@ class _EditStudentScreenState extends State<EditStudentScreen> {
   String? _selectedBusId;
   List<BusModel> _availableBuses = [];
 
-  final List<String> _grades = [
-    'الروضة الأولى',
-    'الروضة الثانية',
-    'التمهيدي',
-    'الصف الأول',
-    'الصف الثاني',
-    'الصف الثالث',
-    'الصف الرابع',
-    'الصف الخامس',
-    'الصف السادس',
-    'الصف السابع',
-    'الصف الثامن',
-    'الصف التاسع',
-    'الصف العاشر',
-    'الصف الحادي عشر',
-    'الصف الثاني عشر'
-  ];
+
 
   final List<String> _busRoutes = [
     'خط العواميه',
@@ -106,6 +93,8 @@ class _EditStudentScreenState extends State<EditStudentScreen> {
     _gradeController.dispose();
     _parentNameController.dispose();
     _parentPhoneController.dispose();
+    _addressController.dispose();
+    _notesController.dispose();
     super.dispose();
   }
 
@@ -124,6 +113,8 @@ class _EditStudentScreenState extends State<EditStudentScreen> {
         _selectedBusId = _student!.busId.isNotEmpty ? _student!.busId : null;
         _parentNameController.text = _student!.parentName;
         _parentPhoneController.text = _student!.parentPhone;
+        _addressController.text = _student!.address;
+        _notesController.text = _student!.notes;
         _selectedStatus = _student!.currentStatus.toString().split('.').last;
         
         setState(() {
@@ -308,7 +299,7 @@ class _EditStudentScreenState extends State<EditStudentScreen> {
                           
                           // Grade Dropdown
                           DropdownButtonFormField<String>(
-                            value: _grades.contains(_gradeController.text) ? _gradeController.text : null,
+                            value: AppConstants.studentGrades.contains(_gradeController.text) ? _gradeController.text : null,
                             decoration: InputDecoration(
                               labelText: 'الصف الدراسي',
                               prefixIcon: const Icon(Icons.class_),
@@ -318,7 +309,7 @@ class _EditStudentScreenState extends State<EditStudentScreen> {
                               filled: true,
                               fillColor: Colors.grey[50],
                             ),
-                            items: _grades.map((grade) {
+                            items: AppConstants.studentGrades.map((grade) {
                               return DropdownMenuItem(
                                 value: grade,
                                 child: Text(grade),
@@ -467,7 +458,93 @@ class _EditStudentScreenState extends State<EditStudentScreen> {
                     ),
                     
                     const SizedBox(height: 20),
-                    
+
+                    // Student Details Card
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.grey.shade100,
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.withAlpha(25),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(
+                                  Icons.info_outline,
+                                  color: Colors.orange,
+                                  size: 20,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              const Text(
+                                'تفاصيل الطالب',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF2D3748),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Address Field
+                          TextFormField(
+                            controller: _addressController,
+                            decoration: InputDecoration(
+                              labelText: 'عنوان الطالب',
+                              prefixIcon: const Icon(Icons.location_on),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              filled: true,
+                              fillColor: Colors.grey[50],
+                            ),
+                            maxLines: 2,
+                            validator: (value) {
+                              if (value == null || value.trim().isEmpty) {
+                                return 'يرجى إدخال عنوان الطالب';
+                              }
+                              return null;
+                            },
+                          ),
+                          const SizedBox(height: 16),
+
+                          // Notes Field
+                          TextFormField(
+                            controller: _notesController,
+                            decoration: InputDecoration(
+                              labelText: 'ملاحظات إضافية (اختياري)',
+                              prefixIcon: const Icon(Icons.note),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              filled: true,
+                              fillColor: Colors.grey[50],
+                            ),
+                            maxLines: 3,
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 20),
+
                     // Status Card
                     Container(
                       padding: const EdgeInsets.all(20),
@@ -622,6 +699,8 @@ class _EditStudentScreenState extends State<EditStudentScreen> {
         busId: _selectedBusId ?? '',
         parentName: _parentNameController.text.trim(),
         parentPhone: _parentPhoneController.text.trim(),
+        address: _addressController.text.trim(),
+        notes: _notesController.text.trim(),
         currentStatus: status,
         updatedAt: DateTime.now(),
       );

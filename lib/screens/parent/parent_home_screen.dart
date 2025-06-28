@@ -571,6 +571,11 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
             ],
           ),
           const SizedBox(height: 16),
+
+          // Bus Assignment Info
+          _buildBusAssignmentInfo(student),
+          const SizedBox(height: 16),
+
           Row(
             children: [
               Expanded(
@@ -672,6 +677,179 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
     );
   }
 
+  Widget _buildBusAssignmentInfo(StudentModel student) {
+    if (student.busId.isEmpty && student.busRoute.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.orange.withAlpha(25),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.orange.withAlpha(76)),
+        ),
+        child: Row(
+          children: [
+            Icon(Icons.info, color: Colors.orange, size: 20),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'تسكين الباص',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.orange,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'لم يتم تسكين الطالب في باص بعد',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return FutureBuilder<Map<String, dynamic>?>(
+      future: _getBusDetails(student.busId),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.blue.withAlpha(25),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Row(
+              children: [
+                SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+                SizedBox(width: 8),
+                Text('جاري تحميل معلومات الباص...'),
+              ],
+            ),
+          );
+        }
+
+        final busData = snapshot.data;
+
+        return Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.blue.withAlpha(25),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.blue.withAlpha(76)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.directions_bus, color: Colors.blue, size: 20),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'معلومات الباص المُسكن',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.blue,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              if (busData != null) ...[
+                _buildBusInfoRow('رقم اللوحة', busData['plateNumber'] ?? 'غير محدد'),
+                _buildBusInfoRow('خط السير', student.busRoute.isNotEmpty ? student.busRoute : 'غير محدد'),
+                _buildBusInfoRow('السائق', busData['driverName'] ?? 'غير محدد'),
+                if (busData['driverPhone'] != null && busData['driverPhone'].isNotEmpty)
+                  _buildBusInfoRow('هاتف السائق', busData['driverPhone'], isPhone: true),
+              ] else ...[
+                _buildBusInfoRow('خط السير', student.busRoute.isNotEmpty ? student.busRoute : 'غير محدد'),
+                const Text(
+                  'تفاصيل الباص غير متاحة',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildBusInfoRow(String label, String value, {bool isPhone = false}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        children: [
+          Text(
+            '$label: ',
+            style: const TextStyle(
+              fontSize: 12,
+              color: Colors.grey,
+            ),
+          ),
+          Expanded(
+            child: isPhone
+                ? GestureDetector(
+                    onTap: () => _makePhoneCall(value),
+                    child: Text(
+                      value,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.blue,
+                        fontWeight: FontWeight.w500,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  )
+                : Text(
+                    value,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF2D3748),
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<Map<String, dynamic>?> _getBusDetails(String busId) async {
+    if (busId.isEmpty) return null;
+
+    try {
+      final busDoc = await FirebaseFirestore.instance
+          .collection('buses')
+          .doc(busId)
+          .get();
+
+      if (busDoc.exists) {
+        return busDoc.data();
+      }
+    } catch (e) {
+      debugPrint('Error getting bus details: $e');
+    }
+
+    return null;
+  }
+
   Widget _buildQuickActions() {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -764,11 +942,11 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: _buildQuickActionButton(
-                  icon: Icons.location_on,
-                  label: 'حالة الطلاب',
-                  color: Colors.teal,
+                  icon: Icons.poll,
+                  label: 'الاستبيانات',
+                  color: Colors.indigo,
                   onTap: () {
-                    _showStudentsStatusDialog();
+                    context.push('/parent/surveys');
                   },
                 ),
               ),
@@ -1379,6 +1557,39 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
     );
   }
 
+  Future<Map<String, String>> _getSupervisorInfo() async {
+    try {
+      // Get current user's students
+      final currentUser = _authService.currentUser;
+      if (currentUser == null) return {};
+
+      // Get student's bus assignment
+      final studentsSnapshot = await FirebaseFirestore.instance
+          .collection('students')
+          .where('parentId', isEqualTo: currentUser.uid)
+          .where('isActive', isEqualTo: true)
+          .limit(1)
+          .get();
+
+      if (studentsSnapshot.docs.isEmpty) return {};
+
+      final studentData = studentsSnapshot.docs.first.data();
+      final busId = studentData['busId'] as String?;
+
+      if (busId == null || busId.isEmpty) return {};
+
+      // For now, return placeholder data since supervisor-bus assignment system is not implemented yet
+      // In the future, this would query the supervisor assigned to this bus
+      return {
+        'name': 'سيتم تحديدها من قبل الإدارة',
+        'phone': _schoolInfo['phone'] ?? '', // Use admin phone for now
+      };
+    } catch (e) {
+      debugPrint('Error getting supervisor info: $e');
+      return {};
+    }
+  }
+
   void _showEmergencyContactDialog() {
     showDialog(
       context: context,
@@ -1449,44 +1660,79 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
                 ],
               ],
 
-              // Drivers contacts
-              if (_allBuses.isNotEmpty) ...[
-                const SizedBox(height: 16),
-                const Divider(),
-                const Text(
-                  'أرقام السائقين',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                ..._allBuses.map((bus) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  child: Row(
+              // Supervisor contacts
+              const SizedBox(height: 16),
+              const Divider(),
+              const Text(
+                'معلومات المشرفة',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+
+              // Supervisor info - will be loaded from database
+              FutureBuilder<Map<String, String>>(
+                future: _getSupervisorInfo(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  final supervisorInfo = snapshot.data ?? {};
+
+                  if (supervisorInfo.isEmpty) {
+                    return const Row(
+                      children: [
+                        Icon(Icons.info, color: Colors.grey, size: 20),
+                        SizedBox(width: 12),
+                        Text('لم يتم تعيين مشرفة للباص بعد'),
+                      ],
+                    );
+                  }
+
+                  return Column(
                     children: [
-                      const Icon(Icons.directions_bus, color: Colors.orange, size: 20),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text('${bus.driverName} - ${bus.route}'),
-                            Text(
-                              bus.driverPhone,
-                              style: const TextStyle(
-                                color: Colors.blue,
-                                fontWeight: FontWeight.bold,
-                              ),
+                      // Supervisor name and phone
+                      Row(
+                        children: [
+                          const Icon(Icons.person, color: Colors.purple, size: 20),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('المشرفة: ${supervisorInfo['name'] ?? 'غير محدد'}'),
+                                if (supervisorInfo['phone'] != null && supervisorInfo['phone']!.isNotEmpty)
+                                  Text(
+                                    supervisorInfo['phone']!,
+                                    style: const TextStyle(
+                                      color: Colors.blue,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                              ],
                             ),
-                          ],
-                        ),
+                          ),
+                          if (supervisorInfo['phone'] != null && supervisorInfo['phone']!.isNotEmpty)
+                            IconButton(
+                              icon: const Icon(Icons.phone, color: Colors.green),
+                              onPressed: () => _makePhoneCall(supervisorInfo['phone']!),
+                            ),
+                        ],
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.phone, color: Colors.green),
-                        onPressed: () => _makePhoneCall(bus.driverPhone),
+
+                      // Trip type info
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          const Icon(Icons.schedule, color: Colors.orange, size: 20),
+                          const SizedBox(width: 12),
+                          Text('متاحة للذهاب والعودة'),
+                        ],
                       ),
                     ],
-                  ),
-                )),
-              ],
+                  );
+                },
+              ),
             ],
           ),
         ),

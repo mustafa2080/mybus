@@ -206,10 +206,10 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
               ),
               _buildManagementCard(
                 icon: Icons.notifications_active,
-                label: 'الإشعارات',
-                description: 'إرسال إشعارات جماعية',
+                label: 'مركز الإشعارات',
+                description: 'إدارة وإرسال الإشعارات',
                 color: const Color(0xFFFF9800),
-                onTap: () => _showNotificationDialog(),
+                onTap: () => context.push('/admin/notifications'),
               ),
               _buildManagementCard(
                 icon: Icons.settings,
@@ -245,6 +245,13 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                 description: 'إضافة وتعديل السيارات والسائقين',
                 color: const Color(0xFF4CAF50),
                 onTap: () => context.push('/admin/buses-management'),
+              ),
+              _buildManagementCard(
+                icon: Icons.assignment_ind,
+                label: 'تعيينات المشرفين',
+                description: 'ربط المشرفين بالسيارات وإدارة الطوارئ',
+                color: const Color(0xFF1E88E5),
+                onTap: () => context.push('/admin/supervisor-assignments'),
               ),
             ],
           ),

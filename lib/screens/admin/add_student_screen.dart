@@ -24,6 +24,8 @@ class _AddStudentScreenState extends State<AddStudentScreen> {
   final _parentPhoneController = TextEditingController();
   final _schoolNameController = TextEditingController();
   final _gradeController = TextEditingController();
+  final _addressController = TextEditingController();
+  final _notesController = TextEditingController();
   String? _selectedBusId;
   String? _selectedGrade;
   String? _selectedSchool;
@@ -54,6 +56,8 @@ class _AddStudentScreenState extends State<AddStudentScreen> {
     _parentPhoneController.dispose();
     _schoolNameController.dispose();
     _gradeController.dispose();
+    _addressController.dispose();
+    _notesController.dispose();
 
     super.dispose();
   }
@@ -248,6 +252,11 @@ class _AddStudentScreenState extends State<AddStudentScreen> {
 
               const SizedBox(height: 20),
 
+              // Student Details Section
+              _buildStudentDetailsSection(),
+
+              const SizedBox(height: 20),
+
               // Parent Information Section
               _buildSectionCard(
                 title: 'بيانات ولي الأمر',
@@ -432,6 +441,8 @@ class _AddStudentScreenState extends State<AddStudentScreen> {
         grade: _gradeController.text.trim(),
         busRoute: '', // Deprecated field, keeping for compatibility
         busId: _selectedBusId ?? '',
+        address: _addressController.text.trim(),
+        notes: _notesController.text.trim(),
         currentStatus: StudentStatus.home,
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
@@ -465,6 +476,35 @@ class _AddStudentScreenState extends State<AddStudentScreen> {
         });
       }
     }
+  }
+
+  Widget _buildStudentDetailsSection() {
+    return _buildSectionCard(
+      title: 'تفاصيل الطالب',
+      icon: Icons.info_outline,
+      children: [
+        CustomTextField(
+          controller: _addressController,
+          label: 'عنوان الطالب',
+          prefixIcon: Icons.location_on,
+          maxLines: 2,
+          validator: (value) {
+            if (value == null || value.trim().isEmpty) {
+              return 'يرجى إدخال عنوان الطالب';
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 16),
+        CustomTextField(
+          controller: _notesController,
+          label: 'ملاحظات إضافية (اختياري)',
+          prefixIcon: Icons.note,
+          maxLines: 3,
+          validator: null, // Optional field
+        ),
+      ],
+    );
   }
 }
 

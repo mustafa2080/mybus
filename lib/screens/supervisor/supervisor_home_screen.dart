@@ -61,7 +61,7 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen> {
                         hasNotifications ? Icons.notifications_active : Icons.notifications,
                         color: hasNotifications ? Colors.yellow : Colors.white,
                       ),
-                      onPressed: hasNotifications ? _showAllNotifications : _showAllNotifications,
+                      onPressed: () => context.push('/supervisor/notifications'),
                       tooltip: hasNotifications
                           ? '$notificationCount إشعار جديد'
                           : 'الإشعارات',
@@ -119,11 +119,23 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen> {
 
           PopupMenuButton<String>(
             onSelected: (value) {
-              if (value == 'logout') {
+              if (value == 'profile') {
+                context.push('/supervisor/profile');
+              } else if (value == 'logout') {
                 _logout();
               }
             },
             itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'profile',
+                child: Row(
+                  children: [
+                    Icon(Icons.person, color: Colors.blue),
+                    SizedBox(width: 8),
+                    Text('الملف الشخصي'),
+                  ],
+                ),
+              ),
               const PopupMenuItem(
                 value: 'logout',
                 child: Row(
@@ -163,11 +175,21 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen> {
                 Expanded(
                   child: _buildAbsenceManagementButton(),
                 ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: _buildEmergencyContactButton(),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildSurveysButton(),
+                ),
               ],
             ),
             const SizedBox(height: 12),
-
-
 
             // تنبيه إشعارات الغياب الجديدة
             StreamBuilder<List<AbsenceModel>>(
@@ -386,6 +408,138 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen> {
               ),
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFFFF9800),
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmergencyContactButton() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(13),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.red.withAlpha(25),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(
+              Icons.emergency,
+              color: Colors.red,
+              size: 20,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'اتصال الطوارئ',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF2D3748),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => context.push('/supervisor/emergency-contact'),
+              icon: const Icon(Icons.phone, color: Colors.white, size: 16),
+              label: const Text(
+                'أرقام الطوارئ',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red[700],
+                padding: const EdgeInsets.symmetric(vertical: 10),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSurveysButton() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(13),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF7C3AED).withAlpha(25),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: const Icon(
+              Icons.assignment,
+              color: Color(0xFF7C3AED),
+              size: 20,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'الاستبيانات الشهرية',
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              color: Color(0xFF2D3748),
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 10),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: () => context.push('/supervisor/surveys'),
+              icon: const Icon(Icons.poll, color: Colors.white, size: 16),
+              label: const Text(
+                'عرض الاستبيانات',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w600,
+                  fontSize: 14,
+                ),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF7C3AED),
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(8),

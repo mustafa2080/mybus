@@ -18,6 +18,8 @@ class StudentModel {
   final String busRoute;
   final String busId; // ID of the assigned bus
   final String? photoUrl; // URL of student's photo
+  final String address; // Student's address
+  final String notes; // Additional notes about the student
   final StudentStatus currentStatus;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -35,6 +37,8 @@ class StudentModel {
     required this.busRoute,
     this.busId = '', // Default empty if no bus assigned
     this.photoUrl, // Optional photo URL
+    this.address = '', // Default empty address
+    this.notes = '', // Default empty notes
     this.currentStatus = StudentStatus.home,
     required this.createdAt,
     required this.updatedAt,
@@ -55,6 +59,8 @@ class StudentModel {
       'busRoute': busRoute,
       'busId': busId,
       'photoUrl': photoUrl,
+      'address': address,
+      'notes': notes,
       'currentStatus': currentStatus.toString().split('.').last,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
@@ -76,6 +82,8 @@ class StudentModel {
       busRoute: map['busRoute'] ?? '',
       busId: map['busId'] ?? '',
       photoUrl: map['photoUrl'],
+      address: map['address'] ?? '',
+      notes: map['notes'] ?? '',
       currentStatus: _parseStudentStatus(map['currentStatus']),
       createdAt: _parseTimestamp(map['createdAt']),
       updatedAt: _parseTimestamp(map['updatedAt']),
@@ -135,6 +143,8 @@ class StudentModel {
     String? busRoute,
     String? busId,
     String? photoUrl,
+    String? address,
+    String? notes,
     StudentStatus? currentStatus,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -152,6 +162,8 @@ class StudentModel {
       busRoute: busRoute ?? this.busRoute,
       busId: busId ?? this.busId,
       photoUrl: photoUrl ?? this.photoUrl,
+      address: address ?? this.address,
+      notes: notes ?? this.notes,
       currentStatus: currentStatus ?? this.currentStatus,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,

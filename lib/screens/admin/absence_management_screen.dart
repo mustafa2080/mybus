@@ -19,7 +19,7 @@ class _AbsenceManagementScreenState extends State<AbsenceManagementScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
   }
 
   @override
@@ -99,6 +99,11 @@ class _AbsenceManagementScreenState extends State<AbsenceManagementScreen>
                     text: 'الإحصائيات',
                     height: 70,
                   ),
+                  Tab(
+                    icon: Icon(Icons.assessment, size: 20),
+                    text: 'التقرير الشامل',
+                    height: 70,
+                  ),
                 ],
               ),
             ),
@@ -113,6 +118,7 @@ class _AbsenceManagementScreenState extends State<AbsenceManagementScreen>
                 _buildRecentAbsences(),
                 _buildAllAbsences(),
                 _buildAbsenceStatistics(),
+                _buildComprehensiveReport(),
               ],
             ),
           ),
@@ -835,6 +841,517 @@ class _AbsenceManagementScreenState extends State<AbsenceManagementScreen>
 
   String _formatDateTime(DateTime dateTime) {
     return DateFormat('yyyy/MM/dd HH:mm').format(dateTime);
+  }
+
+  Widget _buildComprehensiveReport() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.teal.withOpacity(0.05),
+        border: Border.all(color: Colors.teal.withOpacity(0.2)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            child: const Row(
+              children: [
+                Icon(Icons.assessment, color: Colors.teal),
+                SizedBox(width: 8),
+                Text(
+                  'التقرير الشامل للحضور والغياب',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: Colors.teal,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: StreamBuilder<List<Map<String, dynamic>>>(
+              stream: _databaseService.getAllStudentsWithAbsenceData(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (snapshot.hasError) {
+                  return _buildEmptyState(
+                    'خطأ في تحميل البيانات',
+                    'حدث خطأ أثناء تحميل بيانات الطلاب',
+                    Icons.error,
+                    Colors.red,
+                  );
+                }
+
+                final studentsData = snapshot.data ?? [];
+
+                if (studentsData.isEmpty) {
+                  return _buildEmptyState(
+                    'لا توجد بيانات',
+                    'لا يوجد طلاب مسجلين في النظام',
+                    Icons.school,
+                    Colors.teal,
+                  );
+                }
+
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    children: [
+                      // Summary Statistics Card
+                      _buildReportSummaryCard(studentsData),
+                      const SizedBox(height: 16),
+
+                      // Students Report List
+                      ...studentsData.map((studentData) =>
+                        _buildStudentReportCard(studentData)
+                      ).toList(),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReportSummaryCard(List<Map<String, dynamic>> studentsData) {
+    final totalStudents = studentsData.length;
+    final totalAbsences = studentsData.fold<int>(
+      0,
+      (sum, student) => sum + (student['absences'] as List).length,
+    );
+
+    final studentsWithAbsences = studentsData
+        .where((student) => (student['absences'] as List).isNotEmpty)
+        .length;
+
+    final averageAbsenceRate = totalStudents > 0
+        ? (totalAbsences / totalStudents).toStringAsFixed(1)
+        : '0.0';
+
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            colors: [Colors.teal.shade50, Colors.teal.shade100],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.summarize, color: Colors.teal.shade700, size: 24),
+                const SizedBox(width: 8),
+                Text(
+                  'ملخص التقرير الشامل',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.teal.shade700,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildSummaryItem(
+                    'إجمالي الطلاب',
+                    totalStudents.toString(),
+                    Icons.people,
+                    Colors.blue,
+                  ),
+                ),
+                Expanded(
+                  child: _buildSummaryItem(
+                    'إجمالي الغيابات',
+                    totalAbsences.toString(),
+                    Icons.event_busy,
+                    Colors.red,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildSummaryItem(
+                    'طلاب لديهم غيابات',
+                    studentsWithAbsences.toString(),
+                    Icons.warning,
+                    Colors.orange,
+                  ),
+                ),
+                Expanded(
+                  child: _buildSummaryItem(
+                    'متوسط الغيابات',
+                    averageAbsenceRate,
+                    Icons.analytics,
+                    Colors.purple,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSummaryItem(String label, String value, IconData icon, Color color) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withAlpha(76)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              color: Colors.grey,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStudentReportCard(Map<String, dynamic> studentData) {
+    final student = studentData['student'];
+    final absences = studentData['absences'] as List<AbsenceModel>;
+
+    // Calculate statistics
+    final totalAbsences = absences.length;
+    final approvedAbsences = absences.where((a) => a.status == AbsenceStatus.approved).length;
+    final pendingAbsences = absences.where((a) => a.status == AbsenceStatus.pending).length;
+    final rejectedAbsences = absences.where((a) => a.status == AbsenceStatus.rejected).length;
+
+    // Calculate attendance rate (assuming 30 days per month for simplicity)
+    final totalSchoolDays = 30; // This could be made dynamic
+    final attendanceRate = totalSchoolDays > 0
+        ? ((totalSchoolDays - approvedAbsences) / totalSchoolDays * 100).toStringAsFixed(1)
+        : '100.0';
+
+    // Determine status color
+    Color statusColor = Colors.green;
+    String statusText = 'ممتاز';
+    if (double.parse(attendanceRate) < 70) {
+      statusColor = Colors.red;
+      statusText = 'يحتاج متابعة';
+    } else if (double.parse(attendanceRate) < 85) {
+      statusColor = Colors.orange;
+      statusText = 'مقبول';
+    } else if (double.parse(attendanceRate) < 95) {
+      statusColor = Colors.blue;
+      statusText = 'جيد';
+    }
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 3,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: ExpansionTile(
+        leading: CircleAvatar(
+          backgroundColor: statusColor.withAlpha(51),
+          child: Text(
+            student['name']?.substring(0, 1) ?? 'ط',
+            style: TextStyle(
+              color: statusColor,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        title: Text(
+          student['name'] ?? 'غير محدد',
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('${student['schoolName']} - ${student['grade']}'),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Icon(Icons.analytics, size: 14, color: statusColor),
+                const SizedBox(width: 4),
+                Text(
+                  'نسبة الحضور: $attendanceRate% ($statusText)',
+                  style: TextStyle(
+                    color: statusColor,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        trailing: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: statusColor.withAlpha(25),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            '$totalAbsences غياب',
+            style: TextStyle(
+              color: statusColor,
+              fontWeight: FontWeight.bold,
+              fontSize: 12,
+            ),
+          ),
+        ),
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Statistics Row
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildStatisticItem(
+                        'مقبولة',
+                        approvedAbsences.toString(),
+                        Colors.green,
+                        Icons.check_circle,
+                      ),
+                    ),
+                    Expanded(
+                      child: _buildStatisticItem(
+                        'معلقة',
+                        pendingAbsences.toString(),
+                        Colors.orange,
+                        Icons.pending,
+                      ),
+                    ),
+                    Expanded(
+                      child: _buildStatisticItem(
+                        'مرفوضة',
+                        rejectedAbsences.toString(),
+                        Colors.red,
+                        Icons.cancel,
+                      ),
+                    ),
+                  ],
+                ),
+
+                if (absences.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  const Divider(),
+                  const SizedBox(height: 8),
+
+                  // Recent Absences
+                  Row(
+                    children: [
+                      const Icon(Icons.history, size: 16, color: Colors.grey),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'آخر الغيابات:',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.grey,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+
+                  ...absences.take(3).map((absence) => Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: _getAbsenceStatusColor(absence.status).withAlpha(25),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: _getAbsenceStatusColor(absence.status).withAlpha(76),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          _getAbsenceTypeIcon(absence.type),
+                          size: 16,
+                          color: _getAbsenceStatusColor(absence.status),
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _getAbsenceTypeText(absence.type),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 12,
+                                ),
+                              ),
+                              Text(
+                                DateFormat('yyyy/MM/dd').format(absence.date),
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: _getAbsenceStatusColor(absence.status),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            _getAbsenceStatusText(absence.status),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  )).toList(),
+
+                  if (absences.length > 3)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Text(
+                        'و ${absences.length - 3} غيابات أخرى...',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
+                    ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatisticItem(String label, String value, Color color, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      margin: const EdgeInsets.symmetric(horizontal: 2),
+      decoration: BoxDecoration(
+        color: color.withAlpha(25),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withAlpha(76)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 16),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 10,
+              color: Colors.grey,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Color _getAbsenceStatusColor(AbsenceStatus status) {
+    switch (status) {
+      case AbsenceStatus.pending:
+        return Colors.orange;
+      case AbsenceStatus.approved:
+        return Colors.green;
+      case AbsenceStatus.rejected:
+        return Colors.red;
+    }
+  }
+
+  IconData _getAbsenceTypeIcon(AbsenceType type) {
+    switch (type) {
+      case AbsenceType.sick:
+        return Icons.local_hospital;
+      case AbsenceType.family:
+        return Icons.family_restroom;
+      case AbsenceType.travel:
+        return Icons.flight;
+      case AbsenceType.emergency:
+        return Icons.emergency;
+      case AbsenceType.other:
+        return Icons.help;
+    }
+  }
+
+  String _getAbsenceTypeText(AbsenceType type) {
+    switch (type) {
+      case AbsenceType.sick:
+        return 'مرض';
+      case AbsenceType.family:
+        return 'ظروف عائلية';
+      case AbsenceType.travel:
+        return 'سفر';
+      case AbsenceType.emergency:
+        return 'طوارئ';
+      case AbsenceType.other:
+        return 'أخرى';
+    }
+  }
+
+  String _getAbsenceStatusText(AbsenceStatus status) {
+    switch (status) {
+      case AbsenceStatus.pending:
+        return 'معلق';
+      case AbsenceStatus.approved:
+        return 'مقبول';
+      case AbsenceStatus.rejected:
+        return 'مرفوض';
+    }
   }
 
 }

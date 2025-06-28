@@ -77,6 +77,24 @@ class _StudentsListScreenState extends State<StudentsListScreen> {
     ).length;
   }
 
+  int _getStudentsOnBusCount() {
+    return _students.where((student) =>
+      student.currentStatus == StudentStatus.onBus
+    ).length;
+  }
+
+  int _getStudentsAtSchoolCount() {
+    return _students.where((student) =>
+      student.currentStatus == StudentStatus.atSchool
+    ).length;
+  }
+
+  int _getStudentsAtHomeCount() {
+    return _students.where((student) =>
+      student.currentStatus == StudentStatus.home
+    ).length;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -179,10 +197,16 @@ class _StudentsListScreenState extends State<StudentsListScreen> {
               Row(
                 children: [
                   Expanded(child: _buildStatCard('إجمالي', _students.length.toString(), Icons.people)),
-                  const SizedBox(width: 8),
-                  Expanded(child: _buildStatCard('النتائج', _filteredStudents.length.toString(), Icons.search)),
-                  const SizedBox(width: 8),
-                  Expanded(child: _buildStatCard('نشط', _getActiveStudentsCount().toString(), Icons.circle)),
+                  const SizedBox(width: 6),
+                  Expanded(child: _buildStatCard('في الباص', _getStudentsOnBusCount().toString(), Icons.directions_bus, Colors.blue)),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(child: _buildStatCard('في المدرسة', _getStudentsAtSchoolCount().toString(), Icons.school, Colors.green)),
+                  const SizedBox(width: 6),
+                  Expanded(child: _buildStatCard('في المنزل', _getStudentsAtHomeCount().toString(), Icons.home, Colors.orange)),
                 ],
               ),
             ],
@@ -192,14 +216,15 @@ class _StudentsListScreenState extends State<StudentsListScreen> {
     );
   }
 
-  Widget _buildStatCard(String title, String value, IconData icon) {
+  Widget _buildStatCard(String title, String value, IconData icon, [Color? color]) {
+    final cardColor = color ?? Colors.white;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white.withAlpha(38),
+        color: cardColor.withAlpha(38),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: Colors.white.withAlpha(76),
+          color: cardColor.withAlpha(76),
         ),
       ),
       child: Column(
@@ -455,10 +480,10 @@ class _StudentsListScreenState extends State<StudentsListScreen> {
                   children: [
                     Expanded(
                       child: _buildCompactInfoItem(
-                        icon: Icons.badge,
-                        label: 'رقم الطالب',
-                        value: student.id.length > 8 ? student.id.substring(0, 8) : student.id,
-                        color: const Color(0xFF1E88E5),
+                        icon: Icons.location_on,
+                        label: 'عنوان الطالب',
+                        value: student.address.isNotEmpty ? student.address : 'غير محدد',
+                        color: Colors.orange,
                       ),
                     ),
                     const SizedBox(width: 8),

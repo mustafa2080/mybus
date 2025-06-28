@@ -30,11 +30,13 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
   String? _lastScannedCode;
   bool _isCameraInitialized = false;
   bool _hasPermission = false;
+  int _studentsOnBusCount = 0;
 
   @override
   void initState() {
     super.initState();
     _initializeCamera();
+    _loadStudentsCount();
   }
 
   Future<void> _initializeCamera() async {
@@ -67,6 +69,24 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
     }
   }
 
+  Future<void> _loadStudentsCount() async {
+    try {
+      // Get current supervisor's bus assignment (placeholder for now)
+      // In a real implementation, this would get the supervisor's assigned bus
+      final studentsSnapshot = await _firestore
+          .collection('students')
+          .where('currentStatus', isEqualTo: 'onBus')
+          .where('isActive', isEqualTo: true)
+          .get();
+
+      setState(() {
+        _studentsOnBusCount = studentsSnapshot.docs.length;
+      });
+    } catch (e) {
+      debugPrint('Error loading students count: $e');
+    }
+  }
+
   @override
   void dispose() {
     controller.dispose();
@@ -86,6 +106,30 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
           onPressed: () => context.pop(),
         ),
         actions: [
+          // Students counter
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.blue,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.people, color: Colors.white, size: 16),
+                const SizedBox(width: 4),
+                Text(
+                  '$_studentsOnBusCount',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                ),
+              ],
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.flash_on, color: Colors.white),
             onPressed: _toggleFlash,
@@ -669,6 +713,9 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
       // إرسال إشعار مخصص لولي الأمر
       await _sendCustomNotification(student, action);
 
+      // تحديث العداد
+      _updateStudentsCounter(action);
+
       // عرض رسالة نجاح مع الحالة المحدثة
       _showActionSuccessDialog(updatedStudent, action);
 
@@ -682,6 +729,25 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
       // استئناف المسح بعد انتهاء العملية
       _resumeScanning();
     }
+  }
+
+  void _updateStudentsCounter(TripAction action) {
+    setState(() {
+      switch (action) {
+        case TripAction.boardBus:
+        case TripAction.boardBusToSchool:
+        case TripAction.boardBusFromSchool:
+          _studentsOnBusCount++;
+          break;
+        case TripAction.leaveBus:
+        case TripAction.leaveBusAtSchool:
+        case TripAction.leaveBusAtHome:
+          if (_studentsOnBusCount > 0) {
+            _studentsOnBusCount--;
+          }
+          break;
+      }
+    });
   }
 
   Future<void> _sendCustomNotification(StudentModel student, TripAction action) async {

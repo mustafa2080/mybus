@@ -29,31 +29,16 @@ class _AddStudentScreenState extends State<AddStudentScreen> {
   final _nameController = TextEditingController();
   final _gradeController = TextEditingController();
   final _schoolController = TextEditingController();
-  final _busRouteController = TextEditingController();
 
   // State variables
   bool _isLoading = false;
   File? _selectedImage;
   String? _selectedGrade;
-  String? _selectedBusId;
   String? _selectedSchool;
-  List<BusModel> _availableBuses = [];
 
   @override
   void initState() {
     super.initState();
-    _loadAvailableBuses();
-  }
-
-  Future<void> _loadAvailableBuses() async {
-    try {
-      final buses = await _databaseService.getAllBuses().first;
-      setState(() {
-        _availableBuses = buses;
-      });
-    } catch (e) {
-      debugPrint('Error loading buses: $e');
-    }
   }
 
   @override
@@ -61,7 +46,6 @@ class _AddStudentScreenState extends State<AddStudentScreen> {
     _nameController.dispose();
     _gradeController.dispose();
     _schoolController.dispose();
-    _busRouteController.dispose();
     super.dispose();
   }
 
@@ -89,10 +73,6 @@ class _AddStudentScreenState extends State<AddStudentScreen> {
 
                     // Student Information
                     _buildModernStudentInfoCard(),
-                    const SizedBox(height: 24),
-
-                    // Transportation Section
-                    _buildModernTransportationCard(),
                     const SizedBox(height: 32),
 
                     // Action Buttons
@@ -532,174 +512,9 @@ class _AddStudentScreenState extends State<AddStudentScreen> {
     );
   }
 
-  Widget _buildModernTransportationCard() {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(13),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF59E0B).withAlpha(25),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Icon(
-                  Icons.directions_bus_rounded,
-                  color: Color(0xFFF59E0B),
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Text(
-                'وسيلة النقل',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF2D3748),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
 
-          // Bus Selection
-          _buildModernDropdown<String>(
-            value: _selectedBusId,
-            label: 'اختيار السيارة',
-            hint: 'اختر السيارة المناسبة (اختياري)',
-            icon: Icons.directions_bus_rounded,
-            items: [
-              const DropdownMenuItem<String>(
-                value: null,
-                child: Text('بدون سيارة (سيتم التعيين لاحقاً)'),
-              ),
-              ..._availableBuses.map((bus) {
-                return DropdownMenuItem<String>(
-                  value: bus.id,
-                  child: Text('${bus.plateNumber} - ${bus.driverName}'),
-                );
-              }),
-            ],
-            onChanged: (value) {
-              setState(() {
-                _selectedBusId = value;
-                if (value != null) {
-                  final selectedBus = _availableBuses.firstWhere((bus) => bus.id == value);
-                  _busRouteController.text = selectedBus.route;
-                } else {
-                  _busRouteController.clear();
-                }
-              });
-            },
-            validator: (value) => null, // Optional
-          ),
 
-          // Show selected bus info
-          if (_selectedBusId != null) ...[
-            const SizedBox(height: 20),
-            _buildSelectedBusInfo(),
-          ],
-        ],
-      ),
-    );
-  }
 
-  Widget _buildSelectedBusInfo() {
-    final selectedBus = _availableBuses.firstWhere((bus) => bus.id == _selectedBusId);
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            const Color(0xFFF59E0B).withAlpha(25),
-            const Color(0xFFF59E0B).withAlpha(13),
-          ],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: const Color(0xFFF59E0B).withAlpha(76),
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.check_circle_rounded,
-                color: const Color(0xFFF59E0B),
-                size: 20,
-              ),
-              const SizedBox(width: 8),
-              const Text(
-                'السيارة المختارة',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF2D3748),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          _buildBusInfoRow(Icons.confirmation_number_rounded, 'رقم اللوحة', selectedBus.plateNumber),
-          _buildBusInfoRow(Icons.person_rounded, 'السائق', selectedBus.driverName),
-          _buildBusInfoRow(Icons.phone_rounded, 'هاتف السائق', selectedBus.driverPhone),
-          _buildBusInfoRow(Icons.route_rounded, 'خط السير', selectedBus.route),
-          _buildBusInfoRow(
-            selectedBus.hasAirConditioning ? Icons.ac_unit_rounded : Icons.ac_unit_outlined,
-            'التكييف',
-            selectedBus.hasAirConditioning ? 'مكيفة' : 'غير مكيفة',
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBusInfoRow(IconData icon, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
-          Icon(icon, size: 16, color: const Color(0xFFF59E0B)),
-          const SizedBox(width: 8),
-          Text(
-            '$label: ',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[600],
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Color(0xFF2D3748),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildModernTextField({
     required TextEditingController controller,
@@ -1015,8 +830,8 @@ class _AddStudentScreenState extends State<AddStudentScreen> {
         qrCode: '', // Will be generated by database service
         schoolName: _schoolController.text.trim(),
         grade: _selectedGrade!,
-        busRoute: _busRouteController.text.trim(),
-        busId: _selectedBusId ?? '', // Add selected bus ID
+        busRoute: '', // Will be assigned by admin
+        busId: '', // Will be assigned by admin
         photoUrl: photoUrl,
         currentStatus: StudentStatus.home,
         createdAt: DateTime.now(),

@@ -1,7 +1,9 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../models/student_model.dart';
+import '../../models/bus_model.dart';
 import '../../services/database_service.dart';
+import '../../utils/constants.dart';
 
 class AllStudentsScreen extends StatefulWidget {
   const AllStudentsScreen({super.key});
@@ -18,19 +20,7 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
 
   final List<String> _grades = [
     'الكل',
-    'الروضة',
-    'الأول',
-    'الثاني',
-    'الثالث',
-    'الرابع',
-    'الخامس',
-    'السادس',
-    'السابع',
-    'الثامن',
-    'التاسع',
-    'العاشر',
-    'الحادي عشر',
-    'الثاني عشر'
+    ...AppConstants.studentGrades,
   ];
 
   final List<String> _statuses = [
@@ -416,6 +406,16 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
                   ),
                 ),
                 PopupMenuItem(
+                  value: 'assign_bus',
+                  child: const Row(
+                    children: [
+                      Icon(Icons.directions_bus, size: 20, color: Colors.blue),
+                      SizedBox(width: 8),
+                      Text('تسكين الباص'),
+                    ],
+                  ),
+                ),
+                PopupMenuItem(
                   value: 'view',
                   child: const Row(
                     children: [
@@ -440,6 +440,9 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
                 switch (value) {
                   case 'edit':
                     context.push('/admin/students/edit/${student.id}');
+                    break;
+                  case 'assign_bus':
+                    _showBusAssignmentDialog(student);
                     break;
                   case 'view':
                     _showStudentDetails(student);
@@ -550,6 +553,166 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
         ],
       ),
     );
+  }
+
+  void _showBusAssignmentDialog(StudentModel student) {
+    String? selectedBusId = student.busId.isNotEmpty ? student.busId : null;
+    String selectedBusRoute = student.busRoute;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => AlertDialog(
+          title: Row(
+            children: [
+              const Icon(Icons.directions_bus, color: Colors.blue),
+              const SizedBox(width: 8),
+              Text('تسكين الباص - ${student.name}'),
+            ],
+          ),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'اختر الباص المناسب للطالب:',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                StreamBuilder<List<BusModel>>(
+                  stream: _databaseService.getAllBuses(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    final buses = snapshot.data ?? [];
+
+                    if (buses.isEmpty) {
+                      return const Text('لا توجد باصات متاحة');
+                    }
+
+                    return DropdownButtonFormField<String>(
+                      value: selectedBusId,
+                      decoration: InputDecoration(
+                        labelText: 'اختيار الباص',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        prefixIcon: const Icon(Icons.directions_bus),
+                      ),
+                      items: [
+                        const DropdownMenuItem<String>(
+                          value: null,
+                          child: Text('بدون باص'),
+                        ),
+                        ...buses.map((bus) {
+                          return DropdownMenuItem<String>(
+                            value: bus.id,
+                            child: Text('${bus.plateNumber} - ${bus.route}'),
+                          );
+                        }),
+                      ],
+                      onChanged: (value) {
+                        setState(() {
+                          selectedBusId = value;
+                          if (value != null) {
+                            final selectedBus = buses.firstWhere((bus) => bus.id == value);
+                            selectedBusRoute = selectedBus.route;
+                          } else {
+                            selectedBusRoute = '';
+                          }
+                        });
+                      },
+                    );
+                  },
+                ),
+
+                if (selectedBusId != null) ...[
+                  const SizedBox(height: 16),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.blue.withAlpha(25),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.blue.withAlpha(76)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'معلومات الباص المختار:',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: Colors.blue,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text('خط السير: $selectedBusRoute'),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('إلغاء'),
+            ),
+            ElevatedButton(
+              onPressed: () => _assignStudentToBus(student, selectedBusId, selectedBusRoute),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('حفظ التسكين'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _assignStudentToBus(StudentModel student, String? busId, String busRoute) async {
+    try {
+      final updatedStudent = student.copyWith(
+        busId: busId ?? '',
+        busRoute: busRoute,
+        updatedAt: DateTime.now(),
+      );
+
+      await _databaseService.updateStudent(updatedStudent);
+
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              busId != null
+                  ? 'تم تسكين ${student.name} في الباص بنجاح'
+                  : 'تم إلغاء تسكين ${student.name} من الباص',
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ في تحديث تسكين الباص: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }
 

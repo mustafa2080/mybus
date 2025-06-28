@@ -9,6 +9,8 @@ import '../models/complaint_model.dart';
 import '../models/parent_profile_model.dart';
 import '../models/absence_model.dart';
 import '../models/user_model.dart';
+import '../models/survey_model.dart';
+import '../models/supervisor_assignment_model.dart';
 
 
 class DatabaseService {
@@ -1579,5 +1581,424 @@ class DatabaseService {
       debugPrint('❌ Error getting admins: $e');
       return [];
     }
+  }
+
+  // Survey Collection Methods
+
+  /// Create new survey
+  Future<String> createSurvey(SurveyModel survey) async {
+    try {
+      final surveyId = survey.id.isNotEmpty ? survey.id : _uuid.v4();
+      final surveyWithId = survey.copyWith(id: surveyId);
+
+      await _firestore
+          .collection('surveys')
+          .doc(surveyId)
+          .set(surveyWithId.toMap());
+
+      debugPrint('✅ Survey created successfully: $surveyId');
+      return surveyId;
+    } catch (e) {
+      debugPrint('❌ Error creating survey: $e');
+      rethrow;
+    }
+  }
+
+  /// Get all surveys
+  Stream<List<SurveyModel>> getAllSurveys() {
+    return _firestore
+        .collection('surveys')
+        .where('isActive', isEqualTo: true)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => SurveyModel.fromMap(doc.data()))
+            .toList());
+  }
+
+  /// Get surveys by type
+  Stream<List<SurveyModel>> getSurveysByType(SurveyType type) {
+    return _firestore
+        .collection('surveys')
+        .where('isActive', isEqualTo: true)
+        .where('type', isEqualTo: type.toString().split('.').last)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => SurveyModel.fromMap(doc.data()))
+            .toList());
+  }
+
+  /// Get active surveys for user type
+  Stream<List<SurveyModel>> getActiveSurveysForUser(String userType) {
+    SurveyType? targetType;
+    switch (userType) {
+      case 'parent':
+        targetType = SurveyType.parentFeedback;
+        break;
+      case 'supervisor':
+        targetType = SurveyType.supervisorMonthly;
+        break;
+      default:
+        return Stream.value([]);
+    }
+
+    return _firestore
+        .collection('surveys')
+        .where('isActive', isEqualTo: true)
+        .where('status', isEqualTo: 'active')
+        .where('type', isEqualTo: targetType.toString().split('.').last)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => SurveyModel.fromMap(doc.data()))
+            .where((survey) => !survey.isExpired)
+            .toList());
+  }
+
+  /// Submit survey response
+  Future<String> submitSurveyResponse(SurveyResponse response) async {
+    try {
+      final responseId = response.id.isNotEmpty ? response.id : _uuid.v4();
+      final responseWithId = SurveyResponse(
+        id: responseId,
+        surveyId: response.surveyId,
+        respondentId: response.respondentId,
+        respondentName: response.respondentName,
+        respondentType: response.respondentType,
+        answers: response.answers,
+        submittedAt: response.submittedAt,
+        isComplete: response.isComplete,
+      );
+
+      await _firestore
+          .collection('survey_responses')
+          .doc(responseId)
+          .set(responseWithId.toMap());
+
+      debugPrint('✅ Survey response submitted successfully: $responseId');
+      return responseId;
+    } catch (e) {
+      debugPrint('❌ Error submitting survey response: $e');
+      rethrow;
+    }
+  }
+
+  /// Get survey responses
+  Stream<List<SurveyResponse>> getSurveyResponses(String surveyId) {
+    return _firestore
+        .collection('survey_responses')
+        .where('surveyId', isEqualTo: surveyId)
+        .orderBy('submittedAt', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => SurveyResponse.fromMap(doc.data()))
+            .toList());
+  }
+
+  /// Check if user has responded to survey
+  Future<bool> hasUserRespondedToSurvey(String surveyId, String userId) async {
+    try {
+      final response = await _firestore
+          .collection('survey_responses')
+          .where('surveyId', isEqualTo: surveyId)
+          .where('respondentId', isEqualTo: userId)
+          .limit(1)
+          .get();
+
+      return response.docs.isNotEmpty;
+    } catch (e) {
+      debugPrint('❌ Error checking survey response: $e');
+      return false;
+    }
+  }
+
+  /// Update survey status
+  Future<void> updateSurveyStatus(String surveyId, SurveyStatus status) async {
+    try {
+      await _firestore
+          .collection('surveys')
+          .doc(surveyId)
+          .update({
+            'status': status.toString().split('.').last,
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
+
+      debugPrint('✅ Survey status updated successfully');
+    } catch (e) {
+      debugPrint('❌ Error updating survey status: $e');
+      rethrow;
+    }
+  }
+
+  /// Get survey statistics
+  Future<Map<String, dynamic>> getSurveyStatistics(String surveyId) async {
+    try {
+      final responses = await _firestore
+          .collection('survey_responses')
+          .where('surveyId', isEqualTo: surveyId)
+          .get();
+
+      final totalResponses = responses.docs.length;
+      final responsesByType = <String, int>{};
+
+      for (final doc in responses.docs) {
+        final data = doc.data();
+        final type = data['respondentType'] ?? 'unknown';
+        responsesByType[type] = (responsesByType[type] ?? 0) + 1;
+      }
+
+      return {
+        'totalResponses': totalResponses,
+        'responsesByType': responsesByType,
+        'lastResponseDate': responses.docs.isNotEmpty
+            ? responses.docs.first.data()['submittedAt']
+            : null,
+      };
+    } catch (e) {
+      debugPrint('❌ Error getting survey statistics: $e');
+      return {
+        'totalResponses': 0,
+        'responsesByType': <String, int>{},
+        'lastResponseDate': null,
+      };
+    }
+  }
+
+  // Supervisor Assignment Methods
+
+  /// Create new supervisor assignment
+  Future<String> createSupervisorAssignment(SupervisorAssignmentModel assignment) async {
+    try {
+      final assignmentId = assignment.id.isNotEmpty ? assignment.id : _uuid.v4();
+      final assignmentWithId = assignment.copyWith(id: assignmentId);
+
+      await _firestore
+          .collection('supervisor_assignments')
+          .doc(assignmentId)
+          .set(assignmentWithId.toMap());
+
+      debugPrint('✅ Supervisor assignment created successfully: $assignmentId');
+      return assignmentId;
+    } catch (e) {
+      debugPrint('❌ Error creating supervisor assignment: $e');
+      rethrow;
+    }
+  }
+
+  /// Get all supervisor assignments
+  Stream<List<SupervisorAssignmentModel>> getAllSupervisorAssignments() {
+    return _firestore
+        .collection('supervisor_assignments')
+        .orderBy('assignedAt', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => SupervisorAssignmentModel.fromMap(doc.data()))
+            .toList());
+  }
+
+  /// Get active supervisor assignments
+  Stream<List<SupervisorAssignmentModel>> getActiveSupervisorAssignments() {
+    return _firestore
+        .collection('supervisor_assignments')
+        .where('status', isEqualTo: 'active')
+        .orderBy('assignedAt', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => SupervisorAssignmentModel.fromMap(doc.data()))
+            .toList());
+  }
+
+  /// Get assignments for specific supervisor
+  Stream<List<SupervisorAssignmentModel>> getSupervisorAssignments(String supervisorId) {
+    return _firestore
+        .collection('supervisor_assignments')
+        .where('supervisorId', isEqualTo: supervisorId)
+        .where('status', isEqualTo: 'active')
+        .orderBy('assignedAt', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => SupervisorAssignmentModel.fromMap(doc.data()))
+            .toList());
+  }
+
+  /// Get assignments for specific bus
+  Stream<List<SupervisorAssignmentModel>> getBusAssignments(String busId) {
+    return _firestore
+        .collection('supervisor_assignments')
+        .where('busId', isEqualTo: busId)
+        .where('status', isEqualTo: 'active')
+        .orderBy('assignedAt', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => SupervisorAssignmentModel.fromMap(doc.data()))
+            .toList());
+  }
+
+  /// Update supervisor assignment
+  Future<void> updateSupervisorAssignment(SupervisorAssignmentModel assignment) async {
+    try {
+      await _firestore
+          .collection('supervisor_assignments')
+          .doc(assignment.id)
+          .update(assignment.toMap());
+
+      debugPrint('✅ Supervisor assignment updated successfully');
+    } catch (e) {
+      debugPrint('❌ Error updating supervisor assignment: $e');
+      rethrow;
+    }
+  }
+
+  /// Deactivate supervisor assignment
+  Future<void> deactivateSupervisorAssignment(String assignmentId) async {
+    try {
+      await _firestore
+          .collection('supervisor_assignments')
+          .doc(assignmentId)
+          .update({
+            'status': 'inactive',
+            'unassignedAt': FieldValue.serverTimestamp(),
+          });
+
+      debugPrint('✅ Supervisor assignment deactivated successfully');
+    } catch (e) {
+      debugPrint('❌ Error deactivating supervisor assignment: $e');
+      rethrow;
+    }
+  }
+
+  /// Create emergency assignment (temporary supervisor change)
+  Future<String> createEmergencyAssignment({
+    required String busId,
+    required String newSupervisorId,
+    required String newSupervisorName,
+    required String busPlateNumber,
+    required TripDirection direction,
+    required String assignedBy,
+    required String assignedByName,
+    String? notes,
+  }) async {
+    try {
+      // First, deactivate current assignment for this bus
+      final currentAssignments = await _firestore
+          .collection('supervisor_assignments')
+          .where('busId', isEqualTo: busId)
+          .where('status', isEqualTo: 'active')
+          .get();
+
+      String? originalSupervisorId;
+      for (final doc in currentAssignments.docs) {
+        final data = doc.data();
+        originalSupervisorId = data['supervisorId'];
+        await doc.reference.update({
+          'status': 'inactive',
+          'unassignedAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      // Create new emergency assignment
+      final emergencyAssignment = SupervisorAssignmentModel(
+        id: _uuid.v4(),
+        supervisorId: newSupervisorId,
+        supervisorName: newSupervisorName,
+        busId: busId,
+        busPlateNumber: busPlateNumber,
+        direction: direction,
+        status: AssignmentStatus.emergency,
+        assignedAt: DateTime.now(),
+        assignedBy: assignedBy,
+        assignedByName: assignedByName,
+        notes: notes,
+        isEmergencyAssignment: true,
+        originalSupervisorId: originalSupervisorId,
+      );
+
+      return await createSupervisorAssignment(emergencyAssignment);
+    } catch (e) {
+      debugPrint('❌ Error creating emergency assignment: $e');
+      rethrow;
+    }
+  }
+
+  /// Get assignment statistics
+  Future<AssignmentStatistics> getAssignmentStatistics() async {
+    try {
+      final assignmentsSnapshot = await _firestore
+          .collection('supervisor_assignments')
+          .get();
+
+      final busesSnapshot = await _firestore
+          .collection('buses')
+          .where('isActive', isEqualTo: true)
+          .get();
+
+      final assignments = assignmentsSnapshot.docs
+          .map((doc) => SupervisorAssignmentModel.fromMap(doc.data()))
+          .toList();
+
+      final totalBuses = busesSnapshot.docs.length;
+      final activeAssignments = assignments.where((a) => a.isActive).length;
+      final emergencyAssignments = assignments.where((a) => a.isEmergency).length;
+      final unassignedBuses = totalBuses - activeAssignments;
+
+      final assignmentsByDirection = <String, int>{};
+      for (final assignment in assignments.where((a) => a.isActive)) {
+        final direction = assignment.directionDisplayName;
+        assignmentsByDirection[direction] = (assignmentsByDirection[direction] ?? 0) + 1;
+      }
+
+      return AssignmentStatistics(
+        totalAssignments: assignments.length,
+        activeAssignments: activeAssignments,
+        emergencyAssignments: emergencyAssignments,
+        unassignedBuses: unassignedBuses,
+        assignmentsByDirection: assignmentsByDirection,
+      );
+    } catch (e) {
+      debugPrint('❌ Error getting assignment statistics: $e');
+      return AssignmentStatistics.empty();
+    }
+  }
+
+  /// Get all students with their absence data for comprehensive report
+  Stream<List<Map<String, dynamic>>> getAllStudentsWithAbsenceData() {
+    return _firestore
+        .collection('students')
+        .where('isActive', isEqualTo: true)
+        .snapshots()
+        .asyncMap((studentsSnapshot) async {
+      List<Map<String, dynamic>> studentsWithAbsences = [];
+
+      for (final studentDoc in studentsSnapshot.docs) {
+        final studentData = studentDoc.data();
+
+        // Get absences for this student
+        final absencesSnapshot = await _firestore
+            .collection('absences')
+            .where('studentId', isEqualTo: studentDoc.id)
+            .where('source', isEqualTo: 'parent')
+            .orderBy('date', descending: true)
+            .get();
+
+        final absences = absencesSnapshot.docs
+            .map((doc) => AbsenceModel.fromMap(doc.data()))
+            .toList();
+
+        studentsWithAbsences.add({
+          'student': studentData,
+          'absences': absences,
+        });
+      }
+
+      // Sort by number of absences (descending)
+      studentsWithAbsences.sort((a, b) {
+        final aAbsences = (a['absences'] as List).length;
+        final bAbsences = (b['absences'] as List).length;
+        return bAbsences.compareTo(aAbsences);
+      });
+
+      return studentsWithAbsences;
+    });
   }
 }

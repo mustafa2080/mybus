@@ -290,6 +290,16 @@ class _ParentsManagementScreenState extends State<ParentsManagementScreen> {
                               ),
                             ),
                             PopupMenuItem(
+                              value: 'details',
+                              child: const Row(
+                                children: [
+                                  Icon(Icons.info, size: 20, color: Colors.green),
+                                  SizedBox(width: 8),
+                                  Text('عرض التفاصيل'),
+                                ],
+                              ),
+                            ),
+                            PopupMenuItem(
                               value: 'students',
                               child: const Row(
                                 children: [
@@ -334,6 +344,9 @@ class _ParentsManagementScreenState extends State<ParentsManagementScreen> {
                             switch (value) {
                               case 'edit':
                                 _showEditParentDialog(tempParent);
+                                break;
+                              case 'details':
+                                _showParentDetails(tempParent);
                                 break;
                               case 'students':
                                 _showParentStudents(tempParent);
@@ -1046,6 +1059,245 @@ class _ParentsManagementScreenState extends State<ParentsManagementScreen> {
           ),
         );
       }
+    }
+  }
+
+  void _showParentDetails(UserModel parent) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: [
+            const Icon(Icons.person, color: Colors.blue),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'تفاصيل ولي الأمر',
+                style: const TextStyle(fontSize: 18),
+              ),
+            ),
+          ],
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Basic Information Section
+                _buildDetailSection(
+                  title: 'المعلومات الأساسية',
+                  icon: Icons.info,
+                  color: Colors.blue,
+                  children: [
+                    _buildDetailRow('الاسم الكامل', parent.name.isNotEmpty ? parent.name : 'غير محدد'),
+                    _buildDetailRow('البريد الإلكتروني', parent.email),
+                    _buildDetailRow('رقم الهاتف', parent.fatherPhone.isNotEmpty ? parent.fatherPhone : 'غير محدد'),
+                    _buildDetailRow('العنوان', parent.address.isNotEmpty ? parent.address : 'غير محدد'),
+                    _buildDetailRow('تاريخ التسجيل', _formatDate(parent.createdAt)),
+                    _buildDetailRow('آخر تحديث', _formatDate(parent.updatedAt)),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+
+                // Profile Status Section
+                _buildDetailSection(
+                  title: 'حالة البروفايل',
+                  icon: parent.isProfileComplete ? Icons.check_circle : Icons.warning,
+                  color: parent.isProfileComplete ? Colors.green : Colors.orange,
+                  children: [
+                    _buildDetailRow(
+                      'حالة البروفايل',
+                      parent.isProfileComplete ? 'مكتمل' : 'غير مكتمل',
+                      valueColor: parent.isProfileComplete ? Colors.green : Colors.orange,
+                    ),
+                    _buildDetailRow('نوع المستخدم', _getUserTypeDisplay(parent.userType)),
+                    _buildDetailRow('حالة الحساب', parent.isActive ? 'نشط' : 'غير نشط'),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+
+                // Children Information Section
+                StreamBuilder<QuerySnapshot>(
+                  stream: _firestore
+                      .collection('students')
+                      .where('parentId', isEqualTo: parent.id)
+                      .snapshots(),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+
+                    final students = snapshot.data?.docs ?? [];
+
+                    return _buildDetailSection(
+                      title: 'الأطفال المسجلين (${students.length})',
+                      icon: Icons.child_care,
+                      color: Colors.purple,
+                      children: students.isEmpty
+                          ? [
+                              const Padding(
+                                padding: EdgeInsets.all(8.0),
+                                child: Text(
+                                  'لا يوجد أطفال مسجلين',
+                                  style: TextStyle(
+                                    color: Colors.grey,
+                                    fontStyle: FontStyle.italic,
+                                  ),
+                                ),
+                              ),
+                            ]
+                          : students.map((studentDoc) {
+                              final studentData = studentDoc.data() as Map<String, dynamic>;
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 8),
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: Colors.purple.withAlpha(25),
+                                  borderRadius: BorderRadius.circular(8),
+                                  border: Border.all(color: Colors.purple.withAlpha(76)),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      studentData['name'] ?? 'غير محدد',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      'المدرسة: ${studentData['schoolName'] ?? 'غير محدد'}',
+                                      style: const TextStyle(fontSize: 12),
+                                    ),
+                                    Text(
+                                      'الصف: ${studentData['grade'] ?? 'غير محدد'}',
+                                      style: const TextStyle(fontSize: 12),
+                                    ),
+                                    if (studentData['busRoute'] != null && studentData['busRoute'].toString().isNotEmpty)
+                                      Text(
+                                        'خط الباص: ${studentData['busRoute']}',
+                                        style: const TextStyle(fontSize: 12),
+                                      ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('إغلاق'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _showEditParentDialog(parent);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('تعديل'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailSection({
+    required String title,
+    required IconData icon,
+    required Color color,
+    required List<Widget> children,
+  }) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withAlpha(25),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withAlpha(76)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ...children,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value, {Color? valueColor}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(
+              '$label:',
+              style: const TextStyle(
+                fontWeight: FontWeight.w500,
+                color: Colors.grey,
+                fontSize: 14,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(
+                fontSize: 14,
+                color: valueColor ?? const Color(0xFF2D3748),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
+  }
+
+  String _getUserTypeDisplay(UserType userType) {
+    switch (userType) {
+      case UserType.parent:
+        return 'ولي أمر';
+      case UserType.supervisor:
+        return 'مشرفة';
+      case UserType.admin:
+        return 'مدير';
     }
   }
 }

@@ -110,6 +110,45 @@ class AppConstants {
   static const int shortAnimationDuration = 300; // milliseconds
   static const int mediumAnimationDuration = 500; // milliseconds
   static const int longAnimationDuration = 1000; // milliseconds
+
+  // Educational Stages and Grades
+  static const List<String> educationalStages = [
+    'كي جي 1',
+    'كي جي 2',
+    'الصف الأول الابتدائي',
+    'الصف الثاني الابتدائي',
+    'الصف الثالث الابتدائي',
+    'الصف الرابع الابتدائي',
+    'الصف الخامس الابتدائي',
+    'الصف السادس الابتدائي',
+    'الصف الأول الإعدادي',
+    'الصف الثاني الإعدادي',
+    'الصف الثالث الإعدادي',
+  ];
+
+  // Educational Stages Categories
+  static const Map<String, List<String>> educationalStagesCategories = {
+    'مرحلة رياض الأطفال': [
+      'كي جي 1',
+      'كي جي 2',
+    ],
+    'المرحلة الابتدائية': [
+      'الصف الأول الابتدائي',
+      'الصف الثاني الابتدائي',
+      'الصف الثالث الابتدائي',
+      'الصف الرابع الابتدائي',
+      'الصف الخامس الابتدائي',
+      'الصف السادس الابتدائي',
+    ],
+    'المرحلة الإعدادية': [
+      'الصف الأول الإعدادي',
+      'الصف الثاني الإعدادي',
+      'الصف الثالث الإعدادي',
+    ],
+  };
+
+  // Legacy support for existing code
+  static const List<String> studentGrades = educationalStages;
 }
 
 class AppStrings {

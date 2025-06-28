@@ -14,9 +14,19 @@ import 'screens/parent/help_screen.dart';
 import 'screens/parent/add_student_screen.dart' as parent_add_student;
 import 'screens/parent/simple_activity_screen.dart';
 import 'screens/parent/notifications_screen.dart';
+import 'screens/parent/surveys_screen.dart';
+import 'screens/parent/take_survey_screen.dart';
 import 'screens/supervisor/supervisor_home_screen.dart';
 import 'screens/supervisor/qr_scanner_screen.dart';
 import 'screens/supervisor/students_list_screen.dart';
+import 'screens/supervisor/emergency_contact_screen.dart';
+import 'screens/supervisor/supervisor_profile_screen.dart';
+import 'screens/supervisor/supervisor_surveys_screen.dart';
+import 'screens/supervisor/take_supervisor_survey_screen.dart';
+import 'screens/admin/supervisor_assignments_screen.dart';
+import 'screens/admin/buses_management_screen.dart';
+import 'screens/supervisor/supervisor_notifications_screen.dart';
+import 'screens/admin/admin_notifications_screen.dart';
 import 'screens/admin/admin_home_screen.dart';
 import 'screens/admin/add_student_screen.dart' as admin_add_student;
 import 'screens/admin/edit_student_screen.dart';
@@ -147,6 +157,17 @@ final GoRouter _router = GoRouter(
       builder: (context, state) => const AddComplaintScreen(),
     ),
     GoRoute(
+      path: '/parent/surveys',
+      builder: (context, state) => const SurveysScreen(),
+    ),
+    GoRoute(
+      path: '/parent/take-survey/:surveyId',
+      builder: (context, state) {
+        final surveyId = state.pathParameters['surveyId']!;
+        return TakeSurveyScreen(surveyId: surveyId);
+      },
+    ),
+    GoRoute(
       path: '/supervisor',
       builder: (context, state) => const SupervisorHomeScreen(),
     ),
@@ -157,6 +178,29 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/supervisor/students-list',
       builder: (context, state) => const StudentsListScreen(),
+    ),
+    GoRoute(
+      path: '/supervisor/emergency-contact',
+      builder: (context, state) => const EmergencyContactScreen(),
+    ),
+    GoRoute(
+      path: '/supervisor/profile',
+      builder: (context, state) => const SupervisorProfileScreen(),
+    ),
+    GoRoute(
+      path: '/supervisor/surveys',
+      builder: (context, state) => const SupervisorSurveysScreen(),
+    ),
+    GoRoute(
+      path: '/supervisor/take-survey/:surveyId',
+      builder: (context, state) {
+        final surveyId = state.pathParameters['surveyId']!;
+        return TakeSupervisorSurveyScreen(surveyId: surveyId);
+      },
+    ),
+    GoRoute(
+      path: '/supervisor/notifications',
+      builder: (context, state) => const SupervisorNotificationsScreen(),
     ),
     ShellRoute(
       builder: (context, state, child) {
@@ -173,6 +217,18 @@ final GoRouter _router = GoRouter(
         GoRoute(
           path: '/admin/students',
           builder: (context, state) => const AllStudentsScreen(),
+        ),
+        GoRoute(
+          path: '/admin/supervisor-assignments',
+          builder: (context, state) => const SupervisorAssignmentsScreen(),
+        ),
+        GoRoute(
+          path: '/admin/buses-management',
+          builder: (context, state) => const BusesManagementScreen(),
+        ),
+        GoRoute(
+          path: '/admin/notifications',
+          builder: (context, state) => const AdminNotificationsScreen(),
         ),
         GoRoute(
           path: '/admin/add-student',
