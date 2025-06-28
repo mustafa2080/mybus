@@ -1075,7 +1075,6 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
           ),
           );
         }
-      }
     } catch (e) {
       // Close loading dialog if open
       if (mounted && Navigator.canPop(context)) {

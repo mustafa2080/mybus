@@ -691,6 +691,18 @@ class DatabaseService {
             .toList());
   }
 
+  // Get all students currently on buses (alias for supervisor screen)
+  Stream<List<StudentModel>> getStudentsOnBus() {
+    return _firestore
+        .collection('students')
+        .where('isActive', isEqualTo: true)
+        .where('busId', isNotEqualTo: '')
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => StudentModel.fromMap(doc.data()))
+            .toList());
+  }
+
   // Complaints Collection Methods
 
   /// Add new complaint

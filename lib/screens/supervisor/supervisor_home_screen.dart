@@ -1,6 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 import '../../services/auth_service.dart';
 import '../../services/database_service.dart';
 import '../../services/notification_service.dart';
@@ -2321,7 +2322,9 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen> {
     );
   }
 
-
+  void _showAbsenceManagement() {
+    context.push('/supervisor/absence-management');
+  }
 }
 
 
