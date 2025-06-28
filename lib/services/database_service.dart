@@ -12,6 +12,7 @@ import '../models/user_model.dart';
 import '../models/survey_model.dart';
 import '../models/supervisor_assignment_model.dart';
 import '../models/student_behavior_model.dart';
+import '../models/notification_model.dart';
 
 
 class DatabaseService {

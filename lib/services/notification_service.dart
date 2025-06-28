@@ -283,27 +283,6 @@ class NotificationService {
     }
   }
 
-  // Mark all notifications as read for user
-  Future<void> markAllNotificationsAsRead(String userId) async {
-    try {
-      final batch = _firestore.batch();
-      final notifications = await _firestore
-          .collection('notifications')
-          .where('recipientId', isEqualTo: userId)
-          .get();
-
-      for (var doc in notifications.docs) {
-        if (doc.data()['isRead'] == false) {
-          batch.update(doc.reference, {'isRead': true});
-        }
-      }
-
-      await batch.commit();
-    } catch (e) {
-      throw Exception('خطأ في تحديث الإشعارات: $e');
-    }
-  }
-
   // Get unread notifications count
   Stream<int> getUnreadNotificationsCount(String userId) {
     return _firestore

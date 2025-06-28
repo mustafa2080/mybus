@@ -32,9 +32,29 @@ class _SupervisorNotificationsScreenState extends State<SupervisorNotificationsS
   }
 
   Future<void> _markAllAsRead() async {
-    final userId = _authService.currentUser?.uid;
-    if (userId != null) {
-      await _databaseService.markAllNotificationsAsRead(userId);
+    try {
+      final userId = _authService.currentUser?.uid;
+      if (userId != null) {
+        await _databaseService.markAllNotificationsAsRead(userId);
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('تم تحديد جميع الإشعارات كمقروءة'),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ في تحديث الإشعارات: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -544,34 +564,6 @@ class _SupervisorNotificationsScreenState extends State<SupervisorNotificationsS
         return 'طوارئ';
       case AbsenceType.other:
         return 'أخرى';
-    }
-  }
-
-  Future<void> _markAllAsRead() async {
-    try {
-      // Mark all notifications as read for current user
-      final userId = _authService.currentUser?.uid;
-      if (userId != null) {
-        await _notificationService.markAllNotificationsAsRead(userId);
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('تم تحديد جميع الإشعارات كمقروءة'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('خطأ في تحديث الإشعارات: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
     }
   }
 }
