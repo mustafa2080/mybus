@@ -983,16 +983,34 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
   }
 
   Future<void> _assignStudentToBus(StudentModel student, String? busId, String busRoute) async {
+    bool isLoadingShown = false;
+
     try {
       // Show loading indicator
       if (mounted) {
         showDialog(
           context: context,
           barrierDismissible: false,
-          builder: (context) => const Center(
-            child: CircularProgressIndicator(),
+          builder: (context) => WillPopScope(
+            onWillPop: () async => false,
+            child: const Center(
+              child: Card(
+                child: Padding(
+                  padding: EdgeInsets.all(20),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 16),
+                      Text('جاري حفظ التسكين...'),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
         );
+        isLoadingShown = true;
       }
 
       // Validate input data
@@ -1019,12 +1037,23 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
       // Update student in database
       await _databaseService.updateStudent(updatedStudent);
 
-      // Close loading dialog
+      // Close dialogs safely
       if (mounted) {
-        Navigator.of(context).pop(); // Close loading
-        Navigator.of(context).pop(); // Close assignment dialog
+        // Close loading dialog first if it was shown
+        if (isLoadingShown && Navigator.canPop(context)) {
+          Navigator.of(context).pop(); // Close loading
+          await Future.delayed(const Duration(milliseconds: 150));
+        }
 
-        ScaffoldMessenger.of(context).showSnackBar(
+        // Close assignment dialog
+        if (mounted && Navigator.canPop(context)) {
+          Navigator.of(context).pop(); // Close assignment dialog
+          await Future.delayed(const Duration(milliseconds: 150));
+        }
+
+        // Show success message
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
               children: [
@@ -1051,12 +1080,14 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
               borderRadius: BorderRadius.circular(10),
             ),
           ),
-        );
+          );
+        }
       }
     } catch (e) {
       // Close loading dialog if open
-      if (mounted && Navigator.canPop(context)) {
+      if (mounted && isLoadingShown && Navigator.canPop(context)) {
         Navigator.of(context).pop();
+        await Future.delayed(const Duration(milliseconds: 100));
       }
 
       if (mounted) {
