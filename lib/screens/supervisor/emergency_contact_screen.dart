@@ -79,10 +79,12 @@ class _EmergencyContactScreenState extends State<EmergencyContactScreen> {
 
   Future<void> _loadStudentsContacts() async {
     try {
-      // Get all students - in a real implementation, this would be filtered by supervisor's bus
+      // Get students assigned to supervisor's bus
+      // For now, get all students - this should be filtered by supervisor's bus assignment
       final studentsSnapshot = await FirebaseFirestore.instance
           .collection('students')
           .where('isActive', isEqualTo: true)
+          .orderBy('name')
           .get();
 
       final contacts = <Map<String, String>>[];
@@ -93,10 +95,14 @@ class _EmergencyContactScreenState extends State<EmergencyContactScreen> {
             'studentName': data['name'] ?? 'غير محدد',
             'parentName': data['parentName'] ?? 'غير محدد',
             'parentPhone': data['parentPhone'],
+            'grade': data['grade'] ?? 'غير محدد',
+            'busRoute': data['busRoute'] ?? 'غير محدد',
           });
         }
       }
 
+      // Sort by student name
+      contacts.sort((a, b) => a['studentName']!.compareTo(b['studentName']!));
       _studentsContacts = contacts;
     } catch (e) {
       debugPrint('Error loading students contacts: $e');
@@ -157,10 +163,6 @@ class _EmergencyContactScreenState extends State<EmergencyContactScreen> {
 
                   // Students Parents Contacts Card
                   _buildStudentsContactsCard(),
-                  const SizedBox(height: 20),
-
-                  // Emergency Numbers Card
-                  _buildEmergencyNumbersCard(),
                 ],
               ),
             ),
@@ -298,83 +300,232 @@ class _EmergencyContactScreenState extends State<EmergencyContactScreen> {
   }
 
   Widget _buildStudentsContactsCard() {
-    return _buildInfoCard(
-      title: 'أرقام أولياء الأمور',
-      icon: Icons.contacts,
-      color: Colors.purple,
-      children: [
-        if (_studentsContacts.isEmpty)
-          const Center(
-            child: Padding(
-              padding: EdgeInsets.all(20),
-              child: Text(
-                'لا توجد معلومات اتصال متاحة',
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontSize: 14,
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          gradient: LinearGradient(
+            colors: [Colors.purple[50]!, Colors.white],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.purple[600],
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(16),
+                  topRight: Radius.circular(16),
                 ),
               ),
-            ),
-          )
-        else
-          ...(_studentsContacts.take(10).map((contact) => Padding(
-            padding: const EdgeInsets.only(bottom: 8),
-            child: _buildInfoRow(
-              icon: Icons.person,
-              label: '${contact['studentName']} - ${contact['parentName']}',
-              value: contact['parentPhone']!,
-              isClickable: true,
-              onTap: () => _makePhoneCall(contact['parentPhone']!),
-            ),
-          )).toList()),
-        if (_studentsContacts.length > 10)
-          const Padding(
-            padding: EdgeInsets.only(top: 8),
-            child: Text(
-              'وأرقام أخرى...',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey,
-                fontStyle: FontStyle.italic,
+              child: Row(
+                children: [
+                  const Icon(Icons.contacts, color: Colors.white, size: 24),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      'أرقام أولياء الأمور',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withAlpha(51),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      '${_studentsContacts.length}',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-      ],
+
+            // Content
+            if (_studentsContacts.isEmpty)
+              const Padding(
+                padding: EdgeInsets.all(32),
+                child: Center(
+                  child: Column(
+                    children: [
+                      Icon(Icons.contacts_outlined, size: 48, color: Colors.grey),
+                      SizedBox(height: 16),
+                      Text(
+                        'لا توجد معلومات اتصال متاحة',
+                        style: TextStyle(
+                          color: Colors.grey,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    // Search bar
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[100],
+                        borderRadius: BorderRadius.circular(25),
+                        border: Border.all(color: Colors.grey[300]!),
+                      ),
+                      child: const Row(
+                        children: [
+                          Icon(Icons.search, color: Colors.grey, size: 20),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'البحث في جهات الاتصال...',
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Contacts list
+                    ..._studentsContacts.map((contact) => _buildContactCard(contact)),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 
-  Widget _buildEmergencyNumbersCard() {
-    return _buildInfoCard(
-      title: 'أرقام الطوارئ العامة',
-      icon: Icons.local_hospital,
-      color: Colors.red,
-      children: [
-        _buildInfoRow(
-          icon: Icons.local_hospital,
-          label: 'الإسعاف',
-          value: '997',
-          isClickable: true,
-          onTap: () => _makePhoneCall('997'),
-        ),
-        const SizedBox(height: 12),
-        _buildInfoRow(
-          icon: Icons.local_police,
-          label: 'الشرطة',
-          value: '999',
-          isClickable: true,
-          onTap: () => _makePhoneCall('999'),
-        ),
-        const SizedBox(height: 12),
-        _buildInfoRow(
-          icon: Icons.fire_truck,
-          label: 'الإطفاء',
-          value: '998',
-          isClickable: true,
-          onTap: () => _makePhoneCall('998'),
-        ),
-      ],
+  Widget _buildContactCard(Map<String, String> contact) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey[200]!),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withAlpha(25),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // Student Avatar
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: Colors.purple[100],
+            child: Text(
+              contact['studentName']!.isNotEmpty ? contact['studentName']![0] : 'ط',
+              style: TextStyle(
+                color: Colors.purple[700],
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+
+          // Student Info
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  contact['studentName']!,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2D3748),
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  'ولي الأمر: ${contact['parentName']}',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.grey[600],
+                  ),
+                ),
+                if (contact['grade'] != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    'الصف: ${contact['grade']}',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+
+          // Phone number and call button
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                contact['parentPhone']!,
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF2D3748),
+                ),
+              ),
+              const SizedBox(height: 8),
+              ElevatedButton.icon(
+                onPressed: () => _makePhoneCall(contact['parentPhone']!),
+                icon: const Icon(Icons.phone, size: 16),
+                label: const Text('اتصال'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  textStyle: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
+
+
 
   Widget _buildInfoCard({
     required String title,

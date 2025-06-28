@@ -11,6 +11,7 @@ import '../models/absence_model.dart';
 import '../models/user_model.dart';
 import '../models/survey_model.dart';
 import '../models/supervisor_assignment_model.dart';
+import '../models/student_behavior_model.dart';
 
 
 class DatabaseService {
@@ -2049,5 +2050,101 @@ class DatabaseService {
 
       return studentsWithAbsences;
     });
+  }
+
+  // Student Behavior Evaluation Methods
+
+  /// Create or update behavior evaluation
+  Future<void> saveBehaviorEvaluation(StudentBehaviorEvaluation evaluation) async {
+    try {
+      final evaluationId = evaluation.id.isEmpty
+          ? _uuid.v4()
+          : evaluation.id;
+
+      final updatedEvaluation = evaluation.copyWith(
+        id: evaluationId,
+        updatedAt: DateTime.now(),
+      );
+
+      await _firestore
+          .collection('behavior_evaluations')
+          .doc(evaluationId)
+          .set(updatedEvaluation.toMap());
+
+      debugPrint('✅ Behavior evaluation saved successfully: ${evaluation.studentName}');
+    } catch (e) {
+      debugPrint('❌ Error saving behavior evaluation: $e');
+      throw Exception('فشل في حفظ التقييم السلوكي: $e');
+    }
+  }
+
+  /// Get behavior evaluations for a supervisor in a specific month/year
+  Future<List<StudentBehaviorEvaluation>> getBehaviorEvaluations({
+    required String supervisorId,
+    required int month,
+    required int year,
+  }) async {
+    try {
+      final snapshot = await _firestore
+          .collection('behavior_evaluations')
+          .where('supervisorId', isEqualTo: supervisorId)
+          .where('month', isEqualTo: month)
+          .where('year', isEqualTo: year)
+          .get();
+
+      return snapshot.docs
+          .map((doc) => StudentBehaviorEvaluation.fromMap(doc.data()))
+          .toList();
+    } catch (e) {
+      debugPrint('❌ Error getting behavior evaluations: $e');
+      return [];
+    }
+  }
+
+  /// Get behavior evaluations for a specific student
+  Future<List<StudentBehaviorEvaluation>> getStudentBehaviorEvaluations(String studentId) async {
+    try {
+      final snapshot = await _firestore
+          .collection('behavior_evaluations')
+          .where('studentId', isEqualTo: studentId)
+          .orderBy('year', descending: true)
+          .orderBy('month', descending: true)
+          .get();
+
+      return snapshot.docs
+          .map((doc) => StudentBehaviorEvaluation.fromMap(doc.data()))
+          .toList();
+    } catch (e) {
+      debugPrint('❌ Error getting student behavior evaluations: $e');
+      return [];
+    }
+  }
+
+  /// Get all behavior evaluations (for admin)
+  Stream<List<StudentBehaviorEvaluation>> getAllBehaviorEvaluationsStream() {
+    return _firestore
+        .collection('behavior_evaluations')
+        .orderBy('year', descending: true)
+        .orderBy('month', descending: true)
+        .orderBy('studentName')
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => StudentBehaviorEvaluation.fromMap(doc.data()))
+            .toList());
+  }
+
+  /// Delete behavior evaluation
+  Future<void> deleteBehaviorEvaluation(String evaluationId) async {
+    try {
+      await _firestore
+          .collection('behavior_evaluations')
+          .doc(evaluationId)
+          .delete();
+
+      debugPrint('✅ Behavior evaluation deleted successfully');
+    } catch (e) {
+      debugPrint('❌ Error deleting behavior evaluation: $e');
+      throw Exception('فشل في حذف التقييم السلوكي: $e');
+    }
   }
 }

@@ -480,17 +480,17 @@ class _StudentsListScreenState extends State<StudentsListScreen> {
                   children: [
                     Expanded(
                       child: _buildCompactInfoItem(
-                        icon: Icons.location_on,
-                        label: 'عنوان الطالب',
-                        value: student.address.isNotEmpty ? student.address : 'غير محدد',
-                        color: Colors.orange,
+                        icon: Icons.home,
+                        label: 'عنوان ولي الأمر',
+                        value: student.parentName.isNotEmpty ? student.parentName : 'غير محدد',
+                        color: Colors.blue,
                       ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: _buildCompactInfoItem(
                         icon: Icons.phone,
-                        label: 'هاتف ولي الأمر',
+                        label: 'هاتف الوالدة',
                         value: student.parentPhone.isNotEmpty ? student.parentPhone : 'غير محدد',
                         color: Colors.green,
                         onTap: student.parentPhone.isNotEmpty ? () => _callParent(student.parentPhone) : null,

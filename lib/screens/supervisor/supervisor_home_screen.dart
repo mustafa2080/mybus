@@ -9,6 +9,8 @@ import '../../models/absence_model.dart';
 import '../../models/student_model.dart';
 import '../../widgets/curved_app_bar.dart';
 import 'school_info_screen.dart';
+import 'absence_management_screen.dart';
+import 'monthly_behavior_survey_screen.dart';
 
 class SupervisorHomeScreen extends StatefulWidget {
   const SupervisorHomeScreen({super.key});
@@ -996,10 +998,10 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen> {
         const SizedBox(height: 12),
         _buildActionCard(
           'الاستبيانات الشهرية',
-          'استبيانات تقييم الطلاب',
+          'تقييم سلوك الطلاب الشهري',
           Icons.assignment,
           const Color(0xFF8B5CF6),
-          () => context.push('/supervisor/surveys'),
+          () => _navigateToMonthlySurveys(),
           isFullWidth: true,
         ),
       ],
@@ -2323,7 +2325,19 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen> {
   }
 
   void _showAbsenceManagement() {
-    context.push('/supervisor/absence-management');
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const SupervisorAbsenceManagementScreen(),
+      ),
+    );
+  }
+
+  void _navigateToMonthlySurveys() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => const MonthlyBehaviorSurveyScreen(),
+      ),
+    );
   }
 }
 
