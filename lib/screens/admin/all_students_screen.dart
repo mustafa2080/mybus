@@ -1046,7 +1046,7 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
         Navigator.of(context).pop();
 
         // Show success message
-          ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
               children: [
@@ -1073,8 +1073,8 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
               borderRadius: BorderRadius.circular(10),
             ),
           ),
-          );
-        }
+        );
+      }
     } catch (e) {
       // Close loading dialog if open
       if (mounted && Navigator.canPop(context)) {
