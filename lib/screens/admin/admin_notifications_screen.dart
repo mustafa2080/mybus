@@ -710,7 +710,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    complaint.statusDisplayText,
+                    complaint.statusDisplayName,
                     style: TextStyle(
                       color: _getComplaintStatusColor(complaint.status),
                       fontSize: 12,
@@ -725,8 +725,8 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
             _buildDetailRow('رقم الهاتف', complaint.parentPhone),
             if (complaint.studentName != null)
               _buildDetailRow('الطالب', complaint.studentName!),
-            _buildDetailRow('نوع الشكوى', complaint.typeDisplayText),
-            _buildDetailRow('الأولوية', complaint.priorityDisplayText),
+            _buildDetailRow('نوع الشكوى', complaint.typeDisplayName),
+            _buildDetailRow('الأولوية', complaint.priorityDisplayName),
             const SizedBox(height: 8),
             Text(
               complaint.description,
