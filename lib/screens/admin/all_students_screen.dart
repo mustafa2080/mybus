@@ -983,35 +983,38 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
   }
 
   Future<void> _assignStudentToBus(StudentModel student, String? busId, String busRoute) async {
-    bool isLoadingShown = false;
+    // Close the assignment dialog first
+    if (mounted && Navigator.canPop(context)) {
+      Navigator.of(context).pop();
+    }
 
-    try {
-      // Show loading indicator
-      if (mounted) {
-        showDialog(
-          context: context,
-          barrierDismissible: false,
-          builder: (context) => WillPopScope(
-            onWillPop: () async => false,
-            child: const Center(
-              child: Card(
-                child: Padding(
-                  padding: EdgeInsets.all(20),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      CircularProgressIndicator(),
-                      SizedBox(height: 16),
-                      Text('جاري حفظ التسكين...'),
-                    ],
-                  ),
+    // Show loading indicator
+    if (mounted) {
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => WillPopScope(
+          onWillPop: () async => false,
+          child: const Center(
+            child: Card(
+              child: Padding(
+                padding: EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 16),
+                    Text('جاري حفظ التسكين...'),
+                  ],
                 ),
               ),
             ),
           ),
-        );
-        isLoadingShown = true;
-      }
+        ),
+      );
+    }
+
+    try {
 
       // Validate input data
       if (busId != null && busId.isEmpty) {
@@ -1037,22 +1040,12 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
       // Update student in database
       await _databaseService.updateStudent(updatedStudent);
 
-      // Close dialogs safely
+      // Close loading dialog and show success message
       if (mounted) {
-        // Close loading dialog first if it was shown
-        if (isLoadingShown && Navigator.canPop(context)) {
-          Navigator.of(context).pop(); // Close loading
-          await Future.delayed(const Duration(milliseconds: 150));
-        }
-
-        // Close assignment dialog
-        if (mounted && Navigator.canPop(context)) {
-          Navigator.of(context).pop(); // Close assignment dialog
-          await Future.delayed(const Duration(milliseconds: 150));
-        }
+        // Close loading dialog
+        Navigator.of(context).pop();
 
         // Show success message
-        if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Row(
@@ -1085,9 +1078,8 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
       }
     } catch (e) {
       // Close loading dialog if open
-      if (mounted && isLoadingShown && Navigator.canPop(context)) {
+      if (mounted && Navigator.canPop(context)) {
         Navigator.of(context).pop();
-        await Future.delayed(const Duration(milliseconds: 100));
       }
 
       if (mounted) {
