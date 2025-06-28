@@ -1118,6 +1118,7 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
     }
   }
 
+  // Helper method to build info rows with icon, label and value
   Widget _buildInfoRow(IconData icon, String label, String value) {
     return Row(
       children: [
