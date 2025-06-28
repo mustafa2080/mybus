@@ -497,7 +497,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
     try {
       final userId = _authService.currentUser?.uid;
       if (userId != null) {
-        await _notificationService.markAllNotificationsAsRead(userId);
+        await _databaseService.markAllNotificationsAsRead(userId);
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

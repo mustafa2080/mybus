@@ -353,7 +353,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   Future<void> _markAllAsRead() async {
     try {
-      await _notificationService.markAllNotificationsAsRead(
+      await _databaseService.markAllNotificationsAsRead(
         _authService.currentUser?.uid ?? '',
       );
       if (mounted) {
