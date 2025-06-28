@@ -150,46 +150,26 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen> {
           ),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(12),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            // Welcome Section
+            _buildWelcomeSection(),
+            const SizedBox(height: 20),
 
+            // Quick Stats
+            _buildQuickStats(),
+            const SizedBox(height: 24),
 
-            // Action Buttons
-            Row(
-              children: [
-                Expanded(
-                  child: _buildQRScannerButton(),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildStudentsListButton(),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildAbsenceManagementButton(),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: _buildEmergencyContactButton(),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: _buildSurveysButton(),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
+            // Main Action Buttons
+            _buildMainActions(),
+            const SizedBox(height: 20),
+
+            // Secondary Actions
+            _buildSecondaryActions(),
+            const SizedBox(height: 20),
 
             // تنبيه إشعارات الغياب الجديدة
             StreamBuilder<List<AbsenceModel>>(
@@ -655,57 +635,61 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen> {
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: _showAbsenceRegistration,
-                      icon: const Icon(Icons.add, color: Colors.white, size: 16),
-                      label: const Text(
-                        'تسجيل غياب',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFE91E63),
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
+              const SizedBox(height: 12),
+              // زر تسجيل غياب
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _showAbsenceRegistration,
+                  icon: const Icon(Icons.add_circle_outline, color: Colors.white, size: 18),
+                  label: const Text(
+                    'تسجيل غياب جديد',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
                     ),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: _showTodayAbsences,
-                      icon: Icon(
-                        pendingCount > 0 ? Icons.notification_important : Icons.list,
-                        color: Colors.white,
-                        size: 16,
-                      ),
-                      label: Text(
-                        pendingCount > 0 ? 'طلبات ($pendingCount)' : 'الغيابات اليوم',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 12,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: pendingCount > 0 ? Colors.orange : const Color(0xFF9C27B0),
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFE91E63),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 2,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              // زر عرض الطلبات/الغيابات
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _showTodayAbsences,
+                  icon: Icon(
+                    pendingCount > 0 ? Icons.notification_important : Icons.list_alt,
+                    color: Colors.white,
+                    size: 18,
+                  ),
+                  label: Text(
+                    pendingCount > 0
+                        ? 'عرض الطلبات المعلقة ($pendingCount)'
+                        : 'عرض غيابات اليوم',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
                     ),
                   ),
-                ],
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: pendingCount > 0 ? Colors.orange : const Color(0xFF9C27B0),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    elevation: 2,
+                  ),
+                ),
               ),
             ],
           ),
@@ -719,6 +703,397 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen> {
 
 
 
+
+  Widget _buildWelcomeSection() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF1E88E5).withAlpha(25),
+            const Color(0xFF1976D2).withAlpha(51),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF1E88E5).withAlpha(76)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E88E5),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.supervisor_account,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'مرحباً بك',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1E88E5),
+                      ),
+                    ),
+                    Text(
+                      'جاهز لبدء رحلة آمنة اليوم؟',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[700],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.grey.withAlpha(25),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.access_time, color: Colors.grey[600], size: 16),
+                const SizedBox(width: 8),
+                Text(
+                  'آخر تحديث: ${DateFormat('HH:mm').format(DateTime.now())}',
+                  style: TextStyle(
+                    color: Colors.grey[600],
+                    fontSize: 12,
+                  ),
+                ),
+                const Spacer(),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withAlpha(25),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.check_circle, color: Colors.green, size: 12),
+                      SizedBox(width: 4),
+                      Text(
+                        'متصل',
+                        style: TextStyle(
+                          color: Colors.green,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickStats() {
+    return Row(
+      children: [
+        Expanded(
+          child: StreamBuilder<List<StudentModel>>(
+            stream: _databaseService.getStudentsOnBus(),
+            builder: (context, snapshot) {
+              final count = snapshot.data?.length ?? 0;
+              return _buildStatCard(
+                'الطلاب في الباص',
+                count.toString(),
+                Icons.directions_bus,
+                Colors.blue,
+              );
+            },
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: StreamBuilder<List<AbsenceModel>>(
+            stream: _databaseService.getPendingAbsences(),
+            builder: (context, snapshot) {
+              final count = snapshot.data?.length ?? 0;
+              return _buildStatCard(
+                'طلبات الغياب',
+                count.toString(),
+                Icons.notification_important,
+                count > 0 ? Colors.orange : Colors.green,
+              );
+            },
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: StreamBuilder<List<AbsenceModel>>(
+            stream: _databaseService.getTodayAbsences(),
+            builder: (context, snapshot) {
+              final count = snapshot.data?.length ?? 0;
+              return _buildStatCard(
+                'غيابات اليوم',
+                count.toString(),
+                Icons.person_off,
+                Colors.red,
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withAlpha(25),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        border: Border.all(color: color.withAlpha(76)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withAlpha(25),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 10,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMainActions() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'الإجراءات الرئيسية',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF2D3748),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _buildActionCard(
+                'مسح QR',
+                'مسح رمز الطالب',
+                Icons.qr_code_scanner,
+                const Color(0xFF10B981),
+                () => context.push('/supervisor/qr-scanner'),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildActionCard(
+                'قائمة الطلاب',
+                'عرض جميع الطلاب',
+                Icons.people,
+                const Color(0xFF3B82F6),
+                () => context.push('/supervisor/students-list'),
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSecondaryActions() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'إجراءات إضافية',
+          style: TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+            color: Color(0xFF2D3748),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(
+              child: _buildActionCard(
+                'إدارة الغياب',
+                'متابعة طلبات الغياب',
+                Icons.event_busy,
+                const Color(0xFFEF4444),
+                () => _showAbsenceManagement(),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _buildActionCard(
+                'الاتصال الطارئ',
+                'معلومات الاتصال',
+                Icons.emergency,
+                const Color(0xFFF59E0B),
+                () => context.push('/supervisor/emergency-contact'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        _buildActionCard(
+          'الاستبيانات الشهرية',
+          'استبيانات تقييم الطلاب',
+          Icons.assignment,
+          const Color(0xFF8B5CF6),
+          () => context.push('/supervisor/surveys'),
+          isFullWidth: true,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionCard(
+    String title,
+    String subtitle,
+    IconData icon,
+    Color color,
+    VoidCallback onTap, {
+    bool isFullWidth = false,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withAlpha(25),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+          border: Border.all(color: color.withAlpha(76)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: color.withAlpha(25),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(icon, color: color, size: 24),
+                ),
+                if (isFullWidth) ...[
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: color,
+                          ),
+                        ),
+                        Text(
+                          subtitle,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(Icons.arrow_forward_ios, color: Colors.grey[400], size: 16),
+                ],
+              ],
+            ),
+            if (!isFullWidth) ...[
+              const SizedBox(height: 12),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                subtitle,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
 
   void _scanQRCode() {
     context.push('/supervisor/qr-scanner');
