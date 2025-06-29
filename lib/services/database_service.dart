@@ -694,16 +694,52 @@ class DatabaseService {
             .toList());
   }
 
-  // Get all students currently on buses (alias for supervisor screen)
+  // Get all students currently on buses (based on current status from QR scanner)
   Stream<List<StudentModel>> getStudentsOnBus() {
     return _firestore
         .collection('students')
         .where('isActive', isEqualTo: true)
-        .where('busId', isNotEqualTo: '')
+        .where('currentStatus', isEqualTo: 'onBus')
         .snapshots()
         .map((snapshot) => snapshot.docs
             .map((doc) => StudentModel.fromMap(doc.data()))
             .toList());
+  }
+
+  // Get students currently on bus for specific supervisor
+  Stream<List<StudentModel>> getStudentsOnBusForSupervisor(String supervisorId) {
+    return _firestore
+        .collection('supervisor_assignments')
+        .where('supervisorId', isEqualTo: supervisorId)
+        .where('status', isEqualTo: 'active')
+        .snapshots()
+        .asyncMap((assignmentSnapshot) async {
+          if (assignmentSnapshot.docs.isEmpty) {
+            return <StudentModel>[];
+          }
+
+          // Get bus IDs for this supervisor
+          final busIds = assignmentSnapshot.docs
+              .map((doc) => doc.data()['busId'] as String)
+              .toSet()
+              .toList();
+
+          if (busIds.isEmpty) {
+            return <StudentModel>[];
+          }
+
+          // Get students currently on these buses
+          final studentsSnapshot = await _firestore
+              .collection('students')
+              .where('isActive', isEqualTo: true)
+              .where('currentStatus', isEqualTo: 'onBus')
+              .where('busId', whereIn: busIds)
+              .get();
+
+          return studentsSnapshot.docs
+              .map((doc) => StudentModel.fromMap(doc.data()))
+              .toList();
+        });
   }
 
   // Complaints Collection Methods
@@ -1362,6 +1398,116 @@ class DatabaseService {
           }
 
           debugPrint('📊 Final pending absences count: ${absences.length}');
+          return absences;
+        });
+  }
+
+  // Get pending absences for specific supervisor
+  Stream<List<AbsenceModel>> getPendingAbsencesForSupervisor(String supervisorId) {
+    return _firestore
+        .collection('supervisor_assignments')
+        .where('supervisorId', isEqualTo: supervisorId)
+        .where('status', isEqualTo: 'active')
+        .snapshots()
+        .asyncMap((assignmentSnapshot) async {
+          if (assignmentSnapshot.docs.isEmpty) {
+            return <AbsenceModel>[];
+          }
+
+          // Get bus IDs for this supervisor
+          final busIds = assignmentSnapshot.docs
+              .map((doc) => doc.data()['busId'] as String)
+              .toSet()
+              .toList();
+
+          if (busIds.isEmpty) {
+            return <AbsenceModel>[];
+          }
+
+          // Get students on these buses
+          final studentsSnapshot = await _firestore
+              .collection('students')
+              .where('isActive', isEqualTo: true)
+              .where('busId', whereIn: busIds)
+              .get();
+
+          final studentIds = studentsSnapshot.docs
+              .map((doc) => doc.id)
+              .toList();
+
+          if (studentIds.isEmpty) {
+            return <AbsenceModel>[];
+          }
+
+          // Get pending absences for these students
+          final absencesSnapshot = await _firestore
+              .collection('absences')
+              .where('status', isEqualTo: 'pending')
+              .where('studentId', whereIn: studentIds)
+              .get();
+
+          return absencesSnapshot.docs
+              .map((doc) => AbsenceModel.fromMap(doc.data()))
+              .toList();
+        });
+  }
+
+  // Get today's absences for specific supervisor
+  Stream<List<AbsenceModel>> getTodayAbsencesForSupervisor(String supervisorId) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final tomorrow = today.add(const Duration(days: 1));
+
+    return _firestore
+        .collection('supervisor_assignments')
+        .where('supervisorId', isEqualTo: supervisorId)
+        .where('status', isEqualTo: 'active')
+        .snapshots()
+        .asyncMap((assignmentSnapshot) async {
+          if (assignmentSnapshot.docs.isEmpty) {
+            return <AbsenceModel>[];
+          }
+
+          // Get bus IDs for this supervisor
+          final busIds = assignmentSnapshot.docs
+              .map((doc) => doc.data()['busId'] as String)
+              .toSet()
+              .toList();
+
+          if (busIds.isEmpty) {
+            return <AbsenceModel>[];
+          }
+
+          // Get students on these buses
+          final studentsSnapshot = await _firestore
+              .collection('students')
+              .where('isActive', isEqualTo: true)
+              .where('busId', whereIn: busIds)
+              .get();
+
+          final studentIds = studentsSnapshot.docs
+              .map((doc) => doc.id)
+              .toList();
+
+          if (studentIds.isEmpty) {
+            return <AbsenceModel>[];
+          }
+
+          // Get today's approved absences for these students
+          final absencesSnapshot = await _firestore
+              .collection('absences')
+              .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(today))
+              .where('date', isLessThan: Timestamp.fromDate(tomorrow))
+              .where('status', isEqualTo: 'approved')
+              .where('studentId', whereIn: studentIds)
+              .get();
+
+          final absences = absencesSnapshot.docs
+              .map((doc) => AbsenceModel.fromMap(doc.data()))
+              .toList();
+
+          // Sort locally
+          absences.sort((a, b) => b.createdAt.compareTo(a.createdAt));
           return absences;
         });
   }

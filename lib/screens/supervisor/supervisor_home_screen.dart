@@ -825,14 +825,23 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen> {
       children: [
         Expanded(
           child: StreamBuilder<List<StudentModel>>(
-            stream: _databaseService.getStudentsOnBus(),
+            stream: _databaseService.getStudentsOnBusForSupervisor(_authService.currentUser?.uid ?? ''),
             builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return _buildStatCard(
+                  'الطلاب في الباص',
+                  '...',
+                  Icons.directions_bus,
+                  Colors.grey,
+                );
+              }
+
               final count = snapshot.data?.length ?? 0;
               return _buildStatCard(
                 'الطلاب في الباص',
                 count.toString(),
                 Icons.directions_bus,
-                Colors.blue,
+                count > 0 ? Colors.green : Colors.blue,
               );
             },
           ),
@@ -840,8 +849,17 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen> {
         const SizedBox(width: 12),
         Expanded(
           child: StreamBuilder<List<AbsenceModel>>(
-            stream: _databaseService.getPendingAbsences(),
+            stream: _databaseService.getPendingAbsencesForSupervisor(_authService.currentUser?.uid ?? ''),
             builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return _buildStatCard(
+                  'طلبات الغياب',
+                  '...',
+                  Icons.notification_important,
+                  Colors.grey,
+                );
+              }
+
               final count = snapshot.data?.length ?? 0;
               return _buildStatCard(
                 'طلبات الغياب',
@@ -855,14 +873,23 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen> {
         const SizedBox(width: 12),
         Expanded(
           child: StreamBuilder<List<AbsenceModel>>(
-            stream: _databaseService.getTodayAbsences(),
+            stream: _databaseService.getTodayAbsencesForSupervisor(_authService.currentUser?.uid ?? ''),
             builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return _buildStatCard(
+                  'غيابات اليوم',
+                  '...',
+                  Icons.person_off,
+                  Colors.grey,
+                );
+              }
+
               final count = snapshot.data?.length ?? 0;
               return _buildStatCard(
                 'غيابات اليوم',
                 count.toString(),
                 Icons.person_off,
-                Colors.red,
+                count > 0 ? Colors.red : Colors.green,
               );
             },
           ),
@@ -1389,10 +1416,10 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen> {
                       ),
                       Expanded(
                         child: StreamBuilder<List<AbsenceModel>>(
-                          stream: _databaseService.getTodayAbsences(),
+                          stream: _databaseService.getTodayAbsencesForSupervisor(_authService.currentUser?.uid ?? ''),
                           builder: (context, snapshot) {
                             final count = snapshot.data?.length ?? 0;
-                            return _buildCompactStat('غيابات اليوم', count.toString(), Icons.person_off, Colors.red);
+                            return _buildCompactStat('غيابات اليوم', count.toString(), Icons.person_off, count > 0 ? Colors.red : Colors.green);
                           },
                         ),
                       ),
