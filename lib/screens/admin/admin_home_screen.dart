@@ -218,13 +218,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                 color: const Color(0xFF9C27B0),
                 onTap: () => _showSystemSettings(),
               ),
-              _buildManagementCard(
-                icon: Icons.analytics,
-                label: 'تحليلات متقدمة',
-                description: 'إحصائيات تفصيلية',
-                color: const Color(0xFF795548),
-                onTap: () => _showAdvancedAnalytics(),
-              ),
+
               _buildManagementCard(
                 icon: Icons.feedback,
                 label: 'الشكاوى',
@@ -483,9 +477,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
 
 
 
-  void _showAdvancedAnalytics() {
-    context.push('/admin/advanced-analytics');
-  }
+
 
   // دالة لبناء قسم الإحصائيات السريعة
   Widget _buildQuickStatsSection() {
@@ -749,19 +741,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                   ),
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () => context.push('/admin/advanced-analytics'),
-                  icon: const Icon(Icons.analytics, size: 18),
-                  label: const Text('التحليلات'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.teal,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                ),
-              ),
+
             ],
           ),
         ],

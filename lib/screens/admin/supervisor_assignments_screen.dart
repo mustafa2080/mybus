@@ -605,18 +605,11 @@ class _SupervisorAssignmentsScreenState extends State<SupervisorAssignmentsScree
   }
 
   void _showCreateAssignmentDialog() {
-    // Implementation for creating new assignment
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('إضافة تعيين جديد'),
-        content: const Text('سيتم تطوير هذه الميزة قريباً'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('موافق'),
-          ),
-        ],
+      builder: (context) => _CreateAssignmentDialog(
+        databaseService: _databaseService,
+        currentUser: _currentUser,
       ),
     );
   }
@@ -678,6 +671,223 @@ class _SupervisorAssignmentsScreenState extends State<SupervisorAssignmentsScree
             ),
           );
         }
+      }
+    }
+  }
+}
+
+class _CreateAssignmentDialog extends StatefulWidget {
+  final DatabaseService databaseService;
+  final UserModel? currentUser;
+
+  const _CreateAssignmentDialog({
+    required this.databaseService,
+    this.currentUser,
+  });
+
+  @override
+  State<_CreateAssignmentDialog> createState() => _CreateAssignmentDialogState();
+}
+
+class _CreateAssignmentDialogState extends State<_CreateAssignmentDialog> {
+  String? _selectedSupervisorId;
+  String? _selectedBusId;
+  TripDirection _selectedDirection = TripDirection.both;
+  String _notes = '';
+  bool _isLoading = false;
+
+  List<UserModel> _supervisors = [];
+  List<BusModel> _buses = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    try {
+      setState(() => _isLoading = true);
+
+      // Load supervisors
+      final supervisorsSnapshot = await widget.databaseService.getAllSupervisors().first;
+      _supervisors = supervisorsSnapshot;
+
+      // Load buses
+      final busesSnapshot = await widget.databaseService.getAllBuses().first;
+      _buses = busesSnapshot;
+
+      setState(() => _isLoading = false);
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('خطأ في تحميل البيانات: $e')),
+        );
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Row(
+        children: [
+          Icon(Icons.assignment_add, color: Color(0xFF1E88E5)),
+          SizedBox(width: 8),
+          Text('إضافة تعيين جديد'),
+        ],
+      ),
+      content: _isLoading
+          ? const SizedBox(
+              height: 200,
+              child: Center(child: CircularProgressIndicator()),
+            )
+          : SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Supervisor selection
+                  DropdownButtonFormField<String>(
+                    value: _selectedSupervisorId,
+                    decoration: const InputDecoration(
+                      labelText: 'اختر المشرف',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: _supervisors.map((supervisor) {
+                      return DropdownMenuItem(
+                        value: supervisor.id,
+                        child: Text(supervisor.fullName),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      setState(() => _selectedSupervisorId = value);
+                    },
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Bus selection
+                  DropdownButtonFormField<String>(
+                    value: _selectedBusId,
+                    decoration: const InputDecoration(
+                      labelText: 'اختر الباص',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: _buses.map((bus) {
+                      return DropdownMenuItem(
+                        value: bus.id,
+                        child: Text('${bus.plateNumber} - ${bus.route}'),
+                      );
+                    }).toList(),
+                    onChanged: (value) {
+                      setState(() => _selectedBusId = value);
+                    },
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Direction selection
+                  DropdownButtonFormField<TripDirection>(
+                    value: _selectedDirection,
+                    decoration: const InputDecoration(
+                      labelText: 'اتجاه الرحلة',
+                      border: OutlineInputBorder(),
+                    ),
+                    items: const [
+                      DropdownMenuItem(
+                        value: TripDirection.toSchool,
+                        child: Text('الذهاب للمدرسة'),
+                      ),
+                      DropdownMenuItem(
+                        value: TripDirection.fromSchool,
+                        child: Text('العودة من المدرسة'),
+                      ),
+                      DropdownMenuItem(
+                        value: TripDirection.both,
+                        child: Text('كلا الاتجاهين'),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      setState(() => _selectedDirection = value!);
+                    },
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // Notes
+                  TextField(
+                    decoration: const InputDecoration(
+                      labelText: 'ملاحظات (اختياري)',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 3,
+                    onChanged: (value) => _notes = value,
+                  ),
+                ],
+              ),
+            ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('إلغاء'),
+        ),
+        ElevatedButton(
+          onPressed: _canSubmit() ? _createAssignment : null,
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF1E88E5),
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('إنشاء التعيين'),
+        ),
+      ],
+    );
+  }
+
+  bool _canSubmit() {
+    return _selectedSupervisorId != null &&
+           _selectedBusId != null &&
+           !_isLoading;
+  }
+
+  Future<void> _createAssignment() async {
+    if (!_canSubmit()) return;
+
+    try {
+      setState(() => _isLoading = true);
+
+      final supervisor = _supervisors.firstWhere((s) => s.id == _selectedSupervisorId);
+      final bus = _buses.firstWhere((b) => b.id == _selectedBusId);
+
+      await widget.databaseService.createSupervisorAssignment(
+        supervisorId: _selectedSupervisorId!,
+        supervisorName: supervisor.fullName,
+        busId: _selectedBusId!,
+        busPlateNumber: bus.plateNumber,
+        direction: _selectedDirection,
+        assignedBy: widget.currentUser?.id ?? '',
+        assignedByName: widget.currentUser?.fullName ?? 'مدير',
+        notes: _notes.isNotEmpty ? _notes : null,
+      );
+
+      if (mounted) {
+        Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم إنشاء التعيين بنجاح'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ في إنشاء التعيين: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }

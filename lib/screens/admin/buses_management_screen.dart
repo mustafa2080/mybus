@@ -476,18 +476,21 @@ class _BusesManagementScreenState extends State<BusesManagementScreen> {
               child: const Text('إلغاء'),
             ),
             ElevatedButton(
-              onPressed: () => _saveBus(
-                isEditing: isEditing,
-                busId: bus?.id,
-                plateNumber: plateNumberController.text,
-                description: descriptionController.text,
-                driverName: driverNameController.text,
-                driverPhone: driverPhoneController.text,
-                driverNationalId: driverNationalIdController.text,
-                route: routeController.text,
-                capacity: int.tryParse(capacityController.text) ?? 30,
-                hasAirConditioning: hasAirConditioning,
-              ),
+              onPressed: () async {
+                await _saveBus(
+                  context: context,
+                  isEditing: isEditing,
+                  busId: bus?.id,
+                  plateNumber: plateNumberController.text,
+                  description: descriptionController.text,
+                  driverName: driverNameController.text,
+                  driverPhone: driverPhoneController.text,
+                  driverNationalId: driverNationalIdController.text,
+                  route: routeController.text,
+                  capacity: int.tryParse(capacityController.text) ?? 30,
+                  hasAirConditioning: hasAirConditioning,
+                );
+              },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF4CAF50),
                 foregroundColor: Colors.white,
@@ -501,6 +504,7 @@ class _BusesManagementScreenState extends State<BusesManagementScreen> {
   }
 
   Future<void> _saveBus({
+    required BuildContext context,
     required bool isEditing,
     String? busId,
     required String plateNumber,
@@ -515,12 +519,14 @@ class _BusesManagementScreenState extends State<BusesManagementScreen> {
     if (plateNumber.trim().isEmpty ||
         driverName.trim().isEmpty ||
         route.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('يرجى ملء جميع الحقول المطلوبة'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('يرجى ملء جميع الحقول المطلوبة'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
       return;
     }
 
@@ -560,7 +566,7 @@ class _BusesManagementScreenState extends State<BusesManagementScreen> {
         await _databaseService.addBus(newBus);
       }
 
-      if (mounted) {
+      if (context.mounted) {
         Navigator.of(context).pop();
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -570,7 +576,9 @@ class _BusesManagementScreenState extends State<BusesManagementScreen> {
         );
       }
     } catch (e) {
-      if (mounted) {
+      debugPrint('Error saving bus: $e');
+      if (context.mounted) {
+        Navigator.of(context).pop(); // Close dialog even on error
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('خطأ في حفظ السيارة: $e'),
