@@ -227,6 +227,13 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                 onTap: () => context.push('/admin/complaints'),
               ),
               _buildManagementCard(
+                icon: Icons.poll,
+                label: 'تقارير الاستبيانات',
+                description: 'تقييم المشرفين وسلوك الطلاب',
+                color: const Color(0xFF4CAF50),
+                onTap: () => context.push('/admin/surveys-reports'),
+              ),
+              _buildManagementCard(
                 icon: Icons.person_off,
                 label: 'إدارة الغياب',
                 description: 'موافقة طلبات الغياب والإحصائيات',

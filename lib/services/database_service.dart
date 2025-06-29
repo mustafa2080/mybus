@@ -1753,6 +1753,60 @@ class DatabaseService {
     }
   }
 
+  // Get supervisor evaluations by month for admin reports
+  Future<List<SupervisorEvaluationModel>> getSupervisorEvaluationsByMonth(int month, int year) async {
+    try {
+      final snapshot = await _firestore
+          .collection('supervisor_evaluations')
+          .where('month', isEqualTo: month)
+          .where('year', isEqualTo: year)
+          .get();
+
+      final evaluations = <SupervisorEvaluationModel>[];
+      for (final doc in snapshot.docs) {
+        try {
+          final evaluation = SupervisorEvaluationModel.fromMap(doc.data());
+          evaluations.add(evaluation);
+        } catch (e) {
+          debugPrint('❌ Error parsing supervisor evaluation ${doc.id}: $e');
+        }
+      }
+
+      debugPrint('📊 Supervisor evaluations for $month/$year: ${evaluations.length}');
+      return evaluations;
+    } catch (e) {
+      debugPrint('❌ Error getting supervisor evaluations by month: $e');
+      return [];
+    }
+  }
+
+  // Get behavior evaluations by month for admin reports
+  Future<List<StudentBehaviorEvaluation>> getBehaviorEvaluationsByMonth(int month, int year) async {
+    try {
+      final snapshot = await _firestore
+          .collection('behavior_evaluations')
+          .where('month', isEqualTo: month)
+          .where('year', isEqualTo: year)
+          .get();
+
+      final evaluations = <StudentBehaviorEvaluation>[];
+      for (final doc in snapshot.docs) {
+        try {
+          final evaluation = StudentBehaviorEvaluation.fromMap(doc.data());
+          evaluations.add(evaluation);
+        } catch (e) {
+          debugPrint('❌ Error parsing behavior evaluation ${doc.id}: $e');
+        }
+      }
+
+      debugPrint('📊 Behavior evaluations for $month/$year: ${evaluations.length}');
+      return evaluations;
+    } catch (e) {
+      debugPrint('❌ Error getting behavior evaluations by month: $e');
+      return [];
+    }
+  }
+
   // Get all absences stream (for debugging)
   Stream<List<AbsenceModel>> getAllAbsencesStream() {
     return _firestore
