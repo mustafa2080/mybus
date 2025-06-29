@@ -81,7 +81,7 @@ class _SupervisorEvaluationScreenState extends State<SupervisorEvaluationScreen>
     return Directionality(
       textDirection: TextDirection.rtl,
       child: Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+        backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: const Text(
           'تقييم المشرفين',
@@ -347,7 +347,6 @@ class _SupervisorEvaluationScreenState extends State<SupervisorEvaluationScreen>
             ),
           ],
         ),
-      ),
       ),
     );
   }

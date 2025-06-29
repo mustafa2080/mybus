@@ -18,9 +18,6 @@ class ThemeService extends ChangeNotifier {
     primaryColor: const Color(0xFF1E88E5),
     scaffoldBackgroundColor: Colors.grey[50],
 
-    // RTL Text Direction
-    textDirection: TextDirection.rtl,
-    
     // AppBar Theme
     appBarTheme: const AppBarTheme(
       backgroundColor: Color(0xFF1E88E5),
@@ -115,9 +112,6 @@ class ThemeService extends ChangeNotifier {
     primaryColor: const Color(0xFF1E88E5),
     scaffoldBackgroundColor: const Color(0xFF121212),
 
-    // RTL Text Direction
-    textDirection: TextDirection.rtl,
-    
     // AppBar Theme
     appBarTheme: const AppBarTheme(
       backgroundColor: Color(0xFF1F1F1F),
