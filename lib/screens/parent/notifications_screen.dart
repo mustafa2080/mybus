@@ -1,6 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../services/notification_service.dart';
+import '../../services/database_service.dart';
 import '../../services/auth_service.dart';
 import '../../models/notification_model.dart';
 
@@ -13,6 +14,7 @@ class NotificationsScreen extends StatefulWidget {
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
   final NotificationService _notificationService = NotificationService();
+  final DatabaseService _databaseService = DatabaseService();
   final AuthService _authService = AuthService();
 
   @override
