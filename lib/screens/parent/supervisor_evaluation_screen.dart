@@ -157,6 +157,7 @@ class _SupervisorEvaluationScreenState extends State<SupervisorEvaluationScreen>
                     ),
                   ],
                 ),
+      ),
     );
   }
 
