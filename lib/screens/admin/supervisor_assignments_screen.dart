@@ -138,43 +138,42 @@ class _SupervisorAssignmentsScreenState extends State<SupervisorAssignmentsScree
           totalSupervisors: statsData['totalSupervisors'] ?? 0,
           availableSupervisors: statsData['availableSupervisors'] ?? 0,
         );
-        
+
         return Container(
-          margin: const EdgeInsets.all(16),
-          padding: const EdgeInsets.all(20),
+          margin: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
             gradient: LinearGradient(
               colors: [const Color(0xFF1E88E5), const Color(0xFF1976D2)],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(12),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF1E88E5).withAlpha(76),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
+                color: const Color(0xFF1E88E5).withAlpha(51),
+                blurRadius: 6,
+                offset: const Offset(0, 2),
               ),
             ],
           ),
           child: Column(
             children: [
-              const Text(
-                'إحصائيات التعيينات',
-                style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(height: 16),
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Expanded(
-                    child: _buildStatItem('إجمالي التعيينات', stats.totalAssignments.toString(), Icons.assignment),
+                  const Text(
+                    'إحصائيات التعيينات',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
                   ),
-                  Expanded(
-                    child: _buildStatItem('التعيينات النشطة', stats.activeAssignments.toString(), Icons.check_circle),
+                  Icon(
+                    Icons.analytics,
+                    color: Colors.white.withAlpha(204),
+                    size: 20,
                   ),
                 ],
               ),
@@ -182,21 +181,19 @@ class _SupervisorAssignmentsScreenState extends State<SupervisorAssignmentsScree
               Row(
                 children: [
                   Expanded(
-                    child: _buildStatItem('تعيينات الطوارئ', stats.emergencyAssignments.toString(), Icons.emergency),
+                    child: _buildCompactStatItem('النشطة', stats.activeAssignments.toString(), Icons.check_circle),
                   ),
+                  Container(width: 1, height: 30, color: Colors.white.withAlpha(76)),
                   Expanded(
-                    child: _buildStatItem('باصات غير مُعينة', stats.unassignedBuses.toString(), Icons.directions_bus_filled),
+                    child: _buildCompactStatItem('الإجمالي', stats.totalAssignments.toString(), Icons.assignment),
                   ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
+                  Container(width: 1, height: 30, color: Colors.white.withAlpha(76)),
                   Expanded(
-                    child: _buildStatItem('إجمالي المشرفين', stats.totalSupervisors.toString(), Icons.supervisor_account),
+                    child: _buildCompactStatItem('غير مُعينة', stats.unassignedBuses.toString(), Icons.directions_bus),
                   ),
+                  Container(width: 1, height: 30, color: Colors.white.withAlpha(76)),
                   Expanded(
-                    child: _buildStatItem('المشرفين المتاحين', stats.availableSupervisors.toString(), Icons.person_add),
+                    child: _buildCompactStatItem('متاحين', stats.availableSupervisors.toString(), Icons.person_add),
                   ),
                 ],
               ),
@@ -204,6 +201,34 @@ class _SupervisorAssignmentsScreenState extends State<SupervisorAssignmentsScree
           ),
         );
       },
+    );
+  }
+
+  Widget _buildCompactStatItem(String label, String value, IconData icon) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+      child: Column(
+        children: [
+          Icon(icon, color: Colors.white, size: 18),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.white.withAlpha(204),
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 
