@@ -409,7 +409,7 @@ class _SurveysReportsScreenState extends State<SurveysReportsScreen> with Ticker
               const SizedBox(height: 8),
               ..._getTopStudents().map((eval) => _buildTopPerformerItem(
                 name: eval.studentName,
-                score: eval.averageScore,
+                score: eval.averageRating,
                 type: 'طالب',
               )),
             ],
@@ -528,7 +528,7 @@ class _SurveysReportsScreenState extends State<SurveysReportsScreen> with Ticker
               const SizedBox(height: 8),
               ..._getStudentsNeedingAttention().map((eval) => _buildImprovementItem(
                 name: eval.studentName,
-                score: eval.averageScore,
+                score: eval.averageRating,
                 type: 'طالب',
               )),
             ],
@@ -822,11 +822,11 @@ class _SurveysReportsScreenState extends State<SurveysReportsScreen> with Ticker
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
-                    color: _getScoreColor(evaluation.averageScore),
+                    color: _getScoreColor(evaluation.averageRating),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: Text(
-                    '${evaluation.averageScore.toStringAsFixed(1)}/5',
+                    '${evaluation.averageRating.toStringAsFixed(1)}/5',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 12,
@@ -922,7 +922,7 @@ class _SurveysReportsScreenState extends State<SurveysReportsScreen> with Ticker
 
   double _calculateBehaviorAverage() {
     if (_behaviorEvaluations.isEmpty) return 0.0;
-    final total = _behaviorEvaluations.map((e) => e.averageScore).reduce((a, b) => a + b);
+    final total = _behaviorEvaluations.map((e) => e.averageRating).reduce((a, b) => a + b);
     return total / _behaviorEvaluations.length;
   }
 
@@ -934,7 +934,7 @@ class _SurveysReportsScreenState extends State<SurveysReportsScreen> with Ticker
 
   List<StudentBehaviorEvaluation> _getTopStudents() {
     final sorted = List<StudentBehaviorEvaluation>.from(_behaviorEvaluations);
-    sorted.sort((a, b) => b.averageScore.compareTo(a.averageScore));
+    sorted.sort((a, b) => b.averageRating.compareTo(a.averageRating));
     return sorted.take(3).toList();
   }
 
@@ -945,8 +945,8 @@ class _SurveysReportsScreenState extends State<SurveysReportsScreen> with Ticker
   }
 
   List<StudentBehaviorEvaluation> _getStudentsNeedingAttention() {
-    final filtered = _behaviorEvaluations.where((e) => e.averageScore < 3.0).toList();
-    filtered.sort((a, b) => a.averageScore.compareTo(b.averageScore));
+    final filtered = _behaviorEvaluations.where((e) => e.averageRating < 3.0).toList();
+    filtered.sort((a, b) => a.averageRating.compareTo(b.averageRating));
     return filtered.take(3).toList();
   }
 

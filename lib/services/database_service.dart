@@ -2405,45 +2405,46 @@ class DatabaseService {
     }
   }
 
-  /// Get assignment statistics
-  Future<AssignmentStatistics> getAssignmentStatistics() async {
+  // Get bus by ID
+  Future<BusModel?> getBusById(String busId) async {
     try {
-      final assignmentsSnapshot = await _firestore
-          .collection('supervisor_assignments')
-          .get();
-
-      final busesSnapshot = await _firestore
-          .collection('buses')
-          .where('isActive', isEqualTo: true)
-          .get();
-
-      final assignments = assignmentsSnapshot.docs
-          .map((doc) => SupervisorAssignmentModel.fromMap(doc.data()))
-          .toList();
-
-      final totalBuses = busesSnapshot.docs.length;
-      final activeAssignments = assignments.where((a) => a.isActive).length;
-      final emergencyAssignments = assignments.where((a) => a.isEmergency).length;
-      final unassignedBuses = totalBuses - activeAssignments;
-
-      final assignmentsByDirection = <String, int>{};
-      for (final assignment in assignments.where((a) => a.isActive)) {
-        final direction = assignment.directionDisplayName;
-        assignmentsByDirection[direction] = (assignmentsByDirection[direction] ?? 0) + 1;
+      final doc = await _firestore.collection('buses').doc(busId).get();
+      if (doc.exists) {
+        return BusModel.fromMap(doc.data()!);
       }
-
-      return AssignmentStatistics(
-        totalAssignments: assignments.length,
-        activeAssignments: activeAssignments,
-        emergencyAssignments: emergencyAssignments,
-        unassignedBuses: unassignedBuses,
-        assignmentsByDirection: assignmentsByDirection,
-      );
+      return null;
     } catch (e) {
-      debugPrint('❌ Error getting assignment statistics: $e');
-      return AssignmentStatistics.empty();
+      debugPrint('❌ Error getting bus by ID: $e');
+      return null;
     }
   }
+
+  // Get user by ID
+  Future<UserModel?> getUserById(String userId) async {
+    try {
+      final doc = await _firestore.collection('users').doc(userId).get();
+      if (doc.exists) {
+        return UserModel.fromMap(doc.data()!);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('❌ Error getting user by ID: $e');
+      return null;
+    }
+  }
+
+  // Delete supervisor assignment
+  Future<void> deleteSupervisorAssignment(String assignmentId) async {
+    try {
+      await _firestore.collection('supervisor_assignments').doc(assignmentId).delete();
+      debugPrint('✅ Supervisor assignment deleted: $assignmentId');
+    } catch (e) {
+      debugPrint('❌ Error deleting supervisor assignment: $e');
+      throw Exception('خطأ في حذف التعيين: $e');
+    }
+  }
+
+
 
   /// Get all students with their absence data for comprehensive report
   Stream<List<Map<String, dynamic>>> getAllStudentsWithAbsenceData() {

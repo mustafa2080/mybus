@@ -41,9 +41,9 @@ class AssignmentStatistics {
 
   String _getDirectionText(TripDirection direction) {
     switch (direction) {
-      case TripDirection.pickup:
+      case TripDirection.toSchool:
         return 'الذهاب';
-      case TripDirection.dropoff:
+      case TripDirection.fromSchool:
         return 'العودة';
       case TripDirection.both:
         return 'الذهاب والعودة';
@@ -156,10 +156,8 @@ class AssignmentStatistics {
               _buildDetailRow('الاتجاه', _getDirectionText(assignment.direction)),
               _buildDetailRow('تاريخ التعيين', _formatDate(assignment.assignedAt)),
               _buildDetailRow('تم التعيين بواسطة', assignment.assignedBy),
-              if (assignment.notes.isNotEmpty)
-                _buildDetailRow('ملاحظات', assignment.notes),
-              if (assignment.endDate != null)
-                _buildDetailRow('تاريخ الانتهاء', _formatDate(assignment.endDate!)),
+              if (assignment.notes?.isNotEmpty == true)
+                _buildDetailRow('ملاحظات', assignment.notes!),
               _buildDetailRow('نوع التعيين', assignment.isEmergency ? 'طوارئ' : 'عادي'),
             ],
           ),
@@ -344,7 +342,7 @@ class _SupervisorAssignmentsScreenState extends State<SupervisorAssignmentsScree
                     child: _buildStatItem('إجمالي المشرفين', stats.totalSupervisors.toString(), Icons.supervisor_account),
                   ),
                   Expanded(
-                    child: _buildStatItem('المشرفين المتاحين', stats.availableSupervisors.toString(), Icons.person_check),
+                    child: _buildStatItem('المشرفين المتاحين', stats.availableSupervisors.toString(), Icons.person_add),
                   ),
                 ],
               ),
@@ -570,7 +568,7 @@ class _SupervisorAssignmentsScreenState extends State<SupervisorAssignmentsScree
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          gradient: assignment.isEmergency
+          gradient: assignment.isEmergencyAssignment
               ? LinearGradient(
                   colors: [Colors.red[50]!, Colors.white],
                   begin: Alignment.topLeft,
@@ -593,20 +591,20 @@ class _SupervisorAssignmentsScreenState extends State<SupervisorAssignmentsScree
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                     decoration: BoxDecoration(
-                      color: assignment.isEmergency ? Colors.red : Colors.blue,
+                      color: assignment.isEmergencyAssignment ? Colors.red : Colors.blue,
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         Icon(
-                          assignment.isEmergency ? Icons.emergency : Icons.assignment_turned_in,
+                          assignment.isEmergencyAssignment ? Icons.emergency : Icons.assignment_turned_in,
                           color: Colors.white,
                           size: 16,
                         ),
                         const SizedBox(width: 4),
                         Text(
-                          assignment.isEmergency ? 'طوارئ' : 'عادي',
+                          assignment.isEmergencyAssignment ? 'طوارئ' : 'عادي',
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 12,
@@ -701,8 +699,8 @@ class _SupervisorAssignmentsScreenState extends State<SupervisorAssignmentsScree
                       Expanded(child: _buildInfoRow('تاريخ التعيين', _formatDate(assignment.assignedAt))),
                     ],
                   ),
-                  if (assignment.notes.isNotEmpty)
-                    _buildInfoRow('ملاحظات', assignment.notes),
+                  if (assignment.notes?.isNotEmpty == true)
+                    _buildInfoRow('ملاحظات', assignment.notes!),
                   Row(
                     children: [
                       Expanded(child: _buildInfoRow('تم التعيين بواسطة', assignment.assignedBy)),
@@ -852,6 +850,18 @@ class _SupervisorAssignmentsScreenState extends State<SupervisorAssignmentsScree
 
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
+  }
+
+  void _editAssignment(SupervisorAssignmentModel assignment) {
+    _showEditAssignmentDialog(assignment);
+  }
+
+  void _deleteAssignment(SupervisorAssignmentModel assignment) {
+    _showDeleteConfirmationDialog(assignment);
+  }
+
+  void _viewAssignmentDetails(SupervisorAssignmentModel assignment) {
+    _showAssignmentDetailsDialog(assignment);
   }
 
   void _showCreateAssignmentDialog() {
