@@ -94,7 +94,7 @@ class _EmergencyContactScreenState extends State<EmergencyContactScreen> {
             'studentName': data['name'] ?? 'غير محدد',
             'parentName': data['parentName'] ?? 'غير محدد',
             'parentPhone': data['parentPhone'],
-            'parentAddress': data['parentAddress'] ?? 'غير محدد',
+            'parentAddress': data['address'] ?? 'غير محدد',
             'grade': data['grade'] ?? 'غير محدد',
             'busRoute': data['busRoute'] ?? 'غير محدد',
           });

@@ -508,7 +508,7 @@ class _StudentsListScreenState extends State<StudentsListScreen> {
                       child: _buildCompactInfoItem(
                         icon: Icons.home,
                         label: 'عنوان ولي الأمر',
-                        value: student.parentAddress.isNotEmpty ? student.parentAddress : 'غير محدد',
+                        value: student.address.isNotEmpty ? student.address : 'غير محدد',
                         color: Colors.blue,
                       ),
                     ),
