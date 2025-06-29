@@ -39,161 +39,15 @@ class AssignmentStatistics {
     return '${date.day}/${date.month}/${date.year}';
   }
 
-  String _getDirectionText(TripDirection direction) {
-    switch (direction) {
-      case TripDirection.toSchool:
-        return 'الذهاب';
-      case TripDirection.fromSchool:
-        return 'العودة';
-      case TripDirection.both:
-        return 'الذهاب والعودة';
-    }
-  }
 
-  void _editAssignment(SupervisorAssignmentModel assignment) {
-    _showEditAssignmentDialog(assignment);
-  }
 
-  void _deleteAssignment(SupervisorAssignmentModel assignment) {
-    _showDeleteConfirmationDialog(assignment);
-  }
 
-  void _viewAssignmentDetails(SupervisorAssignmentModel assignment) {
-    _showAssignmentDetailsDialog(assignment);
-  }
 
-  void _showEditAssignmentDialog(SupervisorAssignmentModel assignment) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('تعديل التعيين'),
-        content: const Text('سيتم إضافة نافذة تعديل التعيين قريباً'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('إغلاق'),
-          ),
-        ],
-      ),
-    );
-  }
 
-  void _showDeleteConfirmationDialog(SupervisorAssignmentModel assignment) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('تأكيد الحذف'),
-        content: Text('هل أنت متأكد من حذف تعيين ${assignment.supervisorName}؟'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('إلغاء'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Navigator.pop(context);
-              try {
-                await _databaseService.deleteSupervisorAssignment(assignment.id);
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('تم حذف التعيين بنجاح'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
-                }
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('خطأ في حذف التعيين: $e'),
-                      backgroundColor: Colors.red,
-                    ),
-                  );
-                }
-              }
-            },
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text('حذف', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
-    );
-  }
 
-  void _showAssignmentDetailsDialog(SupervisorAssignmentModel assignment) {
-    showDialog(
-      context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.info, color: Colors.blue, size: 24),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'تفاصيل التعيين',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const Spacer(),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.close),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              _buildDetailRow('المشرف', assignment.supervisorName),
-              _buildDetailRow('الباص', assignment.busId),
-              _buildDetailRow('الاتجاه', _getDirectionText(assignment.direction)),
-              _buildDetailRow('تاريخ التعيين', _formatDate(assignment.assignedAt)),
-              _buildDetailRow('تم التعيين بواسطة', assignment.assignedBy),
-              if (assignment.notes?.isNotEmpty == true)
-                _buildDetailRow('ملاحظات', assignment.notes!),
-              _buildDetailRow('نوع التعيين', assignment.isEmergency ? 'طوارئ' : 'عادي'),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
-  Widget _buildDetailRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 120,
-            child: Text(
-              '$label:',
-              style: const TextStyle(
-                fontWeight: FontWeight.w600,
-                color: Color(0xFF2D3748),
-              ),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: TextStyle(
-                color: Colors.grey[700],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+
+
 }
 
 class SupervisorAssignmentsScreen extends StatefulWidget {
@@ -704,8 +558,7 @@ class _SupervisorAssignmentsScreenState extends State<SupervisorAssignmentsScree
                   Row(
                     children: [
                       Expanded(child: _buildInfoRow('تم التعيين بواسطة', assignment.assignedBy)),
-                      if (assignment.endDate != null)
-                        Expanded(child: _buildInfoRow('تاريخ الانتهاء', _formatDate(assignment.endDate!))),
+
                     ],
                   ),
                 ],
@@ -933,6 +786,150 @@ class _SupervisorAssignmentsScreenState extends State<SupervisorAssignmentsScree
         }
       }
     }
+  }
+
+  String _getDirectionText(TripDirection direction) {
+    switch (direction) {
+      case TripDirection.toSchool:
+        return 'الذهاب';
+      case TripDirection.fromSchool:
+        return 'العودة';
+      case TripDirection.both:
+        return 'الذهاب والعودة';
+    }
+  }
+
+  void _showEditAssignmentDialog(SupervisorAssignmentModel assignment) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('تعديل التعيين'),
+        content: const Text('سيتم إضافة نافذة تعديل التعيين قريباً'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('إغلاق'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showDeleteConfirmationDialog(SupervisorAssignmentModel assignment) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('تأكيد الحذف'),
+        content: Text('هل أنت متأكد من حذف تعيين ${assignment.supervisorName}؟'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('إلغاء'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              try {
+                await _databaseService.deleteSupervisorAssignment(assignment.id);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('تم حذف التعيين بنجاح'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('خطأ في حذف التعيين: $e'),
+                      backgroundColor: Colors.red,
+                    ),
+                  );
+                }
+              }
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('حذف', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAssignmentDetailsDialog(SupervisorAssignmentModel assignment) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.info, color: Colors.blue, size: 24),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'تفاصيل التعيين',
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _buildDetailRow('المشرف', assignment.supervisorName),
+              _buildDetailRow('الباص', assignment.busId),
+              _buildDetailRow('الاتجاه', _getDirectionText(assignment.direction)),
+              _buildDetailRow('تاريخ التعيين', _formatDate(assignment.assignedAt)),
+              _buildDetailRow('تم التعيين بواسطة', assignment.assignedBy),
+              if (assignment.notes?.isNotEmpty == true)
+                _buildDetailRow('ملاحظات', assignment.notes!),
+              _buildDetailRow('نوع التعيين', assignment.isEmergencyAssignment ? 'طوارئ' : 'عادي'),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              '$label:',
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF2D3748),
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: TextStyle(
+                color: Colors.grey[700],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 

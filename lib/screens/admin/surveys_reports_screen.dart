@@ -852,17 +852,17 @@ class _SurveysReportsScreenState extends State<SurveysReportsScreen> with Ticker
 
             Row(
               children: [
-                Expanded(child: _buildBehaviorItem('الانضباط', evaluation.disciplineRating)),
+                Expanded(child: _buildBehaviorItem('الانضباط', _getBehaviorRating(evaluation, BehaviorCategory.discipline))),
                 const SizedBox(width: 8),
-                Expanded(child: _buildBehaviorItem('الاحترام', evaluation.respectRating)),
+                Expanded(child: _buildBehaviorItem('الاحترام', _getBehaviorRating(evaluation, BehaviorCategory.respect))),
               ],
             ),
             const SizedBox(height: 8),
             Row(
               children: [
-                Expanded(child: _buildBehaviorItem('التعاون', evaluation.cooperationRating)),
+                Expanded(child: _buildBehaviorItem('التعاون', _getBehaviorRating(evaluation, BehaviorCategory.cooperation))),
                 const SizedBox(width: 8),
-                Expanded(child: _buildBehaviorItem('النظافة', evaluation.cleanlinessRating)),
+                Expanded(child: _buildBehaviorItem('النظافة', _getBehaviorRating(evaluation, BehaviorCategory.cleanliness))),
               ],
             ),
 
@@ -1025,5 +1025,18 @@ class _SurveysReportsScreenState extends State<SurveysReportsScreen> with Ticker
       'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'
     ];
     return months[month];
+  }
+
+  int _getBehaviorRating(StudentBehaviorEvaluation evaluation, BehaviorCategory category) {
+    final rating = evaluation.ratings[category];
+    if (rating == null) return 3; // Default to good
+
+    switch (rating) {
+      case BehaviorRating.excellent: return 5;
+      case BehaviorRating.veryGood: return 4;
+      case BehaviorRating.good: return 3;
+      case BehaviorRating.fair: return 2;
+      case BehaviorRating.poor: return 1;
+    }
   }
 }
