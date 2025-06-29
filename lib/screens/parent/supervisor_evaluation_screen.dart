@@ -36,10 +36,26 @@ class _SupervisorEvaluationScreenState extends State<SupervisorEvaluationScreen>
         });
       } else {
         setState(() => _isLoading = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('خطأ: لم يتم تسجيل الدخول بشكل صحيح'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     } catch (e) {
       debugPrint('Error loading supervisors: $e');
       setState(() => _isLoading = false);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ في تحميل المشرفين: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 

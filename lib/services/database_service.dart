@@ -1561,8 +1561,6 @@ class DatabaseService {
       final query = await _firestore
           .collection('supervisor_assignments')
           .where('busId', isEqualTo: busId)
-          .where('status', isEqualTo: 'active')
-          .where('direction', whereIn: [direction.toString().split('.').last, 'both'])
           .orderBy('assignedAt', descending: true)
           .limit(1)
           .get();
@@ -1628,7 +1626,6 @@ class DatabaseService {
       final assignmentsSnapshot = await _firestore
           .collection('supervisor_assignments')
           .where('busId', whereIn: busIds.toList())
-          .where('status', isEqualTo: 'active')
           .get();
 
       final supervisorIds = <String>{};
@@ -1639,7 +1636,27 @@ class DatabaseService {
         }
       }
 
-      if (supervisorIds.isEmpty) return [];
+      if (supervisorIds.isEmpty) {
+        // If no specific assignments found, get all supervisors as fallback
+        debugPrint('⚠️ No supervisor assignments found, getting all supervisors as fallback');
+        final allSupervisorsSnapshot = await _firestore
+            .collection('users')
+            .where('userType', isEqualTo: 'supervisor')
+            .get();
+
+        final supervisors = <UserModel>[];
+        for (final doc in allSupervisorsSnapshot.docs) {
+          try {
+            final supervisor = UserModel.fromMap(doc.data());
+            supervisors.add(supervisor);
+          } catch (e) {
+            debugPrint('❌ Error parsing supervisor ${doc.id}: $e');
+          }
+        }
+
+        debugPrint('👥 Found ${supervisors.length} supervisors (fallback) for parent $parentId');
+        return supervisors;
+      }
 
       // Get supervisor details
       final supervisorsSnapshot = await _firestore

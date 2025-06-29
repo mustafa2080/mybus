@@ -244,8 +244,8 @@ class _BusInfoScreenState extends State<BusInfoScreen> {
                   const SizedBox(height: 16),
                   _buildInfoRow(
                     icon: Icons.directions_bus,
-                    label: 'نوع الباص',
-                    value: _getBusType(),
+                    label: 'وصف الباص',
+                    value: _bus?.description ?? 'غير محدد',
                     color: Colors.blue,
                   ),
                   const SizedBox(height: 12),
@@ -662,28 +662,7 @@ class _BusInfoScreenState extends State<BusInfoScreen> {
     }
   }
 
-  // Get bus type based on capacity and features
-  String _getBusType() {
-    if (_bus == null) return 'غير محدد';
 
-    final capacity = _bus!.capacity;
-    final hasAC = _bus!.hasAirConditioning;
-
-    String type = '';
-    if (capacity <= 15) {
-      type = 'ميكروباص';
-    } else if (capacity <= 30) {
-      type = 'باص متوسط';
-    } else {
-      type = 'باص كبير';
-    }
-
-    if (hasAC) {
-      type += ' مكيف';
-    }
-
-    return type;
-  }
 
   // Get supervisor phone based on current time and assignment
   String _getSupervisorPhone() {

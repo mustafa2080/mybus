@@ -794,7 +794,7 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
               ),
               const SizedBox(height: 8),
               if (busData != null) ...[
-                _buildBusInfoRow('نوع الباص', _getBusType(busData)),
+                _buildBusInfoRow('وصف الباص', busData['description'] ?? 'غير محدد'),
                 _buildBusInfoRow('خط السير', student.busRoute.isNotEmpty ? student.busRoute : 'غير محدد'),
                 _buildBusInfoRow('المشرف', 'سيتم تحديد المشرف حسب الوقت'),
                 _buildBusInfoRow('هاتف المشرف', 'متاح عند تحديد المشرف', isPhone: false),
@@ -2049,26 +2049,7 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
     }
   }
 
-  // Get bus type based on capacity and features
-  String _getBusType(Map<String, dynamic> busData) {
-    final capacity = busData['capacity'] ?? 30;
-    final hasAC = busData['hasAirConditioning'] ?? false;
 
-    String type = '';
-    if (capacity <= 15) {
-      type = 'ميكروباص';
-    } else if (capacity <= 30) {
-      type = 'باص متوسط';
-    } else {
-      type = 'باص كبير';
-    }
-
-    if (hasAC) {
-      type += ' مكيف';
-    }
-
-    return type;
-  }
 
   void _showBusInfoDialog() {
     if (_students.isEmpty) {
