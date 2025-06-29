@@ -2679,4 +2679,266 @@ class DatabaseService {
     }
   }
 
+  // Create supervisor evaluation survey for parents
+  Future<String> createSupervisorEvaluationSurvey({
+    required String supervisorId,
+    required String supervisorName,
+    required String parentId,
+    required String parentName,
+  }) async {
+    try {
+      final surveyId = _uuid.v4();
+      final now = DateTime.now();
+
+      final survey = SurveyModel(
+        id: surveyId,
+        title: 'تقييم المشرف: $supervisorName',
+        description: 'استبيان تقييم أداء المشرف من قبل ولي الأمر',
+        type: SurveyType.supervisorEvaluation,
+        status: SurveyStatus.active,
+        createdBy: 'system',
+        createdByName: 'النظام',
+        questions: _getSupervisorEvaluationQuestions(),
+        createdAt: now,
+        updatedAt: now,
+        expiresAt: now.add(const Duration(days: 30)), // Valid for 30 days
+        isActive: true,
+      );
+
+      await _firestore
+          .collection('surveys')
+          .doc(surveyId)
+          .set(survey.toMap());
+
+      debugPrint('✅ Supervisor evaluation survey created: $surveyId');
+      return surveyId;
+    } catch (e) {
+      debugPrint('❌ Error creating supervisor evaluation survey: $e');
+      throw Exception('فشل في إنشاء استبيان تقييم المشرف: $e');
+    }
+  }
+
+  // Get supervisor evaluation questions
+  List<SurveyQuestion> _getSupervisorEvaluationQuestions() {
+    return [
+      const SurveyQuestion(
+        id: 'communication',
+        question: 'كيف تقيم مستوى التواصل مع المشرف؟',
+        type: QuestionType.rating,
+        options: [],
+        isRequired: true,
+        order: 1,
+      ),
+      const SurveyQuestion(
+        id: 'punctuality',
+        question: 'كيف تقيم التزام المشرف بالمواعيد؟',
+        type: QuestionType.rating,
+        options: [],
+        isRequired: true,
+        order: 2,
+      ),
+      const SurveyQuestion(
+        id: 'safety',
+        question: 'كيف تقيم اهتمام المشرف بسلامة الطلاب؟',
+        type: QuestionType.rating,
+        options: [],
+        isRequired: true,
+        order: 3,
+      ),
+      const SurveyQuestion(
+        id: 'professionalism',
+        question: 'كيف تقيم مستوى المهنية لدى المشرف؟',
+        type: QuestionType.rating,
+        options: [],
+        isRequired: true,
+        order: 4,
+      ),
+      const SurveyQuestion(
+        id: 'student_care',
+        question: 'كيف تقيم مستوى العناية بالطلاب؟',
+        type: QuestionType.rating,
+        options: [],
+        isRequired: true,
+        order: 5,
+      ),
+      const SurveyQuestion(
+        id: 'overall_satisfaction',
+        question: 'ما هو مستوى رضاك العام عن أداء المشرف؟',
+        type: QuestionType.rating,
+        options: [],
+        isRequired: true,
+        order: 6,
+      ),
+      const SurveyQuestion(
+        id: 'recommend_supervisor',
+        question: 'هل تنصح بهذا المشرف لأولياء أمور آخرين؟',
+        type: QuestionType.yesNo,
+        options: ['نعم', 'لا'],
+        isRequired: true,
+        order: 7,
+      ),
+      const SurveyQuestion(
+        id: 'positive_feedback',
+        question: 'ما هي الجوانب الإيجابية في أداء المشرف؟',
+        type: QuestionType.text,
+        options: [],
+        isRequired: false,
+        order: 8,
+      ),
+      const SurveyQuestion(
+        id: 'improvement_suggestions',
+        question: 'ما هي اقتراحاتك لتحسين أداء المشرف؟',
+        type: QuestionType.text,
+        options: [],
+        isRequired: false,
+        order: 9,
+      ),
+      const SurveyQuestion(
+        id: 'additional_comments',
+        question: 'أي تعليقات إضافية؟',
+        type: QuestionType.text,
+        options: [],
+        isRequired: false,
+        order: 10,
+      ),
+    ];
+  }
+
+  // Get supervisor evaluation surveys for admin reports
+  Stream<List<Map<String, dynamic>>> getSupervisorEvaluationReports() {
+    return _firestore
+        .collection('survey_responses')
+        .where('surveyType', isEqualTo: 'supervisorEvaluation')
+        .snapshots()
+        .map((snapshot) {
+          final responses = snapshot.docs
+              .map((doc) => {
+                    'id': doc.id,
+                    ...doc.data(),
+                  })
+              .toList();
+
+          responses.sort((a, b) =>
+              (b['submittedAt'] as Timestamp).compareTo(a['submittedAt'] as Timestamp));
+          return responses;
+        });
+  }
+
+  // Get supervisor evaluation statistics
+  Future<Map<String, dynamic>> getSupervisorEvaluationStats(String supervisorId) async {
+    try {
+      final snapshot = await _firestore
+          .collection('survey_responses')
+          .where('surveyType', isEqualTo: 'supervisorEvaluation')
+          .where('supervisorId', isEqualTo: supervisorId)
+          .get();
+
+      if (snapshot.docs.isEmpty) {
+        return {
+          'totalResponses': 0,
+          'averageRating': 0.0,
+          'categoryAverages': {},
+          'recommendationRate': 0.0,
+        };
+      }
+
+      final responses = snapshot.docs.map((doc) => doc.data()).toList();
+      final totalResponses = responses.length;
+
+      // Calculate averages for each category
+      final categoryTotals = <String, double>{};
+      final categoryCounts = <String, int>{};
+      int recommendCount = 0;
+
+      for (final response in responses) {
+        final answers = response['answers'] as Map<String, dynamic>? ?? {};
+
+        // Process rating questions
+        for (final entry in answers.entries) {
+          if (entry.key.contains('communication') ||
+              entry.key.contains('punctuality') ||
+              entry.key.contains('safety') ||
+              entry.key.contains('professionalism') ||
+              entry.key.contains('student_care') ||
+              entry.key.contains('overall_satisfaction')) {
+
+            final rating = double.tryParse(entry.value.toString()) ?? 0.0;
+            categoryTotals[entry.key] = (categoryTotals[entry.key] ?? 0.0) + rating;
+            categoryCounts[entry.key] = (categoryCounts[entry.key] ?? 0) + 1;
+          }
+        }
+
+        // Process recommendation
+        if (answers['recommend_supervisor'] == 'نعم') {
+          recommendCount++;
+        }
+      }
+
+      // Calculate averages
+      final categoryAverages = <String, double>{};
+      double totalRating = 0.0;
+      int ratingCount = 0;
+
+      for (final entry in categoryTotals.entries) {
+        final average = entry.value / (categoryCounts[entry.key] ?? 1);
+        categoryAverages[entry.key] = average;
+        totalRating += average;
+        ratingCount++;
+      }
+
+      final averageRating = ratingCount > 0 ? totalRating / ratingCount : 0.0;
+      final recommendationRate = totalResponses > 0 ? (recommendCount / totalResponses) * 100 : 0.0;
+
+      return {
+        'totalResponses': totalResponses,
+        'averageRating': averageRating,
+        'categoryAverages': categoryAverages,
+        'recommendationRate': recommendationRate,
+      };
+    } catch (e) {
+      debugPrint('❌ Error getting supervisor evaluation stats: $e');
+      return {
+        'totalResponses': 0,
+        'averageRating': 0.0,
+        'categoryAverages': {},
+        'recommendationRate': 0.0,
+      };
+    }
+  }
+
+  // Submit supervisor evaluation survey response
+  Future<void> submitSupervisorEvaluationResponse({
+    required String surveyId,
+    required String supervisorId,
+    required String supervisorName,
+    required String parentId,
+    required String parentName,
+    required Map<String, dynamic> answers,
+  }) async {
+    try {
+      final responseId = _uuid.v4();
+
+      await _firestore
+          .collection('survey_responses')
+          .doc(responseId)
+          .set({
+            'id': responseId,
+            'surveyId': surveyId,
+            'surveyType': 'supervisorEvaluation',
+            'supervisorId': supervisorId,
+            'supervisorName': supervisorName,
+            'respondentId': parentId,
+            'respondentName': parentName,
+            'respondentType': 'parent',
+            'answers': answers,
+            'submittedAt': FieldValue.serverTimestamp(),
+            'isComplete': true,
+          });
+
+      debugPrint('✅ Supervisor evaluation response submitted successfully');
+    } catch (e) {
+      debugPrint('❌ Error submitting supervisor evaluation response: $e');
+      throw Exception('فشل في إرسال تقييم المشرف: $e');
+    }
+  }
 }

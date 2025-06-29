@@ -21,11 +21,12 @@ class _SurveysReportsScreenState extends State<SurveysReportsScreen> with Ticker
 
   List<SupervisorEvaluationModel> _supervisorEvaluations = [];
   List<StudentBehaviorEvaluation> _behaviorEvaluations = [];
+  List<Map<String, dynamic>> _supervisorSurveyReports = [];
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
+    _tabController = TabController(length: 4, vsync: this);
     _loadReports();
   }
 
@@ -51,10 +52,15 @@ class _SurveysReportsScreenState extends State<SurveysReportsScreen> with Ticker
       final behaviorEvals = await _databaseService.getBehaviorEvaluationsByMonth(_selectedMonth, _selectedYear);
       debugPrint('📊 Loaded ${behaviorEvals.length} behavior evaluations');
 
+      // Load supervisor survey reports
+      final supervisorSurveys = await _databaseService.getSupervisorEvaluationReports().first;
+      debugPrint('📊 Loaded ${supervisorSurveys.length} supervisor survey reports');
+
       if (mounted) {
         setState(() {
           _supervisorEvaluations = supervisorEvals;
           _behaviorEvaluations = behaviorEvals;
+          _supervisorSurveyReports = supervisorSurveys;
           _isLoading = false;
         });
       }
@@ -112,6 +118,10 @@ class _SurveysReportsScreenState extends State<SurveysReportsScreen> with Ticker
               icon: Icon(Icons.school),
               text: 'سلوك الطلاب',
             ),
+            Tab(
+              icon: Icon(Icons.poll),
+              text: 'استبيانات المشرفين',
+            ),
           ],
         ),
       ),
@@ -139,6 +149,7 @@ class _SurveysReportsScreenState extends State<SurveysReportsScreen> with Ticker
                       _buildOverviewTab(),
                       _buildSupervisorEvaluationsTab(),
                       _buildBehaviorEvaluationsTab(),
+                      _buildSupervisorSurveysTab(),
                     ],
                   ),
           ),
@@ -1038,5 +1049,365 @@ class _SurveysReportsScreenState extends State<SurveysReportsScreen> with Ticker
       case BehaviorRating.fair: return 2;
       case BehaviorRating.poor: return 1;
     }
+  }
+
+  Widget _buildSupervisorSurveysTab() {
+    if (_supervisorSurveyReports.isEmpty) {
+      return const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.poll, size: 64, color: Colors.grey),
+            SizedBox(height: 16),
+            Text(
+              'لا توجد استبيانات تقييم مشرفين',
+              style: TextStyle(fontSize: 18, color: Colors.grey),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'سيتم عرض التقييمات هنا عندما يقوم أولياء الأمور بتقييم المشرفين',
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Group surveys by supervisor
+    final supervisorGroups = <String, List<Map<String, dynamic>>>{};
+    for (final survey in _supervisorSurveyReports) {
+      final supervisorId = survey['supervisorId'] as String? ?? '';
+      if (supervisorId.isNotEmpty) {
+        supervisorGroups[supervisorId] ??= [];
+        supervisorGroups[supervisorId]!.add(survey);
+      }
+    }
+
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        // Summary Cards
+        Row(
+          children: [
+            Expanded(
+              child: _buildSummaryCard(
+                'إجمالي الاستبيانات',
+                _supervisorSurveyReports.length.toString(),
+                Icons.poll,
+                const Color(0xFF1E88E5),
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: _buildSummaryCard(
+                'المشرفين المُقيمين',
+                supervisorGroups.length.toString(),
+                Icons.supervisor_account,
+                const Color(0xFF7C3AED),
+              ),
+            ),
+          ],
+        ),
+
+        const SizedBox(height: 24),
+
+        // Supervisor Evaluations List
+        ...supervisorGroups.entries.map((entry) {
+          final supervisorId = entry.key;
+          final surveys = entry.value;
+          final supervisorName = surveys.first['supervisorName'] as String? ?? 'مشرف غير معروف';
+
+          return _buildSupervisorSurveyCard(supervisorId, supervisorName, surveys);
+        }).toList(),
+      ],
+    );
+  }
+
+  Widget _buildSupervisorSurveyCard(String supervisorId, String supervisorName, List<Map<String, dynamic>> surveys) {
+    // Calculate average ratings
+    final totalSurveys = surveys.length;
+    double totalRating = 0.0;
+    int recommendCount = 0;
+
+    for (final survey in surveys) {
+      final answers = survey['answers'] as Map<String, dynamic>? ?? {};
+
+      // Calculate average rating for this survey
+      double surveyTotal = 0.0;
+      int ratingCount = 0;
+
+      for (final entry in answers.entries) {
+        if (entry.key.contains('communication') ||
+            entry.key.contains('punctuality') ||
+            entry.key.contains('safety') ||
+            entry.key.contains('professionalism') ||
+            entry.key.contains('student_care') ||
+            entry.key.contains('overall_satisfaction')) {
+
+          final rating = double.tryParse(entry.value.toString()) ?? 0.0;
+          surveyTotal += rating;
+          ratingCount++;
+        }
+      }
+
+      if (ratingCount > 0) {
+        totalRating += surveyTotal / ratingCount;
+      }
+
+      if (answers['recommend_supervisor'] == 'نعم') {
+        recommendCount++;
+      }
+    }
+
+    final averageRating = totalSurveys > 0 ? totalRating / totalSurveys : 0.0;
+    final recommendationRate = totalSurveys > 0 ? (recommendCount / totalSurveys) * 100 : 0.0;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 16),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: const Color(0xFF7C3AED),
+                  child: Text(
+                    supervisorName.isNotEmpty ? supervisorName[0] : 'م',
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        supervisorName,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2D3748),
+                        ),
+                      ),
+                      Text(
+                        '$totalSurveys تقييم',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: _getRatingColor(averageRating).withAlpha(25),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '${averageRating.toStringAsFixed(1)}/5',
+                    style: TextStyle(
+                      color: _getRatingColor(averageRating),
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            // Statistics
+            Row(
+              children: [
+                Expanded(
+                  child: _buildStatItem(
+                    'التقييم العام',
+                    '${averageRating.toStringAsFixed(1)}/5',
+                    _getRatingColor(averageRating),
+                  ),
+                ),
+                Expanded(
+                  child: _buildStatItem(
+                    'نسبة التوصية',
+                    '${recommendationRate.toStringAsFixed(0)}%',
+                    recommendationRate >= 70 ? Colors.green :
+                    recommendationRate >= 50 ? Colors.orange : Colors.red,
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            // Action Buttons
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () => _showSupervisorSurveyDetails(supervisorId, supervisorName, surveys),
+                    icon: const Icon(Icons.visibility),
+                    label: const Text('عرض التفاصيل'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF7C3AED),
+                      side: const BorderSide(color: Color(0xFF7C3AED)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: averageRating < 3.0 ? () => _takeActionOnSupervisor(supervisorId, supervisorName) : null,
+                    icon: const Icon(Icons.warning),
+                    label: const Text('اتخاذ إجراء'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatItem(String label, String value, Color color) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey[600],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Color _getRatingColor(double rating) {
+    if (rating >= 4.0) return Colors.green;
+    if (rating >= 3.0) return Colors.orange;
+    return Colors.red;
+  }
+
+  void _showSupervisorSurveyDetails(String supervisorId, String supervisorName, List<Map<String, dynamic>> surveys) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('تفاصيل تقييم: $supervisorName'),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: 400,
+          child: ListView.builder(
+            itemCount: surveys.length,
+            itemBuilder: (context, index) {
+              final survey = surveys[index];
+              final parentName = survey['respondentName'] as String? ?? 'ولي أمر';
+              final submittedAt = survey['submittedAt'] as Timestamp?;
+              final answers = survey['answers'] as Map<String, dynamic>? ?? {};
+
+              return Card(
+                margin: const EdgeInsets.only(bottom: 8),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Text(
+                            parentName,
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          const Spacer(),
+                          if (submittedAt != null)
+                            Text(
+                              DateFormat('dd/MM/yyyy').format(submittedAt.toDate()),
+                              style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                            ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      if (answers['positive_feedback']?.toString().isNotEmpty == true)
+                        Text(
+                          'الجوانب الإيجابية: ${answers['positive_feedback']}',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                      if (answers['improvement_suggestions']?.toString().isNotEmpty == true)
+                        Text(
+                          'اقتراحات التحسين: ${answers['improvement_suggestions']}',
+                          style: const TextStyle(fontSize: 12),
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('إغلاق'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _takeActionOnSupervisor(String supervisorId, String supervisorName) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('اتخاذ إجراء ضد: $supervisorName'),
+        content: const Text('هذا المشرف حصل على تقييمات منخفضة. ما الإجراء المطلوب؟'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('إلغاء'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // TODO: Implement warning action
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('تم إرسال تحذير للمشرف')),
+              );
+            },
+            child: const Text('إرسال تحذير'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              // TODO: Implement suspension action
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('تم إيقاف المشرف مؤقتاً')),
+              );
+            },
+            child: const Text('إيقاف مؤقت'),
+          ),
+        ],
+      ),
+    );
   }
 }

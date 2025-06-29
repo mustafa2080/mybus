@@ -5,6 +5,7 @@ enum SurveyType {
   supervisorMonthly,   // استبيان المشرفة الشهري
   studentBehavior,     // استبيان سلوك الطلاب
   serviceQuality,      // استبيان جودة الخدمة
+  supervisorEvaluation, // تقييم المشرفين من أولياء الأمور
 }
 
 enum SurveyStatus {
@@ -140,6 +141,7 @@ class SurveyModel {
       case SurveyType.supervisorMonthly: return 'استبيان المشرفة الشهري';
       case SurveyType.studentBehavior: return 'استبيان سلوك الطلاب';
       case SurveyType.serviceQuality: return 'استبيان جودة الخدمة';
+      case SurveyType.supervisorEvaluation: return 'تقييم المشرفين';
     }
   }
 

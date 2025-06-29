@@ -15,6 +15,7 @@ class SurveysScreen extends StatefulWidget {
 class _SurveysScreenState extends State<SurveysScreen> {
   final DatabaseService _databaseService = DatabaseService();
   final AuthService _authService = AuthService();
+  final AuthService _authService = AuthService();
   
   UserModel? _currentUser;
 
@@ -72,7 +73,7 @@ class _SurveysScreenState extends State<SurveysScreen> {
             margin: const EdgeInsets.all(16),
             child: GestureDetector(
               onTap: () {
-                Navigator.pushNamed(context, '/parent/supervisor-evaluation');
+                _showSupervisorEvaluationOptions();
               },
               child: Card(
               elevation: 3,
@@ -379,5 +380,238 @@ class _SurveysScreenState extends State<SurveysScreen> {
 
   void _takeSurvey(SurveyModel survey) {
     context.push('/parent/take-survey/${survey.id}');
+  }
+
+  void _showSupervisorEvaluationOptions() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.grey[300],
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              'تقييم المشرفين',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF2D3748),
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'اختر طريقة تقييم المشرفين',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            // Quick Survey Option
+            _buildEvaluationOption(
+              icon: Icons.poll,
+              title: 'استبيان سريع',
+              subtitle: 'استبيان مبسط لتقييم المشرف',
+              color: const Color(0xFF1E88E5),
+              onTap: () {
+                Navigator.pop(context);
+                _createQuickSupervisorSurvey();
+              },
+            ),
+
+            const SizedBox(height: 12),
+
+            // Detailed Evaluation Option
+            _buildEvaluationOption(
+              icon: Icons.supervisor_account,
+              title: 'تقييم مفصل',
+              subtitle: 'تقييم شامل مع تفاصيل أكثر',
+              color: const Color(0xFF7C3AED),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.pushNamed(context, '/parent/supervisor-evaluation');
+              },
+            ),
+
+            const SizedBox(height: 20),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEvaluationOption({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: color.withAlpha(25),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: color.withAlpha(76)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: color,
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                icon,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: color,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.grey[600],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              color: color,
+              size: 16,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _createQuickSupervisorSurvey() async {
+    try {
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+
+      // Get current user
+      final currentUser = _authService.currentUser;
+      if (currentUser == null) {
+        throw Exception('المستخدم غير مسجل الدخول');
+      }
+
+      // Get supervisors for this parent
+      final supervisors = await _databaseService.getSupervisorsForParent(currentUser.uid);
+
+      Navigator.pop(context); // Close loading
+
+      if (supervisors.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('لم يتم العثور على مشرفين مُعينين لأطفالك'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return;
+      }
+
+      // Show supervisor selection if multiple supervisors
+      if (supervisors.length > 1) {
+        _showSupervisorSelection(supervisors);
+      } else {
+        _createSurveyForSupervisor(supervisors.first);
+      }
+    } catch (e) {
+      Navigator.pop(context); // Close loading
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('خطأ في إنشاء الاستبيان: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  void _showSupervisorSelection(List<UserModel> supervisors) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('اختر المشرف'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: supervisors.map((supervisor) => ListTile(
+            leading: const CircleAvatar(
+              child: Icon(Icons.person),
+            ),
+            title: Text(supervisor.name),
+            subtitle: Text(supervisor.phone),
+            onTap: () {
+              Navigator.pop(context);
+              _createSurveyForSupervisor(supervisor);
+            },
+          )).toList(),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _createSurveyForSupervisor(UserModel supervisor) async {
+    try {
+      final currentUser = _authService.currentUser!;
+
+      final surveyId = await _databaseService.createSupervisorEvaluationSurvey(
+        supervisorId: supervisor.id,
+        supervisorName: supervisor.name,
+        parentId: currentUser.uid,
+        parentName: currentUser.displayName ?? 'ولي الأمر',
+      );
+
+      // Navigate to take survey
+      context.push('/parent/take-survey/$surveyId');
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('خطأ في إنشاء الاستبيان: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }
