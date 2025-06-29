@@ -22,7 +22,7 @@ class _ComplaintsScreenState extends State<ComplaintsScreen> {
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
         title: const Text('شكاويي'),
-        backgroundColor: const Color(0xFF1E88E5),
+        backgroundColor: const Color(0xFFE53E3E),
         foregroundColor: Colors.white,
         elevation: 0,
         actions: [

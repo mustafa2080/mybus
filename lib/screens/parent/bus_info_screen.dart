@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models/bus_model.dart';
 import '../../models/student_model.dart';
+import '../../models/supervisor_assignment_model.dart';
 import '../../services/database_service.dart';
 
 class BusInfoScreen extends StatefulWidget {
@@ -21,6 +22,7 @@ class _BusInfoScreenState extends State<BusInfoScreen> {
   final DatabaseService _databaseService = DatabaseService();
   BusModel? _bus;
   StudentModel? _student;
+  SupervisorAssignmentModel? _currentSupervisorAssignment;
   bool _isLoading = true;
 
   @override
@@ -43,6 +45,30 @@ class _BusInfoScreenState extends State<BusInfoScreen> {
           final bus = await _databaseService.getBus(student.busId);
           setState(() {
             _bus = bus;
+          });
+
+          // Load current supervisor assignment for this bus
+          final currentTime = DateTime.now();
+          final currentHour = currentTime.hour;
+
+          // Determine trip direction based on time
+          // Morning (6-10 AM) = to school, Afternoon (12-6 PM) = from school
+          TripDirection currentDirection;
+          if (currentHour >= 6 && currentHour <= 10) {
+            currentDirection = TripDirection.toSchool;
+          } else if (currentHour >= 12 && currentHour <= 18) {
+            currentDirection = TripDirection.fromSchool;
+          } else {
+            // Default to both for other times
+            currentDirection = TripDirection.both;
+          }
+
+          final supervisorAssignment = await _databaseService.getCurrentSupervisorAssignment(
+            student.busId,
+            currentDirection
+          );
+          setState(() {
+            _currentSupervisorAssignment = supervisorAssignment;
           });
         }
       }
@@ -217,9 +243,9 @@ class _BusInfoScreenState extends State<BusInfoScreen> {
                   ),
                   const SizedBox(height: 16),
                   _buildInfoRow(
-                    icon: Icons.confirmation_number,
-                    label: 'رقم اللوحة',
-                    value: _bus?.plateNumber ?? '',
+                    icon: Icons.directions_bus,
+                    label: 'نوع الباص',
+                    value: _getBusType(),
                     color: Colors.blue,
                   ),
                   const SizedBox(height: 12),
@@ -285,7 +311,7 @@ class _BusInfoScreenState extends State<BusInfoScreen> {
                       const SizedBox(width: 16),
                       const Expanded(
                         child: Text(
-                          'معلومات السائق',
+                          'معلومات المشرف',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -297,23 +323,30 @@ class _BusInfoScreenState extends State<BusInfoScreen> {
                   const SizedBox(height: 16),
                   _buildInfoRow(
                     icon: Icons.person,
-                    label: 'اسم السائق',
-                    value: _bus?.driverName ?? '',
+                    label: 'اسم المشرف',
+                    value: _currentSupervisorAssignment?.supervisorName ?? 'غير محدد',
                     color: Colors.green,
                   ),
                   const SizedBox(height: 12),
                   _buildInfoRow(
                     icon: Icons.phone,
                     label: 'رقم الهاتف',
-                    value: _bus?.driverPhone ?? '',
+                    value: _getSupervisorPhone(),
                     color: Colors.blue,
                     isPhone: true,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildInfoRow(
+                    icon: Icons.schedule,
+                    label: 'فترة الإشراف',
+                    value: _getSupervisionPeriod(),
+                    color: Colors.purple,
                   ),
 
                   const SizedBox(height: 16),
 
                   // Quick Call Button
-                  if (_bus?.driverPhone != null && _bus!.driverPhone.isNotEmpty)
+                  if (_getSupervisorPhone().isNotEmpty)
                     Container(
                       width: double.infinity,
                       decoration: BoxDecoration(
@@ -335,7 +368,7 @@ class _BusInfoScreenState extends State<BusInfoScreen> {
                       child: Material(
                         color: Colors.transparent,
                         child: InkWell(
-                          onTap: () => _makePhoneCall(_bus!.driverPhone),
+                          onTap: () => _makePhoneCall(_getSupervisorPhone()),
                           borderRadius: BorderRadius.circular(12),
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 16),
@@ -345,7 +378,7 @@ class _BusInfoScreenState extends State<BusInfoScreen> {
                                 Icon(Icons.call, color: Colors.white, size: 24),
                                 SizedBox(width: 12),
                                 Text(
-                                  'اتصال بالسائق',
+                                  'اتصال بالمشرف',
                                   style: TextStyle(
                                     color: Colors.white,
                                     fontSize: 18,
@@ -626,6 +659,52 @@ class _BusInfoScreenState extends State<BusInfoScreen> {
           ),
         );
       }
+    }
+  }
+
+  // Get bus type based on capacity and features
+  String _getBusType() {
+    if (_bus == null) return 'غير محدد';
+
+    final capacity = _bus!.capacity;
+    final hasAC = _bus!.hasAirConditioning;
+
+    String type = '';
+    if (capacity <= 15) {
+      type = 'ميكروباص';
+    } else if (capacity <= 30) {
+      type = 'باص متوسط';
+    } else {
+      type = 'باص كبير';
+    }
+
+    if (hasAC) {
+      type += ' مكيف';
+    }
+
+    return type;
+  }
+
+  // Get supervisor phone based on current time and assignment
+  String _getSupervisorPhone() {
+    if (_currentSupervisorAssignment == null) return '';
+
+    // Here you would get the supervisor's phone from the supervisor profile
+    // For now, return a placeholder - this should be implemented with actual supervisor data
+    return _currentSupervisorAssignment!.supervisorName.isNotEmpty ? '01234567890' : '';
+  }
+
+  // Get supervision period description
+  String _getSupervisionPeriod() {
+    if (_currentSupervisorAssignment == null) return 'غير محدد';
+
+    switch (_currentSupervisorAssignment!.direction) {
+      case TripDirection.toSchool:
+        return 'الذهاب للمدرسة (6:00 - 10:00 ص)';
+      case TripDirection.fromSchool:
+        return 'العودة من المدرسة (12:00 - 6:00 م)';
+      case TripDirection.both:
+        return 'الذهاب والعودة';
     }
   }
 }

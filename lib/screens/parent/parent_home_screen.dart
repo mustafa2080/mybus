@@ -478,6 +478,32 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
               ),
             ],
           ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildQuickActionButton(
+                  icon: Icons.feedback,
+                  label: 'الشكاوى والاقتراحات',
+                  color: const Color(0xFFE53E3E),
+                  onTap: () {
+                    context.push('/parent/complaints');
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildQuickActionButton(
+                  icon: Icons.info_outline,
+                  label: 'معلومات الباص',
+                  color: Colors.teal,
+                  onTap: () {
+                    _showBusInfoDialog();
+                  },
+                ),
+              ),
+            ],
+          ),
         ],
       ),
     );
@@ -768,11 +794,10 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
               ),
               const SizedBox(height: 8),
               if (busData != null) ...[
-                _buildBusInfoRow('رقم اللوحة', busData['plateNumber'] ?? 'غير محدد'),
+                _buildBusInfoRow('نوع الباص', _getBusType(busData)),
                 _buildBusInfoRow('خط السير', student.busRoute.isNotEmpty ? student.busRoute : 'غير محدد'),
-                _buildBusInfoRow('السائق', busData['driverName'] ?? 'غير محدد'),
-                if (busData['driverPhone'] != null && busData['driverPhone'].isNotEmpty)
-                  _buildBusInfoRow('هاتف السائق', busData['driverPhone'], isPhone: true),
+                _buildBusInfoRow('المشرف', 'سيتم تحديد المشرف حسب الوقت'),
+                _buildBusInfoRow('هاتف المشرف', 'متاح عند تحديد المشرف', isPhone: false),
               ] else ...[
                 _buildBusInfoRow('خط السير', student.busRoute.isNotEmpty ? student.busRoute : 'غير محدد'),
                 const Text(
@@ -2022,6 +2047,52 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
       case TripAction.leaveBus:
         return Icons.home_filled;
     }
+  }
+
+  // Get bus type based on capacity and features
+  String _getBusType(Map<String, dynamic> busData) {
+    final capacity = busData['capacity'] ?? 30;
+    final hasAC = busData['hasAirConditioning'] ?? false;
+
+    String type = '';
+    if (capacity <= 15) {
+      type = 'ميكروباص';
+    } else if (capacity <= 30) {
+      type = 'باص متوسط';
+    } else {
+      type = 'باص كبير';
+    }
+
+    if (hasAC) {
+      type += ' مكيف';
+    }
+
+    return type;
+  }
+
+  void _showBusInfoDialog() {
+    if (_students.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('لا يوجد طلاب مسجلين'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    final student = _students.first;
+    if (student.busId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('لم يتم تعيين باص للطالب بعد'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    context.push('/parent/bus-info/${student.id}');
   }
 }
 

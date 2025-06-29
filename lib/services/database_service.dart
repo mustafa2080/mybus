@@ -1554,6 +1554,52 @@ class DatabaseService {
         });
   }
 
+  // Get current supervisor assignment for a bus and direction
+  Future<SupervisorAssignmentModel?> getCurrentSupervisorAssignment(String busId, TripDirection direction) async {
+    try {
+      final query = await _firestore
+          .collection('supervisor_assignments')
+          .where('busId', isEqualTo: busId)
+          .where('status', isEqualTo: 'active')
+          .where('direction', whereIn: [direction.toString().split('.').last, 'both'])
+          .orderBy('assignedAt', descending: true)
+          .limit(1)
+          .get();
+
+      if (query.docs.isNotEmpty) {
+        return SupervisorAssignmentModel.fromMap(query.docs.first.data());
+      }
+      return null;
+    } catch (e) {
+      debugPrint('❌ Error getting current supervisor assignment: $e');
+      return null;
+    }
+  }
+
+  // Get parent complaints
+  Stream<List<ComplaintModel>> getParentComplaints(String parentId) {
+    if (parentId.isEmpty) return Stream.value([]);
+
+    return _firestore
+        .collection('complaints')
+        .where('parentId', isEqualTo: parentId)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+          final complaints = <ComplaintModel>[];
+          for (final doc in snapshot.docs) {
+            try {
+              final complaint = ComplaintModel.fromMap(doc.data());
+              complaints.add(complaint);
+            } catch (e) {
+              debugPrint('❌ Error parsing complaint ${doc.id}: $e');
+            }
+          }
+          debugPrint('📝 Parent complaints loaded: ${complaints.length}');
+          return complaints;
+        });
+  }
+
   // Get all absences stream (for debugging)
   Stream<List<AbsenceModel>> getAllAbsencesStream() {
     return _firestore
