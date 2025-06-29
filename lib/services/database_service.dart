@@ -721,25 +721,38 @@ class DatabaseService {
 
   // Get students currently on bus for specific supervisor
   Stream<List<StudentModel>> getStudentsOnBusForSupervisor(String supervisorId) {
+    debugPrint('🔍 Getting students on bus for supervisor: $supervisorId');
+
     return _firestore
         .collection('supervisor_assignments')
         .where('supervisorId', isEqualTo: supervisorId)
         .where('status', isEqualTo: 'active')
         .snapshots()
         .asyncMap((assignmentSnapshot) async {
+          debugPrint('📋 Found ${assignmentSnapshot.docs.length} active assignments for supervisor $supervisorId');
+
           if (assignmentSnapshot.docs.isEmpty) {
+            debugPrint('⚠️ No active assignments found for supervisor $supervisorId');
             return <StudentModel>[];
           }
 
           // Get bus IDs for this supervisor
           final busIds = assignmentSnapshot.docs
-              .map((doc) => doc.data()['busId'] as String)
+              .map((doc) {
+                final data = doc.data();
+                final busId = data['busId'] as String;
+                debugPrint('🚌 Supervisor assigned to bus: $busId (${data['busPlateNumber']})');
+                return busId;
+              })
               .toSet()
               .toList();
 
           if (busIds.isEmpty) {
+            debugPrint('⚠️ No bus IDs found for supervisor $supervisorId');
             return <StudentModel>[];
           }
+
+          debugPrint('🔍 Looking for students on buses: $busIds');
 
           // Get students currently on these buses
           final studentsSnapshot = await _firestore
@@ -749,10 +762,68 @@ class DatabaseService {
               .where('busId', whereIn: busIds)
               .get();
 
-          return studentsSnapshot.docs
+          final students = studentsSnapshot.docs
               .map((doc) => StudentModel.fromMap(doc.data()))
               .toList();
+
+          debugPrint('👥 Found ${students.length} students currently on supervisor buses');
+          for (final student in students) {
+            debugPrint('   - ${student.name} (Bus: ${student.busId})');
+          }
+
+          // Sort by name for consistent display
+          students.sort((a, b) => a.name.compareTo(b.name));
+
+          return students;
         });
+  }
+
+  // Get supervisor's assigned buses
+  Future<List<String>> getSupervisorAssignedBuses(String supervisorId) async {
+    try {
+      debugPrint('🔍 Getting assigned buses for supervisor: $supervisorId');
+
+      final assignmentSnapshot = await _firestore
+          .collection('supervisor_assignments')
+          .where('supervisorId', isEqualTo: supervisorId)
+          .where('status', isEqualTo: 'active')
+          .get();
+
+      final busIds = assignmentSnapshot.docs
+          .map((doc) {
+            final data = doc.data();
+            final busId = data['busId'] as String;
+            final busPlate = data['busPlateNumber'] as String;
+            debugPrint('🚌 Found assignment: Bus $busPlate (ID: $busId)');
+            return busId;
+          })
+          .toList();
+
+      debugPrint('📊 Total assigned buses: ${busIds.length}');
+      return busIds;
+    } catch (e) {
+      debugPrint('❌ Error getting supervisor assigned buses: $e');
+      return [];
+    }
+  }
+
+  // Check if supervisor has any active assignments
+  Future<bool> hasSupervisorAssignments(String supervisorId) async {
+    try {
+      final assignmentSnapshot = await _firestore
+          .collection('supervisor_assignments')
+          .where('supervisorId', isEqualTo: supervisorId)
+          .where('status', isEqualTo: 'active')
+          .limit(1)
+          .get();
+
+      final hasAssignments = assignmentSnapshot.docs.isNotEmpty;
+      debugPrint('🔍 Supervisor $supervisorId has assignments: $hasAssignments');
+      return hasAssignments;
+    } catch (e) {
+      debugPrint('❌ Error checking supervisor assignments: $e');
+      return false;
+    }
   }
 
   // Complaints Collection Methods

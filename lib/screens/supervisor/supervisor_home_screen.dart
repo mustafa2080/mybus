@@ -35,7 +35,20 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen> {
   }
 
   void _initializeStreams() {
-    _studentsOnBusStream = _databaseService.getStudentsOnBusForSupervisor(_authService.currentUser?.uid ?? '');
+    final supervisorId = _authService.currentUser?.uid ?? '';
+    debugPrint('🔄 Initializing streams for supervisor: $supervisorId');
+    _studentsOnBusStream = _databaseService.getStudentsOnBusForSupervisor(supervisorId);
+    _checkSupervisorAssignments();
+  }
+
+  void _checkSupervisorAssignments() async {
+    final supervisorId = _authService.currentUser?.uid ?? '';
+    final hasAssignments = await _databaseService.hasSupervisorAssignments(supervisorId);
+
+    if (!hasAssignments && mounted) {
+      debugPrint('⚠️ Supervisor has no active assignments');
+      // Could show a message or handle this case
+    }
   }
 
   void _listenToSystemUpdates() {
@@ -2447,7 +2460,7 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'الطلاب في الباص',
+                          'الطلاب في الباص المعين لك',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -2455,7 +2468,7 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen> {
                           ),
                         ),
                         Text(
-                          '${students.length} ${students.length == 1 ? 'طالب' : 'طلاب'}',
+                          '${students.length} ${students.length == 1 ? 'طالب' : 'طلاب'} في الباصات المعينة لك',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey[600],
@@ -2476,33 +2489,74 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen> {
               // Students List
               if (students.isEmpty)
                 Expanded(
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.directions_bus_outlined,
-                          size: 64,
-                          color: Colors.grey[400],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'لا يوجد طلاب في الباص',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey[600],
+                  child: FutureBuilder<bool>(
+                    future: _databaseService.hasSupervisorAssignments(_authService.currentUser?.uid ?? ''),
+                    builder: (context, snapshot) {
+                      final hasAssignments = snapshot.data ?? true;
+
+                      if (!hasAssignments) {
+                        return Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.assignment_outlined,
+                                size: 64,
+                                color: Colors.orange[400],
+                              ),
+                              const SizedBox(height: 16),
+                              Text(
+                                'لم يتم تعيينك لأي باص',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.orange[600],
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'يرجى التواصل مع الإدارة لتعيينك لباص',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey[600],
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
                           ),
+                        );
+                      }
+
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.directions_bus_outlined,
+                              size: 64,
+                              color: Colors.grey[400],
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              'لا يوجد طلاب في الباص',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              'ابدأ بمسح QR للطلاب المعينين لباصك',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[500],
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'ابدأ بمسح QR للطلاب',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[500],
-                          ),
-                        ),
-                      ],
-                    ),
+                      );
+                    },
                   ),
                 )
               else
@@ -2556,6 +2610,21 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen> {
                                       fontSize: 12,
                                       color: Colors.grey[600],
                                     ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  FutureBuilder<String>(
+                                    future: _getBusPlateNumber(student.busId),
+                                    builder: (context, snapshot) {
+                                      final busPlate = snapshot.data ?? student.busId;
+                                      return Text(
+                                        'الباص: $busPlate',
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.blue[600],
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      );
+                                    },
                                   ),
                                 ],
                               ),
@@ -2636,6 +2705,17 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen> {
         ),
       ),
     );
+  }
+
+  // Get bus plate number from bus ID
+  Future<String> _getBusPlateNumber(String busId) async {
+    try {
+      final bus = await _databaseService.getBus(busId);
+      return bus?.plateNumber ?? busId;
+    } catch (e) {
+      debugPrint('Error getting bus plate number: $e');
+      return busId;
+    }
   }
 }
 
