@@ -36,23 +36,39 @@ class _SurveysReportsScreenState extends State<SurveysReportsScreen> with Ticker
   }
 
   Future<void> _loadReports() async {
+    if (!mounted) return;
+
     setState(() => _isLoading = true);
-    
+
     try {
+      debugPrint('🔄 Loading reports for $_selectedMonth/$_selectedYear');
+
       // Load supervisor evaluations
       final supervisorEvals = await _databaseService.getSupervisorEvaluationsByMonth(_selectedMonth, _selectedYear);
-      
+      debugPrint('📊 Loaded ${supervisorEvals.length} supervisor evaluations');
+
       // Load behavior evaluations
       final behaviorEvals = await _databaseService.getBehaviorEvaluationsByMonth(_selectedMonth, _selectedYear);
-      
-      setState(() {
-        _supervisorEvaluations = supervisorEvals;
-        _behaviorEvaluations = behaviorEvals;
-        _isLoading = false;
-      });
+      debugPrint('📊 Loaded ${behaviorEvals.length} behavior evaluations');
+
+      if (mounted) {
+        setState(() {
+          _supervisorEvaluations = supervisorEvals;
+          _behaviorEvaluations = behaviorEvals;
+          _isLoading = false;
+        });
+      }
     } catch (e) {
-      debugPrint('Error loading reports: $e');
-      setState(() => _isLoading = false);
+      debugPrint('❌ Error loading reports: $e');
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ في تحميل التقارير: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -107,7 +123,16 @@ class _SurveysReportsScreenState extends State<SurveysReportsScreen> with Ticker
           // Tab content
           Expanded(
             child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
+                ? const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        CircularProgressIndicator(),
+                        SizedBox(height: 16),
+                        Text('جاري تحميل التقارير...'),
+                      ],
+                    ),
+                  )
                 : TabBarView(
                     controller: _tabController,
                     children: [
