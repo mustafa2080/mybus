@@ -1772,68 +1772,6 @@ class DatabaseService {
     }
   }
 
-      if (busIds.isEmpty) {
-        debugPrint('⚠️ No bus assignments found for parent students');
-        return [];
-      }
-
-      // Get current active supervisor assignments for these buses
-      final now = DateTime.now();
-      final assignmentsSnapshot = await _firestore
-          .collection('supervisor_assignments')
-          .where('busId', whereIn: busIds.toList())
-          .get();
-
-      final supervisorIds = <String>{};
-      for (final doc in assignmentsSnapshot.docs) {
-        try {
-          final assignment = SupervisorAssignmentModel.fromMap(doc.data());
-
-          // Check if assignment is current and active
-          final isCurrentAssignment = assignment.assignedAt.isBefore(now) ||
-                                    assignment.assignedAt.isAtSameMomentAs(now);
-
-          if (isCurrentAssignment) {
-            supervisorIds.add(assignment.supervisorId);
-            debugPrint('✅ Found active assignment: ${assignment.supervisorName} for bus ${assignment.busId}');
-          }
-        } catch (e) {
-          debugPrint('❌ Error parsing assignment ${doc.id}: $e');
-        }
-      }
-
-      if (supervisorIds.isEmpty) {
-        debugPrint('⚠️ No active supervisor assignments found for buses: $busIds');
-        // Return empty list instead of all supervisors to be more accurate
-        return [];
-      }
-
-      // Get supervisor details
-      final supervisorsSnapshot = await _firestore
-          .collection('users')
-          .where('userType', isEqualTo: 'supervisor')
-          .where(FieldPath.documentId, whereIn: supervisorIds.toList())
-          .get();
-
-      final supervisors = <UserModel>[];
-      for (final doc in supervisorsSnapshot.docs) {
-        try {
-          final supervisor = UserModel.fromMap(doc.data());
-          supervisors.add(supervisor);
-          debugPrint('👤 Added supervisor: ${supervisor.name}');
-        } catch (e) {
-          debugPrint('❌ Error parsing supervisor ${doc.id}: $e');
-        }
-      }
-
-      debugPrint('👥 Found ${supervisors.length} assigned supervisors for parent $parentId');
-      return supervisors;
-    } catch (e) {
-      debugPrint('❌ Error getting supervisors for parent: $e');
-      return [];
-    }
-  }
-
   // Create supervisor evaluation
   Future<void> createSupervisorEvaluation(SupervisorEvaluationModel evaluation) async {
     try {
@@ -2738,6 +2676,290 @@ class DatabaseService {
     } catch (e) {
       debugPrint('❌ Error deleting behavior evaluation: $e');
       throw Exception('فشل في حذف التقييم السلوكي: $e');
+    }
+  }
+
+  // Missing methods implementation
+
+  // Get user by ID
+  Future<UserModel?> getUserById(String userId) async {
+    try {
+      final doc = await _firestore.collection('users').doc(userId).get();
+      if (doc.exists) {
+        return UserModel.fromMap(doc.data()!);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('❌ Error getting user by ID: $e');
+      return null;
+    }
+  }
+
+  // Get bus by ID
+  Future<BusModel?> getBusById(String busId) async {
+    try {
+      final doc = await _firestore.collection('buses').doc(busId).get();
+      if (doc.exists) {
+        return BusModel.fromMap(doc.data()!);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('❌ Error getting bus by ID: $e');
+      return null;
+    }
+  }
+
+  // Get all supervisors
+  Future<List<UserModel>> getAllSupervisors() async {
+    try {
+      final snapshot = await _firestore
+          .collection('users')
+          .where('userType', isEqualTo: 'supervisor')
+          .where('isActive', isEqualTo: true)
+          .get();
+
+      return snapshot.docs
+          .map((doc) => UserModel.fromMap(doc.data()))
+          .toList();
+    } catch (e) {
+      debugPrint('❌ Error getting all supervisors: $e');
+      return [];
+    }
+  }
+
+  // Get all admins
+  Future<List<UserModel>> getAllAdmins() async {
+    try {
+      final snapshot = await _firestore
+          .collection('users')
+          .where('userType', isEqualTo: 'admin')
+          .where('isActive', isEqualTo: true)
+          .get();
+
+      return snapshot.docs
+          .map((doc) => UserModel.fromMap(doc.data()))
+          .toList();
+    } catch (e) {
+      debugPrint('❌ Error getting all admins: $e');
+      return [];
+    }
+  }
+
+  // Get students by parent (once)
+  Future<List<StudentModel>> getStudentsByParentOnce(String parentId) async {
+    try {
+      final snapshot = await _firestore
+          .collection('students')
+          .where('parentId', isEqualTo: parentId)
+          .where('isActive', isEqualTo: true)
+          .get();
+
+      return snapshot.docs
+          .map((doc) => StudentModel.fromMap(doc.data()))
+          .toList();
+    } catch (e) {
+      debugPrint('❌ Error getting students by parent: $e');
+      return [];
+    }
+  }
+
+  // Get all absences stream
+  Stream<List<AbsenceModel>> getAllAbsencesStream() {
+    return _firestore
+        .collection('absences')
+        .snapshots()
+        .map((snapshot) {
+          final absences = snapshot.docs
+              .map((doc) => AbsenceModel.fromMap(doc.data()))
+              .toList();
+
+          absences.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          return absences;
+        });
+  }
+
+  // Update absence status
+  Future<void> updateAbsenceStatus(String absenceId, AbsenceStatus status) async {
+    try {
+      await _firestore.collection('absences').doc(absenceId).update({
+        'status': status.toString().split('.').last,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+      debugPrint('✅ Absence status updated successfully');
+    } catch (e) {
+      debugPrint('❌ Error updating absence status: $e');
+      throw Exception('فشل في تحديث حالة الغياب: $e');
+    }
+  }
+
+  // Get all students with absence data
+  Future<List<Map<String, dynamic>>> getAllStudentsWithAbsenceData() async {
+    try {
+      final studentsSnapshot = await _firestore
+          .collection('students')
+          .where('isActive', isEqualTo: true)
+          .get();
+
+      final students = <Map<String, dynamic>>[];
+
+      for (final doc in studentsSnapshot.docs) {
+        final studentData = doc.data();
+        final studentId = studentData['id'] as String;
+
+        // Get absence count for this student
+        final absencesSnapshot = await _firestore
+            .collection('absences')
+            .where('studentId', isEqualTo: studentId)
+            .get();
+
+        students.add({
+          ...studentData,
+          'absenceCount': absencesSnapshot.docs.length,
+        });
+      }
+
+      return students;
+    } catch (e) {
+      debugPrint('❌ Error getting students with absence data: $e');
+      return [];
+    }
+  }
+
+  // Survey methods
+
+  // Check if user has responded to survey
+  Future<bool> hasUserRespondedToSurvey(String surveyId, String userId) async {
+    try {
+      final snapshot = await _firestore
+          .collection('survey_responses')
+          .where('surveyId', isEqualTo: surveyId)
+          .where('userId', isEqualTo: userId)
+          .limit(1)
+          .get();
+
+      return snapshot.docs.isNotEmpty;
+    } catch (e) {
+      debugPrint('❌ Error checking survey response: $e');
+      return false;
+    }
+  }
+
+  // Submit survey response
+  Future<void> submitSurveyResponse(Map<String, dynamic> response) async {
+    try {
+      final responseId = _uuid.v4();
+      await _firestore
+          .collection('survey_responses')
+          .doc(responseId)
+          .set({
+            'id': responseId,
+            ...response,
+            'submittedAt': FieldValue.serverTimestamp(),
+          });
+      debugPrint('✅ Survey response submitted successfully');
+    } catch (e) {
+      debugPrint('❌ Error submitting survey response: $e');
+      throw Exception('فشل في إرسال الاستبيان: $e');
+    }
+  }
+
+  // Get assignment statistics
+  Future<Map<String, int>> getAssignmentStatistics() async {
+    try {
+      final snapshot = await _firestore
+          .collection('supervisor_assignments')
+          .where('status', isEqualTo: 'active')
+          .get();
+
+      final assignments = snapshot.docs
+          .map((doc) => SupervisorAssignmentModel.fromMap(doc.data()))
+          .toList();
+
+      return {
+        'total': assignments.length,
+        'pickup': assignments.where((a) => a.direction == TripDirection.toSchool).length,
+        'dropoff': assignments.where((a) => a.direction == TripDirection.fromSchool).length,
+        'both': assignments.where((a) => a.direction == TripDirection.both).length,
+      };
+    } catch (e) {
+      debugPrint('❌ Error getting assignment statistics: $e');
+      return {};
+    }
+  }
+
+  // Get active supervisor assignments
+  Stream<List<SupervisorAssignmentModel>> getActiveSupervisorAssignments() {
+    return _firestore
+        .collection('supervisor_assignments')
+        .where('status', isEqualTo: 'active')
+        .snapshots()
+        .map((snapshot) {
+          final assignments = snapshot.docs
+              .map((doc) => SupervisorAssignmentModel.fromMap(doc.data()))
+              .toList();
+
+          assignments.sort((a, b) => b.assignedAt.compareTo(a.assignedAt));
+          return assignments;
+        });
+  }
+
+  // Get all supervisor assignments
+  Stream<List<SupervisorAssignmentModel>> getAllSupervisorAssignments() {
+    return _firestore
+        .collection('supervisor_assignments')
+        .snapshots()
+        .map((snapshot) {
+          final assignments = snapshot.docs
+              .map((doc) => SupervisorAssignmentModel.fromMap(doc.data()))
+              .toList();
+
+          assignments.sort((a, b) => b.assignedAt.compareTo(a.assignedAt));
+          return assignments;
+        });
+  }
+
+  // Deactivate supervisor assignment
+  Future<void> deactivateSupervisorAssignment(String assignmentId) async {
+    try {
+      await _firestore
+          .collection('supervisor_assignments')
+          .doc(assignmentId)
+          .update({
+            'status': 'inactive',
+            'deactivatedAt': FieldValue.serverTimestamp(),
+          });
+      debugPrint('✅ Supervisor assignment deactivated successfully');
+    } catch (e) {
+      debugPrint('❌ Error deactivating supervisor assignment: $e');
+      throw Exception('فشل في إلغاء تعيين المشرف: $e');
+    }
+  }
+
+  // Delete supervisor assignment
+  Future<void> deleteSupervisorAssignment(String assignmentId) async {
+    try {
+      await _firestore
+          .collection('supervisor_assignments')
+          .doc(assignmentId)
+          .delete();
+      debugPrint('✅ Supervisor assignment deleted successfully');
+    } catch (e) {
+      debugPrint('❌ Error deleting supervisor assignment: $e');
+      throw Exception('فشل في حذف تعيين المشرف: $e');
+    }
+  }
+
+  // Create supervisor assignment
+  Future<void> createSupervisorAssignment(SupervisorAssignmentModel assignment) async {
+    try {
+      await _firestore
+          .collection('supervisor_assignments')
+          .doc(assignment.id)
+          .set(assignment.toMap());
+      debugPrint('✅ Supervisor assignment created successfully');
+    } catch (e) {
+      debugPrint('❌ Error creating supervisor assignment: $e');
+      throw Exception('فشل في إنشاء تعيين المشرف: $e');
     }
   }
 }
