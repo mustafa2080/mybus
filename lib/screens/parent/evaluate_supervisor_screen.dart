@@ -423,7 +423,7 @@ class _EvaluateSupervisorScreenState extends State<EvaluateSupervisorScreen> {
       }
 
       // Get parent's student info for the evaluation
-      final students = await _databaseService.getStudentsByParent(currentUser.uid);
+      final students = await _databaseService.getStudentsByParentOnce(currentUser.uid);
       if (students.isEmpty) {
         throw Exception('لا يوجد طلاب مسجلين');
       }

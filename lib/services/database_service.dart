@@ -1727,8 +1727,8 @@ class DatabaseService {
     }
   }
 
-  // Get students by parent ID
-  Future<List<StudentModel>> getStudentsByParent(String parentId) async {
+  // Get students by parent ID (Future version for one-time queries)
+  Future<List<StudentModel>> getStudentsByParentOnce(String parentId) async {
     try {
       final snapshot = await _firestore
           .collection('students')
