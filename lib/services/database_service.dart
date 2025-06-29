@@ -1684,6 +1684,99 @@ class DatabaseService {
         return [];
       }
 
+      // Get all active supervisor assignments for these buses
+      final supervisorIds = <String>{};
+      for (final busId in busIds) {
+        final assignmentsSnapshot = await _firestore
+            .collection('supervisor_assignments')
+            .where('busId', isEqualTo: busId)
+            .where('status', isEqualTo: 'active')
+            .get();
+
+        for (final assignmentDoc in assignmentsSnapshot.docs) {
+          final supervisorId = assignmentDoc.data()['supervisorId'] as String?;
+          if (supervisorId != null && supervisorId.isNotEmpty) {
+            supervisorIds.add(supervisorId);
+            debugPrint('👨‍🏫 Found supervisor $supervisorId for bus $busId');
+          }
+        }
+      }
+
+      if (supervisorIds.isEmpty) {
+        debugPrint('⚠️ No supervisor assignments found for buses');
+        return [];
+      }
+
+      // Get supervisor user details
+      final supervisors = <UserModel>[];
+      for (final supervisorId in supervisorIds) {
+        final supervisorDoc = await _firestore
+            .collection('users')
+            .doc(supervisorId)
+            .get();
+
+        if (supervisorDoc.exists) {
+          final supervisorData = supervisorDoc.data()!;
+          if (supervisorData['userType'] == 'supervisor') {
+            final supervisor = UserModel.fromMap(supervisorData);
+            supervisors.add(supervisor);
+            debugPrint('✅ Added supervisor: ${supervisor.name}');
+          }
+        }
+      }
+
+      debugPrint('📋 Total supervisors found: ${supervisors.length}');
+      return supervisors;
+    } catch (e) {
+      debugPrint('❌ Error getting supervisors for parent: $e');
+      return [];
+    }
+  }
+
+  // Get detailed supervisor info for each student assignment
+  Future<Map<String, Map<String, String>>> getSupervisorInfoForStudents(String parentId) async {
+    try {
+      debugPrint('🔍 Getting detailed supervisor info for parent: $parentId');
+
+      final result = <String, Map<String, String>>{};
+
+      // Get parent's students
+      final studentsSnapshot = await _firestore
+          .collection('students')
+          .where('parentId', isEqualTo: parentId)
+          .get();
+
+      for (final studentDoc in studentsSnapshot.docs) {
+        final studentData = studentDoc.data();
+        final studentId = studentData['id'] as String;
+        final busId = studentData['busId'] as String?;
+
+        if (busId == null || busId.isEmpty) {
+          result[studentId] = {
+            'supervisorName': 'غير محدد',
+            'supervisorPhone': '',
+            'direction': 'غير محدد',
+          };
+          continue;
+        }
+
+        // Get supervisor info for this bus
+        final supervisorInfo = await getSupervisorInfoForParent(busId);
+        result[studentId] = supervisorInfo;
+      }
+
+      return result;
+    } catch (e) {
+      debugPrint('❌ Error getting supervisor info for students: $e');
+      return {};
+    }
+  }
+
+      if (busIds.isEmpty) {
+        debugPrint('⚠️ No bus assignments found for parent students');
+        return [];
+      }
+
       // Get current active supervisor assignments for these buses
       final now = DateTime.now();
       final assignmentsSnapshot = await _firestore
@@ -2185,17 +2278,24 @@ class DatabaseService {
         return Stream.value([]);
     }
 
+    // Simplified query to avoid index requirements
     return _firestore
         .collection('surveys')
         .where('isActive', isEqualTo: true)
-        .where('status', isEqualTo: 'active')
         .where('type', isEqualTo: targetType.toString().split('.').last)
-        .orderBy('createdAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => SurveyModel.fromMap(doc.data()))
-            .where((survey) => !survey.isExpired)
-            .toList());
+        .map((snapshot) {
+          final surveys = snapshot.docs
+              .map((doc) => SurveyModel.fromMap(doc.data()))
+              .where((survey) =>
+                  survey.status == SurveyStatus.active &&
+                  !survey.isExpired)
+              .toList();
+
+          // Sort manually to avoid compound index requirement
+          surveys.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+          return surveys;
+        });
   }
 
   /// Submit survey response
