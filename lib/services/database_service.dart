@@ -1155,14 +1155,60 @@ class DatabaseService {
 
   Future<void> updateParentProfile(String parentId, Map<String, dynamic> updates) async {
     try {
+      // Update parent profile
       await _firestore.collection('parent_profiles').doc(parentId).update({
         ...updates,
         'updatedAt': DateTime.now().toIso8601String(),
       });
       debugPrint('✅ Parent profile updated successfully');
+
+      // Update related student records if name or address changed
+      if (updates.containsKey('fullName') || updates.containsKey('address')) {
+        await _updateStudentParentInfo(parentId, updates);
+      }
     } catch (e) {
       debugPrint('❌ Error updating parent profile: $e');
       throw Exception('فشل في تحديث بيانات الوالد: $e');
+    }
+  }
+
+  // Update student records when parent info changes
+  Future<void> _updateStudentParentInfo(String parentId, Map<String, dynamic> updates) async {
+    try {
+      // Get all students for this parent
+      final studentsSnapshot = await _firestore
+          .collection('students')
+          .where('parentId', isEqualTo: parentId)
+          .get();
+
+      if (studentsSnapshot.docs.isNotEmpty) {
+        final batch = _firestore.batch();
+
+        for (final doc in studentsSnapshot.docs) {
+          final studentRef = _firestore.collection('students').doc(doc.id);
+          final updateData = <String, dynamic>{
+            'updatedAt': FieldValue.serverTimestamp(),
+          };
+
+          // Update parent name if changed
+          if (updates.containsKey('fullName')) {
+            updateData['parentName'] = updates['fullName'];
+          }
+
+          // Update address if changed
+          if (updates.containsKey('address')) {
+            updateData['address'] = updates['address'];
+          }
+
+          batch.update(studentRef, updateData);
+        }
+
+        await batch.commit();
+        debugPrint('✅ Updated ${studentsSnapshot.docs.length} student records with new parent info');
+      }
+    } catch (e) {
+      debugPrint('❌ Error updating student parent info: $e');
+      // Don't throw here to avoid breaking the main profile update
     }
   }
 

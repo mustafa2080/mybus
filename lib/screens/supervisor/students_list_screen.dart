@@ -479,11 +479,17 @@ class _StudentsListScreenState extends State<StudentsListScreen> {
                 Row(
                   children: [
                     Expanded(
-                      child: _buildCompactInfoItem(
-                        icon: Icons.person,
-                        label: 'اسم ولي الأمر',
-                        value: student.parentName.isNotEmpty ? student.parentName : 'غير محدد',
-                        color: Colors.purple,
+                      child: FutureBuilder<String>(
+                        future: _getParentName(student.parentId),
+                        builder: (context, snapshot) {
+                          final parentName = snapshot.data ?? student.parentName;
+                          return _buildCompactInfoItem(
+                            icon: Icons.person,
+                            label: 'اسم ولي الأمر',
+                            value: parentName.isNotEmpty ? parentName : 'غير محدد',
+                            color: Colors.purple,
+                          );
+                        },
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -501,15 +507,21 @@ class _StudentsListScreenState extends State<StudentsListScreen> {
 
                 const SizedBox(height: 8),
 
-                // Second Row - Address
+                // Second Row - Address from Parent Profile
                 Row(
                   children: [
                     Expanded(
-                      child: _buildCompactInfoItem(
-                        icon: Icons.home,
-                        label: 'عنوان ولي الأمر',
-                        value: student.address.isNotEmpty ? student.address : 'غير محدد',
-                        color: Colors.blue,
+                      child: FutureBuilder<String>(
+                        future: _getParentAddress(student.parentId),
+                        builder: (context, snapshot) {
+                          final address = snapshot.data ?? 'جاري التحميل...';
+                          return _buildCompactInfoItem(
+                            icon: Icons.home,
+                            label: 'عنوان ولي الأمر',
+                            value: address,
+                            color: Colors.blue,
+                          );
+                        },
                       ),
                     ),
                   ],
@@ -1038,6 +1050,34 @@ class _StudentsListScreenState extends State<StudentsListScreen> {
         ),
       ),
     );
+  }
+
+  // Get parent name from profile
+  Future<String> _getParentName(String parentId) async {
+    try {
+      final profile = await _databaseService.getParentProfile(parentId);
+      if (profile != null && profile.fullName.isNotEmpty) {
+        return profile.fullName;
+      }
+      return 'غير محدد';
+    } catch (e) {
+      debugPrint('Error getting parent name: $e');
+      return 'غير محدد';
+    }
+  }
+
+  // Get parent address from profile
+  Future<String> _getParentAddress(String parentId) async {
+    try {
+      final profile = await _databaseService.getParentProfile(parentId);
+      if (profile != null && profile.address.isNotEmpty) {
+        return profile.address;
+      }
+      return 'غير محدد';
+    } catch (e) {
+      debugPrint('Error getting parent address: $e');
+      return 'غير محدد';
+    }
   }
 }
 
