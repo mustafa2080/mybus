@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models/bus_model.dart';
@@ -322,10 +323,39 @@ class _BusInfoScreenState extends State<BusInfoScreen> {
                   ),
                   const SizedBox(height: 16),
 
+                  // Debug button (remove in production)
+                  if (kDebugMode)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          if (_bus != null) {
+                            await _databaseService.debugSupervisorAssignments(_bus!.id);
+                            setState(() {}); // Refresh the UI
+                          }
+                        },
+                        icon: const Icon(Icons.bug_report),
+                        label: const Text('Debug Supervisor Info'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ),
+
                   // Supervisor info with real data
                   FutureBuilder<Map<String, String>>(
-                    future: _databaseService.getSupervisorInfoForParent(_bus!.id),
+                    future: _getSupervisorInfoWithDebug(),
                     builder: (context, supervisorSnapshot) {
+                      if (supervisorSnapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(
+                          child: Padding(
+                            padding: EdgeInsets.all(16.0),
+                            child: CircularProgressIndicator(),
+                          ),
+                        );
+                      }
+
                       final supervisorInfo = supervisorSnapshot.data ?? {};
                       final supervisorName = supervisorInfo['name'] ?? 'غير محدد';
                       final supervisorPhone = supervisorInfo['phone'] ?? '';
@@ -706,6 +736,29 @@ class _BusInfoScreenState extends State<BusInfoScreen> {
       case TripDirection.both:
         return 'الذهاب والعودة';
     }
+  }
+
+  // Get supervisor info with debug logging
+  Future<Map<String, String>> _getSupervisorInfoWithDebug() async {
+    if (_bus == null) {
+      debugPrint('❌ Bus is null');
+      return {
+        'name': 'خطأ: لا توجد حافلة',
+        'phone': '',
+        'direction': '',
+      };
+    }
+
+    debugPrint('🚌 Getting supervisor info for bus: ${_bus!.id} (${_bus!.plateNumber})');
+
+    // Call debug function first
+    await _databaseService.debugSupervisorAssignments(_bus!.id);
+
+    // Then get the actual supervisor info
+    final result = await _databaseService.getSupervisorInfoForParent(_bus!.id);
+
+    debugPrint('📱 Final result: $result');
+    return result;
   }
 }
 

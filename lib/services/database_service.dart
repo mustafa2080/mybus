@@ -1558,22 +1558,46 @@ class DatabaseService {
   // Get current supervisor assignment for a bus and direction
   Future<SupervisorAssignmentModel?> getCurrentSupervisorAssignment(String busId, TripDirection direction) async {
     try {
+      debugPrint('🔍 Getting supervisor assignment for bus: $busId, direction: $direction');
+
+      // Simplified query to avoid index issues
       final query = await _firestore
           .collection('supervisor_assignments')
           .where('busId', isEqualTo: busId)
           .where('status', isEqualTo: 'active')
-          .orderBy('assignedAt', descending: true)
           .get();
 
+      debugPrint('📊 Found ${query.docs.length} active assignments for bus $busId');
+
       if (query.docs.isNotEmpty) {
-        // Filter by direction
+        // Filter by direction and get the most recent
+        SupervisorAssignmentModel? bestMatch;
+        DateTime? latestDate;
+
         for (final doc in query.docs) {
-          final assignment = SupervisorAssignmentModel.fromMap(doc.data());
-          if (assignment.direction == direction || assignment.direction == TripDirection.both) {
-            return assignment;
+          try {
+            final assignment = SupervisorAssignmentModel.fromMap(doc.data());
+            debugPrint('📋 Assignment: ${assignment.supervisorName}, direction: ${assignment.direction}, date: ${assignment.assignedAt}');
+
+            // Check if direction matches
+            if (assignment.direction == direction || assignment.direction == TripDirection.both) {
+              if (latestDate == null || assignment.assignedAt.isAfter(latestDate)) {
+                bestMatch = assignment;
+                latestDate = assignment.assignedAt;
+              }
+            }
+          } catch (e) {
+            debugPrint('❌ Error parsing assignment document: $e');
           }
         }
+
+        if (bestMatch != null) {
+          debugPrint('✅ Found matching assignment: ${bestMatch.supervisorName}');
+          return bestMatch;
+        }
       }
+
+      debugPrint('⚠️ No matching supervisor assignment found');
       return null;
     } catch (e) {
       debugPrint('❌ Error getting current supervisor assignment: $e');
@@ -1584,6 +1608,8 @@ class DatabaseService {
   // Get supervisor info for parent based on bus and current time
   Future<Map<String, String>> getSupervisorInfoForParent(String busId) async {
     try {
+      debugPrint('🚌 Getting supervisor info for bus: $busId');
+
       // Determine current direction based on time
       final currentTime = DateTime.now();
       final currentHour = currentTime.hour;
@@ -1597,22 +1623,54 @@ class DatabaseService {
         currentDirection = TripDirection.both;
       }
 
+      debugPrint('⏰ Current time: $currentHour:00, Direction: $currentDirection');
+
       // Get supervisor assignment
       final assignment = await getCurrentSupervisorAssignment(busId, currentDirection);
 
       if (assignment != null) {
+        debugPrint('📋 Found assignment: ${assignment.supervisorName} (ID: ${assignment.supervisorId})');
+
         // Get supervisor details
         final supervisor = await getUserById(assignment.supervisorId);
 
         if (supervisor != null) {
+          debugPrint('👤 Found supervisor: ${supervisor.name}, Phone: ${supervisor.phone}');
           return {
             'name': supervisor.name,
             'phone': supervisor.phone,
             'direction': assignment.directionDisplayName,
           };
+        } else {
+          debugPrint('❌ Supervisor user not found for ID: ${assignment.supervisorId}');
+        }
+      } else {
+        debugPrint('⚠️ No supervisor assignment found for bus $busId with direction $currentDirection');
+
+        // Try to get any active assignment for this bus (fallback)
+        final fallbackQuery = await _firestore
+            .collection('supervisor_assignments')
+            .where('busId', isEqualTo: busId)
+            .where('status', isEqualTo: 'active')
+            .limit(1)
+            .get();
+
+        if (fallbackQuery.docs.isNotEmpty) {
+          final fallbackAssignment = SupervisorAssignmentModel.fromMap(fallbackQuery.docs.first.data());
+          final supervisor = await getUserById(fallbackAssignment.supervisorId);
+
+          if (supervisor != null) {
+            debugPrint('🔄 Using fallback assignment: ${supervisor.name}');
+            return {
+              'name': supervisor.name,
+              'phone': supervisor.phone,
+              'direction': fallbackAssignment.directionDisplayName,
+            };
+          }
         }
       }
 
+      debugPrint('❌ No supervisor info found, returning default values');
       return {
         'name': 'غير محدد',
         'phone': '',
@@ -1621,14 +1679,47 @@ class DatabaseService {
     } catch (e) {
       debugPrint('❌ Error getting supervisor info for parent: $e');
       return {
-        'name': 'غير محدد',
+        'name': 'خطأ في التحميل',
         'phone': '',
-        'direction': 'غير محدد',
+        'direction': 'خطأ في التحميل',
       };
     }
   }
 
+  // Debug function to check supervisor assignments
+  Future<void> debugSupervisorAssignments(String busId) async {
+    try {
+      debugPrint('🔍 DEBUG: Checking all assignments for bus: $busId');
 
+      final allAssignments = await _firestore
+          .collection('supervisor_assignments')
+          .where('busId', isEqualTo: busId)
+          .get();
+
+      debugPrint('📊 Total assignments found: ${allAssignments.docs.length}');
+
+      for (final doc in allAssignments.docs) {
+        final data = doc.data();
+        debugPrint('📋 Assignment: ${doc.id}');
+        debugPrint('   - Supervisor: ${data['supervisorName']}');
+        debugPrint('   - Direction: ${data['direction']}');
+        debugPrint('   - Status: ${data['status']}');
+        debugPrint('   - Assigned At: ${data['assignedAt']}');
+      }
+
+      // Check if there are any active assignments
+      final activeAssignments = await _firestore
+          .collection('supervisor_assignments')
+          .where('busId', isEqualTo: busId)
+          .where('status', isEqualTo: 'active')
+          .get();
+
+      debugPrint('✅ Active assignments: ${activeAssignments.docs.length}');
+
+    } catch (e) {
+      debugPrint('❌ Error in debug function: $e');
+    }
+  }
 
   // Get parent complaints
   Stream<List<ComplaintModel>> getParentComplaints(String parentId) {
