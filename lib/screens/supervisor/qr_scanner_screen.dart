@@ -1127,11 +1127,9 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
       case StudentStatus.home:
         return Colors.green;
       case StudentStatus.onBus:
-        return Colors.blue;
-      case StudentStatus.atSchool:
         return Colors.orange;
-      default:
-        return Colors.grey;
+      case StudentStatus.atSchool:
+        return Colors.blue;
     }
   }
 
@@ -1143,8 +1141,6 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
         return Icons.directions_bus;
       case StudentStatus.atSchool:
         return Icons.school;
-      default:
-        return Icons.help;
     }
   }
 
@@ -1248,27 +1244,7 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
     );
   }
 
-  Color _getStatusColor(StudentStatus status) {
-    switch (status) {
-      case StudentStatus.home:
-        return Colors.green;
-      case StudentStatus.onBus:
-        return Colors.orange;
-      case StudentStatus.atSchool:
-        return Colors.blue;
-    }
-  }
 
-  IconData _getStatusIcon(StudentStatus status) {
-    switch (status) {
-      case StudentStatus.home:
-        return Icons.home;
-      case StudentStatus.onBus:
-        return Icons.directions_bus;
-      case StudentStatus.atSchool:
-        return Icons.school;
-    }
-  }
 
   void _showDetailedCounter() {
     showDialog(
