@@ -310,14 +310,27 @@ class DatabaseService {
     }
   }
 
-  // Update student status
+  // Update student status with enhanced logging and sync
   Future<void> updateStudentStatus(String studentId, StudentStatus status) async {
     try {
+      debugPrint('🔄 Updating student status: $studentId to ${status.toString().split('.').last}');
+
       await _firestore.collection('students').doc(studentId).update({
         'currentStatus': status.toString().split('.').last,
         'updatedAt': Timestamp.fromDate(DateTime.now()),
       });
+
+      debugPrint('✅ Student status updated successfully: $studentId');
+
+      // Force refresh any cached data by updating a timestamp
+      await _firestore.collection('system_updates').doc('last_student_update').set({
+        'timestamp': Timestamp.fromDate(DateTime.now()),
+        'studentId': studentId,
+        'newStatus': status.toString().split('.').last,
+      }, SetOptions(merge: true));
+
     } catch (e) {
+      debugPrint('❌ Error updating student status: $e');
       throw Exception('خطأ في تحديث حالة الطالب: $e');
     }
   }

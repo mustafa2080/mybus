@@ -25,10 +25,33 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen> {
   final NotificationService _notificationService = NotificationService();
 
   final bool _isLoading = false;
+  late Stream<List<StudentModel>> _studentsOnBusStream;
 
   @override
   void initState() {
     super.initState();
+    _initializeStreams();
+    _listenToSystemUpdates();
+  }
+
+  void _initializeStreams() {
+    _studentsOnBusStream = _databaseService.getStudentsOnBusForSupervisor(_authService.currentUser?.uid ?? '');
+  }
+
+  void _listenToSystemUpdates() {
+    // Listen to system updates to refresh data when needed
+    FirebaseFirestore.instance
+        .collection('system_updates')
+        .doc('last_student_update')
+        .snapshots()
+        .listen((snapshot) {
+      if (snapshot.exists && mounted) {
+        debugPrint('🔄 System update detected, refreshing streams...');
+        setState(() {
+          _initializeStreams();
+        });
+      }
+    });
   }
 
 
@@ -825,7 +848,7 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen> {
       children: [
         Expanded(
           child: StreamBuilder<List<StudentModel>>(
-            stream: _databaseService.getStudentsOnBusForSupervisor(_authService.currentUser?.uid ?? ''),
+            stream: _studentsOnBusStream,
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return _buildStatCard(
@@ -836,12 +859,29 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen> {
                 );
               }
 
-              final count = snapshot.data?.length ?? 0;
-              return _buildStatCard(
-                'الطلاب في الباص',
-                count.toString(),
-                Icons.directions_bus,
-                count > 0 ? Colors.green : Colors.blue,
+              final students = snapshot.data ?? [];
+              final count = students.length;
+
+              return GestureDetector(
+                onTap: () => _showStudentsOnBusDialog(students),
+                child: Container(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    boxShadow: [
+                      BoxShadow(
+                        color: (count > 0 ? Colors.green : Colors.blue).withAlpha(25),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: _buildStatCard(
+                    'الطلاب في الباص',
+                    count.toString(),
+                    Icons.directions_bus,
+                    count > 0 ? Colors.green : Colors.blue,
+                  ),
+                ),
               );
             },
           ),
@@ -2363,6 +2403,237 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen> {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => const MonthlyBehaviorSurveyScreen(),
+      ),
+    );
+  }
+
+  // Show students currently on bus dialog
+  void _showStudentsOnBusDialog(List<StudentModel> students) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Container(
+          width: double.maxFinite,
+          constraints: const BoxConstraints(maxHeight: 600),
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Colors.green[400]!, Colors.green[600]!],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.directions_bus,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'الطلاب في الباص',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF2D3748),
+                          ),
+                        ),
+                        Text(
+                          '${students.length} ${students.length == 1 ? 'طالب' : 'طلاب'}',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icon(Icons.close, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 20),
+
+              // Students List
+              if (students.isEmpty)
+                Expanded(
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.directions_bus_outlined,
+                          size: 64,
+                          color: Colors.grey[400],
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'لا يوجد طلاب في الباص',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'ابدأ بمسح QR للطلاب',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[500],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: students.length,
+                    itemBuilder: (context, index) {
+                      final student = students[index];
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.green.withAlpha(25),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.green.withAlpha(76)),
+                        ),
+                        child: Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: Colors.green,
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                '${index + 1}',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    student.name,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      color: Color(0xFF2D3748),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    'الصف: ${student.grade} • ${student.schoolName}',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.green,
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.directions_bus,
+                                    color: Colors.white,
+                                    size: 12,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Text(
+                                    'في الباص',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+
+              const SizedBox(height: 16),
+
+              // Action Buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        context.push('/supervisor/qr-scanner');
+                      },
+                      icon: const Icon(Icons.qr_code_scanner, size: 16),
+                      label: const Text('مسح QR'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.green,
+                        backgroundColor: Colors.green.withAlpha(25),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.grey[700],
+                        backgroundColor: Colors.grey.withAlpha(25),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text('إغلاق'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
