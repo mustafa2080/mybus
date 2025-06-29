@@ -1824,6 +1824,71 @@ class DatabaseService {
     }
   }
 
+  // Get assignment statistics for admin dashboard
+  Future<Map<String, dynamic>> getAssignmentStatistics() async {
+    try {
+      // Get all assignments
+      final assignmentsSnapshot = await _firestore
+          .collection('supervisor_assignments')
+          .get();
+
+      // Get all buses
+      final busesSnapshot = await _firestore
+          .collection('buses')
+          .where('isActive', isEqualTo: true)
+          .get();
+
+      // Get all supervisors
+      final supervisorsSnapshot = await _firestore
+          .collection('users')
+          .where('userType', isEqualTo: 'supervisor')
+          .get();
+
+      final totalAssignments = assignmentsSnapshot.docs.length;
+      final totalBuses = busesSnapshot.docs.length;
+      final totalSupervisors = supervisorsSnapshot.docs.length;
+
+      // Count assigned buses
+      final assignedBusIds = <String>{};
+      int emergencyAssignments = 0;
+
+      for (final doc in assignmentsSnapshot.docs) {
+        final data = doc.data();
+        final busId = data['busId'] as String?;
+        final isEmergency = data['isEmergency'] as bool? ?? false;
+
+        if (busId != null) {
+          assignedBusIds.add(busId);
+        }
+
+        if (isEmergency) {
+          emergencyAssignments++;
+        }
+      }
+
+      final unassignedBuses = totalBuses - assignedBusIds.length;
+
+      return {
+        'totalAssignments': totalAssignments,
+        'activeAssignments': totalAssignments, // For now, all are considered active
+        'emergencyAssignments': emergencyAssignments,
+        'unassignedBuses': unassignedBuses,
+        'totalSupervisors': totalSupervisors,
+        'availableSupervisors': totalSupervisors, // For now, all are considered available
+      };
+    } catch (e) {
+      debugPrint('❌ Error getting assignment statistics: $e');
+      return {
+        'totalAssignments': 0,
+        'activeAssignments': 0,
+        'emergencyAssignments': 0,
+        'unassignedBuses': 0,
+        'totalSupervisors': 0,
+        'availableSupervisors': 0,
+      };
+    }
+  }
+
   // Get all absences stream (for debugging)
   Stream<List<AbsenceModel>> getAllAbsencesStream() {
     return _firestore
