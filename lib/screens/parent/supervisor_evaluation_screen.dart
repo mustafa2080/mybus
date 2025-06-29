@@ -82,7 +82,7 @@ class _SupervisorEvaluationScreenState extends State<SupervisorEvaluationScreen>
       textDirection: TextDirection.rtl,
       child: Scaffold(
         backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
+        appBar: AppBar(
         title: const Text(
           'تقييم المشرفين',
           style: TextStyle(
@@ -94,7 +94,7 @@ class _SupervisorEvaluationScreenState extends State<SupervisorEvaluationScreen>
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
-      body: _isLoading
+        body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _supervisors.isEmpty
               ? _buildEmptyState()
