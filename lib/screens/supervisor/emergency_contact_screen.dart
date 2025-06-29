@@ -60,8 +60,7 @@ class _EmergencyContactScreenState extends State<EmergencyContactScreen> {
       }
 
       // Load bus assignment for supervisor
-      // This would be implemented when we add the supervisor-bus assignment system
-      _busAssignment = 'سيتم تحديده من قبل الإدارة';
+      await _loadBusAssignment();
 
       // Load students contacts for emergency
       await _loadStudentsContacts();
@@ -95,6 +94,7 @@ class _EmergencyContactScreenState extends State<EmergencyContactScreen> {
             'studentName': data['name'] ?? 'غير محدد',
             'parentName': data['parentName'] ?? 'غير محدد',
             'parentPhone': data['parentPhone'],
+            'parentAddress': data['parentAddress'] ?? 'غير محدد',
             'grade': data['grade'] ?? 'غير محدد',
             'busRoute': data['busRoute'] ?? 'غير محدد',
           });
@@ -106,6 +106,71 @@ class _EmergencyContactScreenState extends State<EmergencyContactScreen> {
       _studentsContacts = contacts;
     } catch (e) {
       debugPrint('Error loading students contacts: $e');
+    }
+  }
+
+  Future<void> _loadBusAssignment() async {
+    try {
+      final currentUser = _authService.currentUser;
+      if (currentUser == null) {
+        _busAssignment = 'غير محدد - لم يتم تسجيل الدخول';
+        return;
+      }
+
+      // Get supervisor assignments
+      final assignmentsSnapshot = await FirebaseFirestore.instance
+          .collection('supervisor_assignments')
+          .where('supervisorId', isEqualTo: currentUser.uid)
+          .where('status', isEqualTo: 'active')
+          .get();
+
+      if (assignmentsSnapshot.docs.isEmpty) {
+        _busAssignment = 'لم يتم تعيين حافلة بعد';
+        return;
+      }
+
+      // Get the first active assignment
+      final assignmentData = assignmentsSnapshot.docs.first.data();
+      final busId = assignmentData['busId'] as String?;
+      final direction = assignmentData['direction'] as String?;
+
+      if (busId != null) {
+        // Get bus details
+        final busDoc = await FirebaseFirestore.instance
+            .collection('buses')
+            .doc(busId)
+            .get();
+
+        if (busDoc.exists) {
+          final busData = busDoc.data()!;
+          final plateNumber = busData['plateNumber'] ?? 'غير محدد';
+          final busType = busData['description'] ?? 'حافلة مدرسية';
+
+          String directionText = '';
+          switch (direction) {
+            case 'toSchool':
+              directionText = 'الذهاب للمدرسة';
+              break;
+            case 'fromSchool':
+              directionText = 'العودة من المدرسة';
+              break;
+            case 'both':
+              directionText = 'الذهاب والعودة';
+              break;
+            default:
+              directionText = 'غير محدد';
+          }
+
+          _busAssignment = 'حافلة رقم: $plateNumber\nالنوع: $busType\nالاتجاه: $directionText';
+        } else {
+          _busAssignment = 'حافلة رقم: $busId (تفاصيل غير متوفرة)';
+        }
+      } else {
+        _busAssignment = 'خطأ في بيانات التعيين';
+      }
+    } catch (e) {
+      debugPrint('Error loading bus assignment: $e');
+      _busAssignment = 'خطأ في تحميل بيانات التعيين';
     }
   }
 
@@ -277,24 +342,80 @@ class _EmergencyContactScreenState extends State<EmergencyContactScreen> {
 
   Widget _buildBusAssignmentCard() {
     return _buildInfoCard(
-      title: 'تسكين الباص',
+      title: 'تسكين الحافلة',
       icon: Icons.directions_bus,
       color: Colors.orange,
       children: [
-        _buildInfoRow(
-          icon: Icons.info,
-          label: 'الحالة',
-          value: _busAssignment,
-        ),
-        const SizedBox(height: 8),
-        const Text(
-          'سيتم تحديد تسكين الباص من قبل الإدارة',
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey,
-            fontStyle: FontStyle.italic,
+        Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.orange.withAlpha(25),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: Colors.orange.withAlpha(76)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.assignment,
+                    color: Colors.orange[700],
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'تفاصيل التعيين',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.orange[700],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Text(
+                _busAssignment,
+                style: const TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF2D3748),
+                  height: 1.4,
+                ),
+              ),
+            ],
           ),
         ),
+        if (_busAssignment.contains('لم يتم تعيين') || _busAssignment.contains('خطأ')) ...[
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.blue.withAlpha(25),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  color: Colors.blue[600],
+                  size: 16,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'يرجى التواصل مع الإدارة لتحديد تعيين الحافلة',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.blue[600],
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ],
     );
   }
@@ -473,6 +594,28 @@ class _EmergencyContactScreenState extends State<EmergencyContactScreen> {
                     fontSize: 12,
                     color: Colors.grey[600],
                   ),
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.location_on,
+                      size: 12,
+                      color: Colors.grey[500],
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        'العنوان: ${contact['parentAddress']}',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey[500],
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
                 ),
                 if (contact['grade'] != null) ...[
                   const SizedBox(height: 2),
