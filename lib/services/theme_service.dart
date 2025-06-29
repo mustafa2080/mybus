@@ -10,13 +10,16 @@ class ThemeService extends ChangeNotifier {
   
   bool get isDarkMode => _themeMode == ThemeMode.dark;
   
-  // Light Theme
+  // Light Theme with RTL Support
   static final ThemeData lightTheme = ThemeData(
     useMaterial3: true,
     brightness: Brightness.light,
     primarySwatch: Colors.blue,
     primaryColor: const Color(0xFF1E88E5),
     scaffoldBackgroundColor: Colors.grey[50],
+
+    // RTL Text Direction
+    textDirection: TextDirection.rtl,
     
     // AppBar Theme
     appBarTheme: const AppBarTheme(
@@ -104,13 +107,16 @@ class ThemeService extends ChangeNotifier {
     ),
   );
   
-  // Dark Theme
+  // Dark Theme with RTL Support
   static final ThemeData darkTheme = ThemeData(
     useMaterial3: true,
     brightness: Brightness.dark,
     primarySwatch: Colors.blue,
     primaryColor: const Color(0xFF1E88E5),
     scaffoldBackgroundColor: const Color(0xFF121212),
+
+    // RTL Text Direction
+    textDirection: TextDirection.rtl,
     
     // AppBar Theme
     appBarTheme: const AppBarTheme(

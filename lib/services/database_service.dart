@@ -1601,28 +1601,38 @@ class DatabaseService {
         });
   }
 
-  // Get supervisors assigned to parent's student buses
+  // Get supervisors assigned to parent's student buses with proper assignment validation
   Future<List<UserModel>> getSupervisorsForParent(String parentId) async {
     try {
+      debugPrint('🔍 Getting supervisors for parent: $parentId');
+
       // Get parent's students
       final studentsSnapshot = await _firestore
           .collection('students')
           .where('parentId', isEqualTo: parentId)
           .get();
 
-      if (studentsSnapshot.docs.isEmpty) return [];
+      if (studentsSnapshot.docs.isEmpty) {
+        debugPrint('⚠️ No students found for parent $parentId');
+        return [];
+      }
 
       final busIds = <String>{};
       for (final doc in studentsSnapshot.docs) {
         final busId = doc.data()['busId'] as String?;
         if (busId != null && busId.isNotEmpty) {
           busIds.add(busId);
+          debugPrint('📍 Student ${doc.data()['name']} assigned to bus: $busId');
         }
       }
 
-      if (busIds.isEmpty) return [];
+      if (busIds.isEmpty) {
+        debugPrint('⚠️ No bus assignments found for parent students');
+        return [];
+      }
 
-      // Get supervisor assignments for these buses
+      // Get current active supervisor assignments for these buses
+      final now = DateTime.now();
       final assignmentsSnapshot = await _firestore
           .collection('supervisor_assignments')
           .where('busId', whereIn: busIds.toList())
@@ -1630,32 +1640,26 @@ class DatabaseService {
 
       final supervisorIds = <String>{};
       for (final doc in assignmentsSnapshot.docs) {
-        final supervisorId = doc.data()['supervisorId'] as String?;
-        if (supervisorId != null && supervisorId.isNotEmpty) {
-          supervisorIds.add(supervisorId);
+        try {
+          final assignment = SupervisorAssignmentModel.fromMap(doc.data());
+
+          // Check if assignment is current and active
+          final isCurrentAssignment = assignment.assignedAt.isBefore(now) ||
+                                    assignment.assignedAt.isAtSameMomentAs(now);
+
+          if (isCurrentAssignment) {
+            supervisorIds.add(assignment.supervisorId);
+            debugPrint('✅ Found active assignment: ${assignment.supervisorName} for bus ${assignment.busId}');
+          }
+        } catch (e) {
+          debugPrint('❌ Error parsing assignment ${doc.id}: $e');
         }
       }
 
       if (supervisorIds.isEmpty) {
-        // If no specific assignments found, get all supervisors as fallback
-        debugPrint('⚠️ No supervisor assignments found, getting all supervisors as fallback');
-        final allSupervisorsSnapshot = await _firestore
-            .collection('users')
-            .where('userType', isEqualTo: 'supervisor')
-            .get();
-
-        final supervisors = <UserModel>[];
-        for (final doc in allSupervisorsSnapshot.docs) {
-          try {
-            final supervisor = UserModel.fromMap(doc.data());
-            supervisors.add(supervisor);
-          } catch (e) {
-            debugPrint('❌ Error parsing supervisor ${doc.id}: $e');
-          }
-        }
-
-        debugPrint('👥 Found ${supervisors.length} supervisors (fallback) for parent $parentId');
-        return supervisors;
+        debugPrint('⚠️ No active supervisor assignments found for buses: $busIds');
+        // Return empty list instead of all supervisors to be more accurate
+        return [];
       }
 
       // Get supervisor details
@@ -1670,12 +1674,13 @@ class DatabaseService {
         try {
           final supervisor = UserModel.fromMap(doc.data());
           supervisors.add(supervisor);
+          debugPrint('👤 Added supervisor: ${supervisor.name}');
         } catch (e) {
           debugPrint('❌ Error parsing supervisor ${doc.id}: $e');
         }
       }
 
-      debugPrint('👥 Found ${supervisors.length} supervisors for parent $parentId');
+      debugPrint('👥 Found ${supervisors.length} assigned supervisors for parent $parentId');
       return supervisors;
     } catch (e) {
       debugPrint('❌ Error getting supervisors for parent: $e');

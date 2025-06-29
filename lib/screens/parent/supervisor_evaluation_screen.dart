@@ -29,11 +29,28 @@ class _SupervisorEvaluationScreenState extends State<SupervisorEvaluationScreen>
     try {
       final parentId = _authService.currentUser?.uid ?? '';
       if (parentId.isNotEmpty) {
+        debugPrint('🔍 Loading supervisors for parent: $parentId');
         final supervisors = await _databaseService.getSupervisorsForParent(parentId);
+
         setState(() {
           _supervisors = supervisors;
           _isLoading = false;
         });
+
+        if (supervisors.isEmpty) {
+          debugPrint('⚠️ No supervisors found for parent');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('لم يتم العثور على مشرفين مُعينين لأطفالك. يرجى التواصل مع الإدارة.'),
+                backgroundColor: Colors.orange,
+                duration: Duration(seconds: 5),
+              ),
+            );
+          }
+        } else {
+          debugPrint('✅ Found ${supervisors.length} supervisors');
+        }
       } else {
         setState(() => _isLoading = false);
         if (mounted) {
@@ -46,7 +63,7 @@ class _SupervisorEvaluationScreenState extends State<SupervisorEvaluationScreen>
         }
       }
     } catch (e) {
-      debugPrint('Error loading supervisors: $e');
+      debugPrint('❌ Error loading supervisors: $e');
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -61,7 +78,9 @@ class _SupervisorEvaluationScreenState extends State<SupervisorEvaluationScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: const Text(
@@ -143,32 +162,62 @@ class _SupervisorEvaluationScreenState extends State<SupervisorEvaluationScreen>
 
   Widget _buildEmptyState() {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.supervisor_account_outlined,
-            size: 80,
-            color: Colors.grey[400],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'لا يوجد مشرفين للتقييم',
-            style: TextStyle(
-              fontSize: 18,
-              color: Colors.grey[600],
-              fontWeight: FontWeight.w500,
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.supervisor_account_outlined,
+              size: 80,
+              color: Colors.grey[400],
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'لم يتم تعيين مشرفين لأطفالك بعد',
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[500],
+            const SizedBox(height: 24),
+            Text(
+              'لا يوجد مشرفين للتقييم',
+              style: TextStyle(
+                fontSize: 20,
+                color: Colors.grey[700],
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
             ),
-          ),
-        ],
+            const SizedBox(height: 12),
+            Text(
+              'لم يتم تعيين مشرفين لأطفالك من قبل الإدارة بعد',
+              style: TextStyle(
+                fontSize: 16,
+                color: Colors.grey[600],
+                height: 1.4,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.blue[200]!),
+              ),
+              child: Column(
+                children: [
+                  Icon(Icons.info_outline, color: Colors.blue[600], size: 24),
+                  const SizedBox(height: 8),
+                  Text(
+                    'يرجى التواصل مع إدارة المدرسة لتعيين مشرفين للباصات',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Colors.blue[800],
+                      fontWeight: FontWeight.w500,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -298,6 +347,7 @@ class _SupervisorEvaluationScreenState extends State<SupervisorEvaluationScreen>
             ),
           ],
         ),
+      ),
       ),
     );
   }

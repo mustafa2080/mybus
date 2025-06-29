@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'screens/splash_screen.dart';
@@ -79,8 +80,31 @@ class MyApp extends StatelessWidget {
           return MaterialApp.router(
             title: 'باصي - تتبع الطلاب',
             debugShowCheckedModeBanner: false,
-            theme: ThemeService.lightTheme,
-            darkTheme: ThemeService.darkTheme,
+
+            // RTL Support for Arabic
+            locale: const Locale('ar', 'SA'),
+            supportedLocales: const [
+              Locale('ar', 'SA'), // Arabic
+              Locale('en', 'US'), // English
+            ],
+            localizationsDelegates: const [
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+
+            theme: ThemeService.lightTheme.copyWith(
+              // Ensure RTL text direction
+              textTheme: ThemeService.lightTheme.textTheme.apply(
+                fontFamily: 'Cairo',
+              ),
+            ),
+            darkTheme: ThemeService.darkTheme.copyWith(
+              // Ensure RTL text direction
+              textTheme: ThemeService.darkTheme.textTheme.apply(
+                fontFamily: 'Cairo',
+              ),
+            ),
             themeMode: themeService.themeMode,
             routerConfig: _router,
           );

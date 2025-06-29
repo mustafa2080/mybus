@@ -46,7 +46,9 @@ class _EvaluateSupervisorScreenState extends State<EvaluateSupervisorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return Directionality(
+      textDirection: TextDirection.rtl,
+      child: Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
         title: Text(
@@ -89,6 +91,7 @@ class _EvaluateSupervisorScreenState extends State<EvaluateSupervisorScreen> {
             _buildSubmitButton(),
           ],
         ),
+      ),
       ),
     );
   }
