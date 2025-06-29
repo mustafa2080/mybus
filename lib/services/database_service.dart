@@ -13,6 +13,7 @@ import '../models/survey_model.dart';
 import '../models/supervisor_assignment_model.dart';
 import '../models/student_behavior_model.dart';
 import '../models/notification_model.dart';
+import '../models/supervisor_evaluation_model.dart';
 
 
 class DatabaseService {
@@ -1600,6 +1601,156 @@ class DatabaseService {
           debugPrint('📝 Parent complaints loaded: ${complaints.length}');
           return complaints;
         });
+  }
+
+  // Get supervisors assigned to parent's student buses
+  Future<List<UserModel>> getSupervisorsForParent(String parentId) async {
+    try {
+      // Get parent's students
+      final studentsSnapshot = await _firestore
+          .collection('students')
+          .where('parentId', isEqualTo: parentId)
+          .get();
+
+      if (studentsSnapshot.docs.isEmpty) return [];
+
+      final busIds = <String>{};
+      for (final doc in studentsSnapshot.docs) {
+        final busId = doc.data()['busId'] as String?;
+        if (busId != null && busId.isNotEmpty) {
+          busIds.add(busId);
+        }
+      }
+
+      if (busIds.isEmpty) return [];
+
+      // Get supervisor assignments for these buses
+      final assignmentsSnapshot = await _firestore
+          .collection('supervisor_assignments')
+          .where('busId', whereIn: busIds.toList())
+          .where('status', isEqualTo: 'active')
+          .get();
+
+      final supervisorIds = <String>{};
+      for (final doc in assignmentsSnapshot.docs) {
+        final supervisorId = doc.data()['supervisorId'] as String?;
+        if (supervisorId != null && supervisorId.isNotEmpty) {
+          supervisorIds.add(supervisorId);
+        }
+      }
+
+      if (supervisorIds.isEmpty) return [];
+
+      // Get supervisor details
+      final supervisorsSnapshot = await _firestore
+          .collection('users')
+          .where('userType', isEqualTo: 'supervisor')
+          .where(FieldPath.documentId, whereIn: supervisorIds.toList())
+          .get();
+
+      final supervisors = <UserModel>[];
+      for (final doc in supervisorsSnapshot.docs) {
+        try {
+          final supervisor = UserModel.fromMap(doc.data());
+          supervisors.add(supervisor);
+        } catch (e) {
+          debugPrint('❌ Error parsing supervisor ${doc.id}: $e');
+        }
+      }
+
+      debugPrint('👥 Found ${supervisors.length} supervisors for parent $parentId');
+      return supervisors;
+    } catch (e) {
+      debugPrint('❌ Error getting supervisors for parent: $e');
+      return [];
+    }
+  }
+
+  // Create supervisor evaluation
+  Future<void> createSupervisorEvaluation(SupervisorEvaluationModel evaluation) async {
+    try {
+      await _firestore
+          .collection('supervisor_evaluations')
+          .doc(evaluation.id)
+          .set(evaluation.toMap());
+
+      debugPrint('✅ Supervisor evaluation created successfully: ${evaluation.id}');
+    } catch (e) {
+      debugPrint('❌ Error creating supervisor evaluation: $e');
+      throw Exception('خطأ في حفظ التقييم: $e');
+    }
+  }
+
+  // Get supervisor evaluations for a parent
+  Stream<List<SupervisorEvaluationModel>> getParentSupervisorEvaluations(String parentId) {
+    return _firestore
+        .collection('supervisor_evaluations')
+        .where('parentId', isEqualTo: parentId)
+        .orderBy('evaluatedAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+          final evaluations = <SupervisorEvaluationModel>[];
+          for (final doc in snapshot.docs) {
+            try {
+              final evaluation = SupervisorEvaluationModel.fromMap(doc.data());
+              evaluations.add(evaluation);
+            } catch (e) {
+              debugPrint('❌ Error parsing evaluation ${doc.id}: $e');
+            }
+          }
+          debugPrint('📊 Parent evaluations loaded: ${evaluations.length}');
+          return evaluations;
+        });
+  }
+
+  // Check if parent has already evaluated supervisor this month
+  Future<bool> hasEvaluatedSupervisorThisMonth(
+    String parentId,
+    String supervisorId,
+    int month,
+    int year,
+  ) async {
+    try {
+      final snapshot = await _firestore
+          .collection('supervisor_evaluations')
+          .where('parentId', isEqualTo: parentId)
+          .where('supervisorId', isEqualTo: supervisorId)
+          .where('month', isEqualTo: month)
+          .where('year', isEqualTo: year)
+          .limit(1)
+          .get();
+
+      return snapshot.docs.isNotEmpty;
+    } catch (e) {
+      debugPrint('❌ Error checking evaluation status: $e');
+      return false;
+    }
+  }
+
+  // Get students by parent ID
+  Future<List<StudentModel>> getStudentsByParent(String parentId) async {
+    try {
+      final snapshot = await _firestore
+          .collection('students')
+          .where('parentId', isEqualTo: parentId)
+          .get();
+
+      final students = <StudentModel>[];
+      for (final doc in snapshot.docs) {
+        try {
+          final student = StudentModel.fromMap(doc.data());
+          students.add(student);
+        } catch (e) {
+          debugPrint('❌ Error parsing student ${doc.id}: $e');
+        }
+      }
+
+      debugPrint('👨‍👩‍👧‍👦 Found ${students.length} students for parent $parentId');
+      return students;
+    } catch (e) {
+      debugPrint('❌ Error getting students by parent: $e');
+      return [];
+    }
   }
 
   // Get all absences stream (for debugging)

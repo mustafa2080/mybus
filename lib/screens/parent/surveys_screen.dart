@@ -55,8 +55,86 @@ class _SurveysScreenState extends State<SurveysScreen> {
         backgroundColor: const Color(0xFF1E88E5),
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.supervisor_account),
+            onPressed: () {
+              Navigator.pushNamed(context, '/parent/supervisor-evaluation');
+            },
+            tooltip: 'تقييم المشرفين',
+          ),
+        ],
       ),
-      body: StreamBuilder<List<SurveyModel>>(
+      body: Column(
+        children: [
+          // Supervisor evaluation card
+          Container(
+            margin: const EdgeInsets.all(16),
+            child: GestureDetector(
+              onTap: () {
+                Navigator.pushNamed(context, '/parent/supervisor-evaluation');
+              },
+              child: Card(
+              elevation: 3,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Container(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(12),
+                  gradient: LinearGradient(
+                    colors: [Colors.blue[600]!, Colors.blue[400]!],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.supervisor_account,
+                        color: Colors.white,
+                        size: 32,
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'تقييم المشرفين',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'قيم أداء المشرفين المسؤولين عن أطفالك',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.white.withAlpha(230),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(
+                        Icons.arrow_forward_ios,
+                        color: Colors.white,
+                        size: 16,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            ),
+          ),
+
+          // Regular surveys
+          Expanded(
+            child: StreamBuilder<List<SurveyModel>>(
         stream: _databaseService.getActiveSurveysForUser('parent'),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -91,6 +169,9 @@ class _SurveysScreenState extends State<SurveysScreen> {
             },
           );
         },
+      ),
+          ),
+        ],
       ),
     );
   }
