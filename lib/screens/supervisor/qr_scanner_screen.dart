@@ -106,28 +106,62 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
           onPressed: () => context.pop(),
         ),
         actions: [
-          // Students counter
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            decoration: BoxDecoration(
-              color: Colors.blue,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.people, color: Colors.white, size: 16),
-                const SizedBox(width: 4),
-                Text(
-                  '$_studentsOnBusCount',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                  ),
+          // Professional Students Counter
+          GestureDetector(
+            onTap: _showDetailedCounter,
+            child: Container(
+              margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [
+                    _studentsOnBusCount > 0 ? Colors.green[400]! : Colors.grey[400]!,
+                    _studentsOnBusCount > 0 ? Colors.green[600]! : Colors.grey[600]!,
+                  ],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
                 ),
-              ],
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                  BoxShadow(
+                    color: (_studentsOnBusCount > 0 ? Colors.green : Colors.grey).withAlpha(76),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    _studentsOnBusCount > 0 ? Icons.directions_bus : Icons.directions_bus_outlined,
+                    color: Colors.white,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withAlpha(51),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '$_studentsOnBusCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  const Icon(
+                    Icons.info_outline,
+                    color: Colors.white,
+                    size: 12,
+                  ),
+                ],
+              ),
             ),
           ),
           IconButton(
@@ -588,6 +622,9 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
   }
 
   void _showActionSelectionDialog(StudentModel student) {
+    // فحص حالة الطالب الحالية لمنع التكرار
+    final currentStatus = student.currentStatus;
+
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -596,11 +633,30 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(
-              'الحالة الحالية: ${student.statusDisplayText}',
-              style: TextStyle(
-                color: Colors.grey[600],
-                fontSize: 14,
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: _getStatusColor(currentStatus).withAlpha(25),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: _getStatusColor(currentStatus).withAlpha(76)),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    _getStatusIcon(currentStatus),
+                    color: _getStatusColor(currentStatus),
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
+                  Text(
+                    'الحالة الحالية: ${student.statusDisplayText}',
+                    style: TextStyle(
+                      color: _getStatusColor(currentStatus),
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 16),
@@ -615,23 +671,69 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
         ),
         actions: [
           // ركب الباص إلى المدرسة
-          TextButton.icon(
-            onPressed: () {
-              Navigator.pop(context);
-              _processStudentAction(student, TripAction.boardBusToSchool, StudentStatus.onBus);
-            },
-            icon: const Icon(Icons.directions_bus, color: Colors.green),
-            label: const Text('ركب الباص إلى المدرسة'),
-          ),
+          if (currentStatus == StudentStatus.onBus)
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.orange.withAlpha(25),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange.withAlpha(76)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info, color: Colors.orange, size: 16),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'الطالب موجود في الباص بالفعل',
+                      style: TextStyle(color: Colors.orange, fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            TextButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+                _processStudentAction(student, TripAction.boardBusToSchool, StudentStatus.onBus);
+              },
+              icon: const Icon(Icons.directions_bus, color: Colors.green),
+              label: const Text('ركب الباص إلى المدرسة'),
+            ),
+
           // وصل إلى المدرسة
-          TextButton.icon(
-            onPressed: () {
-              Navigator.pop(context);
-              _processStudentAction(student, TripAction.arriveAtSchool, StudentStatus.atSchool);
-            },
-            icon: const Icon(Icons.school, color: Colors.orange),
-            label: const Text('وصل إلى المدرسة'),
-          ),
+          if (currentStatus == StudentStatus.atSchool)
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.blue.withAlpha(25),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.blue.withAlpha(76)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info, color: Colors.blue, size: 16),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'الطالب في المدرسة بالفعل',
+                      style: TextStyle(color: Colors.blue, fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            TextButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+                _processStudentAction(student, TripAction.arriveAtSchool, StudentStatus.atSchool);
+              },
+              icon: const Icon(Icons.school, color: Colors.orange),
+              label: const Text('وصل إلى المدرسة'),
+            ),
+
           // ركب الباص إلى المنزل
           TextButton.icon(
             onPressed: () {
@@ -641,15 +743,38 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
             icon: const Icon(Icons.home_work, color: Colors.blue),
             label: const Text('ركب الباص إلى المنزل'),
           ),
+
           // وصل إلى المنزل
-          TextButton.icon(
-            onPressed: () {
-              Navigator.pop(context);
-              _processStudentAction(student, TripAction.arriveAtHome, StudentStatus.home);
-            },
-            icon: const Icon(Icons.home, color: Colors.purple),
-            label: const Text('وصل إلى المنزل'),
-          ),
+          if (currentStatus == StudentStatus.home)
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.green.withAlpha(25),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.green.withAlpha(76)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.info, color: Colors.green, size: 16),
+                  const SizedBox(width: 8),
+                  const Expanded(
+                    child: Text(
+                      'الطالب وصل للمنزل بالفعل',
+                      style: TextStyle(color: Colors.green, fontSize: 12),
+                    ),
+                  ),
+                ],
+              ),
+            )
+          else
+            TextButton.icon(
+              onPressed: () {
+                Navigator.pop(context);
+                _processStudentAction(student, TripAction.arriveAtHome, StudentStatus.home);
+              },
+              icon: const Icon(Icons.home, color: Colors.purple),
+              label: const Text('وصل إلى المنزل'),
+            ),
           // إلغاء
           TextButton(
             onPressed: () {
@@ -1123,6 +1248,234 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
     );
   }
 
+  Color _getStatusColor(StudentStatus status) {
+    switch (status) {
+      case StudentStatus.home:
+        return Colors.green;
+      case StudentStatus.onBus:
+        return Colors.orange;
+      case StudentStatus.atSchool:
+        return Colors.blue;
+    }
+  }
+
+  IconData _getStatusIcon(StudentStatus status) {
+    switch (status) {
+      case StudentStatus.home:
+        return Icons.home;
+      case StudentStatus.onBus:
+        return Icons.directions_bus;
+      case StudentStatus.atSchool:
+        return Icons.school;
+    }
+  }
+
+  void _showDetailedCounter() {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Header
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [Colors.blue[400]!, Colors.blue[600]!],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: const Icon(
+                      Icons.analytics,
+                      color: Colors.white,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Expanded(
+                    child: Text(
+                      'إحصائيات الطلاب',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2D3748),
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icon(Icons.close, color: Colors.grey[600]),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 20),
+
+              // Main Counter Display
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      _studentsOnBusCount > 0 ? Colors.green[400]! : Colors.grey[400]!,
+                      _studentsOnBusCount > 0 ? Colors.green[600]! : Colors.grey[600]!,
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                  boxShadow: [
+                    BoxShadow(
+                      color: (_studentsOnBusCount > 0 ? Colors.green : Colors.grey).withAlpha(76),
+                      blurRadius: 8,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    Icon(
+                      _studentsOnBusCount > 0 ? Icons.directions_bus : Icons.directions_bus_outlined,
+                      color: Colors.white,
+                      size: 40,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      '$_studentsOnBusCount',
+                      style: const TextStyle(
+                        fontSize: 36,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _studentsOnBusCount == 1 ? 'طالب في الباص' : 'طلاب في الباص',
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.white.withAlpha(230),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Status Indicators
+              Row(
+                children: [
+                  Expanded(
+                    child: _buildStatusIndicator(
+                      icon: Icons.home,
+                      label: 'في المنزل',
+                      color: Colors.green,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildStatusIndicator(
+                      icon: Icons.directions_bus,
+                      label: 'في الباص',
+                      color: Colors.orange,
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: _buildStatusIndicator(
+                      icon: Icons.school,
+                      label: 'في المدرسة',
+                      color: Colors.blue,
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 16),
+
+              // Action Buttons
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        _loadStudentsCount(); // Refresh counter
+                      },
+                      icon: const Icon(Icons.refresh, size: 16),
+                      label: const Text('تحديث'),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.blue,
+                        backgroundColor: Colors.blue.withAlpha(25),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: TextButton.styleFrom(
+                        foregroundColor: Colors.grey[700],
+                        backgroundColor: Colors.grey.withAlpha(25),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text('إغلاق'),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusIndicator({
+    required IconData icon,
+    required String label,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: color.withAlpha(25),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withAlpha(76)),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 16),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 10,
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 
