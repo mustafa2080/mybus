@@ -83,17 +83,17 @@ class _SupervisorEvaluationScreenState extends State<SupervisorEvaluationScreen>
       child: Scaffold(
         backgroundColor: const Color(0xFFF8FAFC),
         appBar: AppBar(
-        title: const Text(
-          'تقييم المشرفين',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
+          title: const Text(
+            'تقييم المشرفين',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
           ),
+          backgroundColor: const Color(0xFF1E88E5),
+          elevation: 0,
+          iconTheme: const IconThemeData(color: Colors.white),
         ),
-        backgroundColor: const Color(0xFF1E88E5),
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
         body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _supervisors.isEmpty
