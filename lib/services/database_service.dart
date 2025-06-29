@@ -2461,11 +2461,16 @@ class DatabaseService {
   Stream<List<SupervisorAssignmentModel>> getAllSupervisorAssignments() {
     return _firestore
         .collection('supervisor_assignments')
-        .orderBy('assignedAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => SupervisorAssignmentModel.fromMap(doc.data()))
-            .toList());
+        .map((snapshot) {
+          final assignments = snapshot.docs
+              .map((doc) => SupervisorAssignmentModel.fromMap(doc.data()))
+              .toList();
+
+          // Sort manually to avoid index requirements
+          assignments.sort((a, b) => b.assignedAt.compareTo(a.assignedAt));
+          return assignments;
+        });
   }
 
   /// Get active supervisor assignments
@@ -2473,11 +2478,16 @@ class DatabaseService {
     return _firestore
         .collection('supervisor_assignments')
         .where('status', isEqualTo: 'active')
-        .orderBy('assignedAt', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => SupervisorAssignmentModel.fromMap(doc.data()))
-            .toList());
+        .map((snapshot) {
+          final assignments = snapshot.docs
+              .map((doc) => SupervisorAssignmentModel.fromMap(doc.data()))
+              .toList();
+
+          // Sort manually to avoid index requirements
+          assignments.sort((a, b) => b.assignedAt.compareTo(a.assignedAt));
+          return assignments;
+        });
   }
 
   /// Get assignments for specific supervisor
@@ -2512,7 +2522,12 @@ class DatabaseService {
       await _firestore
           .collection('supervisor_assignments')
           .doc(assignment.id)
-          .update(assignment.toMap());
+          .update({
+            'direction': assignment.direction.toString().split('.').last,
+            'isEmergencyAssignment': assignment.isEmergencyAssignment,
+            'notes': assignment.notes,
+            'updatedAt': FieldValue.serverTimestamp(),
+          });
 
       debugPrint('✅ Supervisor assignment updated successfully');
     } catch (e) {

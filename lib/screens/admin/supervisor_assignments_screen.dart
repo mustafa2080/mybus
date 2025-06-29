@@ -435,217 +435,258 @@ class _SupervisorAssignmentsScreenState extends State<SupervisorAssignmentsScree
   }
 
   Widget _buildAssignmentCard(SupervisorAssignmentModel assignment) {
-    return Card(
+    return Container(
       margin: const EdgeInsets.only(bottom: 16),
-      elevation: 4,
-      shape: RoundedRectangleBorder(
+      decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        side: assignment.isEmergency
-            ? const BorderSide(color: Colors.red, width: 2)
-            : BorderSide.none,
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(25),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        border: assignment.isEmergencyAssignment
+            ? Border.all(color: Colors.red, width: 2)
+            : null,
       ),
-      child: Container(
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(16),
-          gradient: assignment.isEmergencyAssignment
-              ? LinearGradient(
-                  colors: [Colors.red[50]!, Colors.white],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                )
-              : LinearGradient(
-                  colors: [Colors.blue[50]!, Colors.white],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header with status
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: assignment.isEmergencyAssignment ? Colors.red : Colors.blue,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          assignment.isEmergencyAssignment ? Icons.emergency : Icons.assignment_turned_in,
-                          color: Colors.white,
-                          size: 16,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          assignment.isEmergencyAssignment ? 'طوارئ' : 'عادي',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const Spacer(),
-                  Text(
-                    'تم في ${_formatDate(assignment.assignedAt)}',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey[600],
-                    ),
-                  ),
-                ],
+      child: Column(
+        children: [
+          // Modern Header
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              gradient: LinearGradient(
+                colors: assignment.isEmergencyAssignment
+                    ? [Colors.red[400]!, Colors.red[600]!]
+                    : [const Color(0xFF1E88E5), const Color(0xFF1976D2)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
               ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withAlpha(51),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Icon(
+                    assignment.isEmergencyAssignment ? Icons.emergency : Icons.assignment_turned_in,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        assignment.isEmergencyAssignment ? 'تعيين طوارئ' : 'تعيين عادي',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      Text(
+                        'تم في ${_formatDate(assignment.assignedAt)}',
+                        style: TextStyle(
+                          color: Colors.white.withAlpha(204),
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withAlpha(51),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    assignment.status == 'active' ? 'نشط' : 'غير نشط',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
 
-              const SizedBox(height: 16),
-
-              // Main info section
-              Row(
-                children: [
-                  // Bus info
-                  Expanded(
-                    flex: 2,
-                    child: _buildInfoSection(
-                      title: 'معلومات الباص',
-                      icon: Icons.directions_bus,
-                      color: Colors.blue,
-                      children: [
-                        _buildInfoRow('رقم الباص', assignment.busId),
-                        FutureBuilder<BusModel?>(
+          // Content Section
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              children: [
+                // Bus and Supervisor Info Row
+                Row(
+                  children: [
+                    // Bus Info
+                    Expanded(
+                      child: _buildModernInfoCard(
+                        title: 'معلومات الحافلة',
+                        icon: Icons.directions_bus,
+                        color: const Color(0xFF2196F3),
+                        child: FutureBuilder<BusModel?>(
                           future: _databaseService.getBusById(assignment.busId),
                           builder: (context, snapshot) {
                             final bus = snapshot.data;
                             return Column(
                               children: [
-                                _buildInfoRow('رقم اللوحة', bus?.plateNumber ?? 'غير محدد'),
-                                _buildInfoRow('الوصف', bus?.description ?? 'غير محدد'),
-                                _buildInfoRow('السعة', bus != null ? '${bus.capacity} راكب' : 'غير محدد'),
+                                _buildModernInfoRow(
+                                  icon: Icons.confirmation_number,
+                                  label: 'رقم اللوحة',
+                                  value: bus?.plateNumber ?? 'غير محدد',
+                                ),
+                                _buildModernInfoRow(
+                                  icon: Icons.info_outline,
+                                  label: 'النوع',
+                                  value: bus?.description ?? 'غير محدد',
+                                ),
+                                _buildModernInfoRow(
+                                  icon: Icons.people,
+                                  label: 'السعة',
+                                  value: bus != null ? '${bus.capacity} راكب' : 'غير محدد',
+                                ),
                               ],
                             );
                           },
                         ),
-                      ],
+                      ),
                     ),
-                  ),
 
-                  const SizedBox(width: 16),
+                    const SizedBox(width: 16),
 
-                  // Supervisor info
-                  Expanded(
-                    flex: 2,
-                    child: _buildInfoSection(
-                      title: 'معلومات المشرف',
-                      icon: Icons.supervisor_account,
-                      color: Colors.green,
-                      children: [
-                        FutureBuilder<UserModel?>(
+                    // Supervisor Info
+                    Expanded(
+                      child: _buildModernInfoCard(
+                        title: 'معلومات المشرف',
+                        icon: Icons.supervisor_account,
+                        color: const Color(0xFF4CAF50),
+                        child: FutureBuilder<UserModel?>(
                           future: _databaseService.getUserById(assignment.supervisorId),
                           builder: (context, snapshot) {
                             final supervisor = snapshot.data;
                             return Column(
                               children: [
-                                _buildInfoRow('الاسم', supervisor?.name ?? 'غير محدد'),
-                                _buildInfoRow('الهاتف', supervisor?.phone ?? 'غير محدد'),
-                                _buildInfoRow('الإيميل', supervisor?.email ?? 'غير محدد'),
+                                _buildModernInfoRow(
+                                  icon: Icons.person,
+                                  label: 'الاسم',
+                                  value: supervisor?.name ?? 'غير محدد',
+                                ),
+                                _buildModernInfoRow(
+                                  icon: Icons.phone,
+                                  label: 'الهاتف',
+                                  value: supervisor?.phone ?? 'غير محدد',
+                                ),
+                                _buildModernInfoRow(
+                                  icon: Icons.email,
+                                  label: 'الإيميل',
+                                  value: supervisor?.email ?? 'غير محدد',
+                                ),
                               ],
                             );
                           },
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
 
-              const SizedBox(height: 16),
+                const SizedBox(height: 16),
 
-              // Assignment details
-              _buildInfoSection(
-                title: 'تفاصيل التعيين',
-                icon: Icons.info,
-                color: Colors.orange,
-                children: [
-                  Row(
+                // Assignment Details
+                _buildModernInfoCard(
+                  title: 'تفاصيل التعيين',
+                  icon: Icons.assignment,
+                  color: const Color(0xFFFF9800),
+                  child: Column(
                     children: [
-                      Expanded(child: _buildInfoRow('الاتجاه', _getDirectionText(assignment.direction))),
-                      Expanded(child: _buildInfoRow('تاريخ التعيين', _formatDate(assignment.assignedAt))),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildModernInfoRow(
+                              icon: Icons.compare_arrows,
+                              label: 'الاتجاه',
+                              value: _getDirectionText(assignment.direction),
+                            ),
+                          ),
+                          Expanded(
+                            child: _buildModernInfoRow(
+                              icon: Icons.calendar_today,
+                              label: 'تاريخ التعيين',
+                              value: _formatDate(assignment.assignedAt),
+                            ),
+                          ),
+                        ],
+                      ),
+                      FutureBuilder<UserModel?>(
+                        future: _databaseService.getUserById(assignment.assignedBy),
+                        builder: (context, snapshot) {
+                          final admin = snapshot.data;
+                          return _buildModernInfoRow(
+                            icon: Icons.admin_panel_settings,
+                            label: 'تم التعيين بواسطة',
+                            value: admin?.name ?? 'الأدمن',
+                          );
+                        },
+                      ),
+                      if (assignment.notes?.isNotEmpty == true)
+                        _buildModernInfoRow(
+                          icon: Icons.note,
+                          label: 'ملاحظات',
+                          value: assignment.notes!,
+                        ),
                     ],
                   ),
-                  if (assignment.notes?.isNotEmpty == true)
-                    _buildInfoRow('ملاحظات', assignment.notes!),
-                  Row(
-                    children: [
-                      Expanded(child: _buildInfoRow('تم التعيين بواسطة', assignment.assignedBy)),
+                ),
 
-                    ],
-                  ),
-                ],
-              ),
+                const SizedBox(height: 16),
 
-              const SizedBox(height: 16),
-
-              // Action buttons
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () => _editAssignment(assignment),
-                      icon: const Icon(Icons.edit, size: 16),
-                      label: const Text('تعديل'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.blue,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
+                // Action Buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildActionButton(
+                        onPressed: () => _editAssignment(assignment),
+                        icon: Icons.edit,
+                        label: 'تعديل',
+                        color: const Color(0xFF2196F3),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () => _deleteAssignment(assignment),
-                      icon: const Icon(Icons.delete, size: 16),
-                      label: const Text('حذف'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildActionButton(
+                        onPressed: () => _viewAssignmentDetails(assignment),
+                        icon: Icons.visibility,
+                        label: 'تفاصيل',
+                        color: const Color(0xFF4CAF50),
                       ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () => _viewAssignmentDetails(assignment),
-                      icon: const Icon(Icons.visibility, size: 16),
-                      label: const Text('تفاصيل'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.green,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildActionButton(
+                        onPressed: () => _deleteAssignment(assignment),
+                        icon: Icons.delete,
+                        label: 'حذف',
+                        color: const Color(0xFFF44336),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -728,6 +769,99 @@ class _SupervisorAssignmentsScreenState extends State<SupervisorAssignmentsScree
 
   String _formatDate(DateTime date) {
     return '${date.day}/${date.month}/${date.year}';
+  }
+
+  Widget _buildModernInfoCard({
+    required String title,
+    required IconData icon,
+    required Color color,
+    required Widget child,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withAlpha(25),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withAlpha(76)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: color, size: 18),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                  color: color,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModernInfoRow({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        children: [
+          Icon(icon, size: 14, color: Colors.grey[600]),
+          const SizedBox(width: 6),
+          Text(
+            '$label: ',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey[700],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 12,
+                color: Color(0xFF2D3748),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActionButton({
+    required VoidCallback onPressed,
+    required IconData icon,
+    required String label,
+    required Color color,
+  }) {
+    return ElevatedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 16),
+      label: Text(label),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: color,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 10),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+        elevation: 2,
+      ),
+    );
   }
 
   void _editAssignment(SupervisorAssignmentModel assignment) {
@@ -827,15 +961,12 @@ class _SupervisorAssignmentsScreenState extends State<SupervisorAssignmentsScree
   void _showEditAssignmentDialog(SupervisorAssignmentModel assignment) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('تعديل التعيين'),
-        content: const Text('سيتم إضافة نافذة تعديل التعيين قريباً'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('إغلاق'),
-          ),
-        ],
+      builder: (context) => _EditAssignmentDialog(
+        assignment: assignment,
+        databaseService: _databaseService,
+        onAssignmentUpdated: () {
+          setState(() {}); // Refresh the list
+        },
       ),
     );
   }
@@ -1173,6 +1304,211 @@ class _CreateAssignmentDialogState extends State<_CreateAssignmentDialog> {
             backgroundColor: Colors.red,
           ),
         );
+      }
+    }
+  }
+}
+
+// Edit Assignment Dialog
+class _EditAssignmentDialog extends StatefulWidget {
+  final SupervisorAssignmentModel assignment;
+  final DatabaseService databaseService;
+  final VoidCallback onAssignmentUpdated;
+
+  const _EditAssignmentDialog({
+    required this.assignment,
+    required this.databaseService,
+    required this.onAssignmentUpdated,
+  });
+
+  @override
+  State<_EditAssignmentDialog> createState() => _EditAssignmentDialogState();
+}
+
+class _EditAssignmentDialogState extends State<_EditAssignmentDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _notesController = TextEditingController();
+
+  TripDirection? _selectedDirection;
+  bool _isEmergency = false;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedDirection = widget.assignment.direction;
+    _isEmergency = widget.assignment.isEmergencyAssignment;
+    _notesController.text = widget.assignment.notes ?? '';
+  }
+
+  @override
+  void dispose() {
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('تعديل التعيين'),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: Form(
+          key: _formKey,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Assignment Info
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue[50],
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'معلومات التعيين',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue[700],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text('المشرف: ${widget.assignment.supervisorName}'),
+                    Text('الحافلة: ${widget.assignment.busId}'),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Direction Selection
+              DropdownButtonFormField<TripDirection>(
+                value: _selectedDirection,
+                decoration: const InputDecoration(
+                  labelText: 'الاتجاه',
+                  border: OutlineInputBorder(),
+                ),
+                items: TripDirection.values.map((direction) {
+                  return DropdownMenuItem(
+                    value: direction,
+                    child: Text(_getDirectionText(direction)),
+                  );
+                }).toList(),
+                onChanged: (value) {
+                  setState(() {
+                    _selectedDirection = value;
+                  });
+                },
+                validator: (value) {
+                  if (value == null) {
+                    return 'يرجى اختيار الاتجاه';
+                  }
+                  return null;
+                },
+              ),
+
+              const SizedBox(height: 16),
+
+              // Emergency Assignment
+              CheckboxListTile(
+                title: const Text('تعيين طوارئ'),
+                subtitle: const Text('هل هذا تعيين طوارئ؟'),
+                value: _isEmergency,
+                onChanged: (value) {
+                  setState(() {
+                    _isEmergency = value ?? false;
+                  });
+                },
+              ),
+
+              const SizedBox(height: 16),
+
+              // Notes
+              TextFormField(
+                controller: _notesController,
+                decoration: const InputDecoration(
+                  labelText: 'ملاحظات (اختياري)',
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 3,
+              ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('إلغاء'),
+        ),
+        ElevatedButton(
+          onPressed: _isLoading ? null : _updateAssignment,
+          child: _isLoading
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text('حفظ التعديلات'),
+        ),
+      ],
+    );
+  }
+
+  String _getDirectionText(TripDirection direction) {
+    switch (direction) {
+      case TripDirection.toSchool:
+        return 'الذهاب للمدرسة';
+      case TripDirection.fromSchool:
+        return 'العودة من المدرسة';
+      case TripDirection.both:
+        return 'الذهاب والعودة';
+    }
+  }
+
+  Future<void> _updateAssignment() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final updatedAssignment = widget.assignment.copyWith(
+        direction: _selectedDirection!,
+        isEmergencyAssignment: _isEmergency,
+        notes: _notesController.text.trim().isEmpty ? null : _notesController.text.trim(),
+      );
+
+      await widget.databaseService.updateSupervisorAssignment(updatedAssignment);
+
+      if (mounted) {
+        Navigator.pop(context);
+        widget.onAssignmentUpdated();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم تحديث التعيين بنجاح'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ في تحديث التعيين: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
   }
