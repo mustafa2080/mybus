@@ -15,7 +15,6 @@ class SurveysScreen extends StatefulWidget {
 class _SurveysScreenState extends State<SurveysScreen> {
   final DatabaseService _databaseService = DatabaseService();
   final AuthService _authService = AuthService();
-  final AuthService _authService = AuthService();
   
   UserModel? _currentUser;
 

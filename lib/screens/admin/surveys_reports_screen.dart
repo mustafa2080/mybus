@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/database_service.dart';
 import '../../models/supervisor_evaluation_model.dart';
 import '../../models/student_behavior_model.dart';
@@ -1405,6 +1406,44 @@ class _SurveysReportsScreenState extends State<SurveysReportsScreen> with Ticker
               );
             },
             child: const Text('إيقاف مؤقت'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSummaryCard(String title, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withAlpha(25),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withAlpha(76)),
+      ),
+      child: Column(
+        children: [
+          Icon(
+            icon,
+            color: color,
+            size: 32,
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[600],
+            ),
+            textAlign: TextAlign.center,
           ),
         ],
       ),
