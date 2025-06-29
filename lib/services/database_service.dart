@@ -1561,17 +1561,70 @@ class DatabaseService {
       final query = await _firestore
           .collection('supervisor_assignments')
           .where('busId', isEqualTo: busId)
+          .where('status', isEqualTo: 'active')
           .orderBy('assignedAt', descending: true)
-          .limit(1)
           .get();
 
       if (query.docs.isNotEmpty) {
-        return SupervisorAssignmentModel.fromMap(query.docs.first.data());
+        // Filter by direction
+        for (final doc in query.docs) {
+          final assignment = SupervisorAssignmentModel.fromMap(doc.data());
+          if (assignment.direction == direction || assignment.direction == TripDirection.both) {
+            return assignment;
+          }
+        }
       }
       return null;
     } catch (e) {
       debugPrint('❌ Error getting current supervisor assignment: $e');
       return null;
+    }
+  }
+
+  // Get supervisor info for parent based on bus and current time
+  Future<Map<String, String>> getSupervisorInfoForParent(String busId) async {
+    try {
+      // Determine current direction based on time
+      final currentTime = DateTime.now();
+      final currentHour = currentTime.hour;
+
+      TripDirection currentDirection;
+      if (currentHour >= 6 && currentHour <= 10) {
+        currentDirection = TripDirection.toSchool;
+      } else if (currentHour >= 12 && currentHour <= 18) {
+        currentDirection = TripDirection.fromSchool;
+      } else {
+        currentDirection = TripDirection.both;
+      }
+
+      // Get supervisor assignment
+      final assignment = await getCurrentSupervisorAssignment(busId, currentDirection);
+
+      if (assignment != null) {
+        // Get supervisor details
+        final supervisor = await getUserById(assignment.supervisorId);
+
+        if (supervisor != null) {
+          return {
+            'name': supervisor.name,
+            'phone': supervisor.phone,
+            'direction': assignment.directionDisplayName,
+          };
+        }
+      }
+
+      return {
+        'name': 'غير محدد',
+        'phone': '',
+        'direction': 'غير محدد',
+      };
+    } catch (e) {
+      debugPrint('❌ Error getting supervisor info for parent: $e');
+      return {
+        'name': 'غير محدد',
+        'phone': '',
+        'direction': 'غير محدد',
+      };
     }
   }
 

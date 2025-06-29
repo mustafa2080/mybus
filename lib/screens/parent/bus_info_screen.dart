@@ -321,32 +321,44 @@ class _BusInfoScreenState extends State<BusInfoScreen> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  _buildInfoRow(
-                    icon: Icons.person,
-                    label: 'اسم المشرف',
-                    value: _currentSupervisorAssignment?.supervisorName ?? 'غير محدد',
-                    color: Colors.green,
-                  ),
-                  const SizedBox(height: 12),
-                  _buildInfoRow(
-                    icon: Icons.phone,
-                    label: 'رقم الهاتف',
-                    value: _getSupervisorPhone(),
-                    color: Colors.blue,
-                    isPhone: true,
-                  ),
-                  const SizedBox(height: 12),
-                  _buildInfoRow(
-                    icon: Icons.schedule,
-                    label: 'فترة الإشراف',
-                    value: _getSupervisionPeriod(),
-                    color: Colors.purple,
-                  ),
 
-                  const SizedBox(height: 16),
+                  // Supervisor info with real data
+                  FutureBuilder<Map<String, String>>(
+                    future: _databaseService.getSupervisorInfoForParent(_bus!.id),
+                    builder: (context, supervisorSnapshot) {
+                      final supervisorInfo = supervisorSnapshot.data ?? {};
+                      final supervisorName = supervisorInfo['name'] ?? 'غير محدد';
+                      final supervisorPhone = supervisorInfo['phone'] ?? '';
+                      final supervisionPeriod = supervisorInfo['direction'] ?? 'غير محدد';
 
-                  // Quick Call Button
-                  if (_getSupervisorPhone().isNotEmpty)
+                      return Column(
+                        children: [
+                          _buildInfoRow(
+                            icon: Icons.person,
+                            label: 'اسم المشرف',
+                            value: supervisorName,
+                            color: Colors.green,
+                          ),
+                          const SizedBox(height: 12),
+                          _buildInfoRow(
+                            icon: Icons.phone,
+                            label: 'رقم الهاتف',
+                            value: supervisorPhone.isNotEmpty ? supervisorPhone : 'غير محدد',
+                            color: Colors.blue,
+                            isPhone: supervisorPhone.isNotEmpty,
+                          ),
+                          const SizedBox(height: 12),
+                          _buildInfoRow(
+                            icon: Icons.schedule,
+                            label: 'فترة الإشراف',
+                            value: supervisionPeriod,
+                            color: Colors.purple,
+                          ),
+
+                          const SizedBox(height: 16),
+
+                          // Quick Call Button
+                          if (supervisorPhone.isNotEmpty)
                     Container(
                       width: double.infinity,
                       decoration: BoxDecoration(
@@ -368,7 +380,7 @@ class _BusInfoScreenState extends State<BusInfoScreen> {
                       child: Material(
                         color: Colors.transparent,
                         child: InkWell(
-                          onTap: () => _makePhoneCall(_getSupervisorPhone()),
+                          onTap: () => _makePhoneCall(supervisorPhone),
                           borderRadius: BorderRadius.circular(12),
                           child: Container(
                             padding: const EdgeInsets.symmetric(vertical: 16),
@@ -391,6 +403,10 @@ class _BusInfoScreenState extends State<BusInfoScreen> {
                         ),
                       ),
                     ),
+                        ],
+                      );
+                    },
+                  ),
                 ],
               ),
             ),
@@ -668,9 +684,14 @@ class _BusInfoScreenState extends State<BusInfoScreen> {
   String _getSupervisorPhone() {
     if (_currentSupervisorAssignment == null) return '';
 
-    // Here you would get the supervisor's phone from the supervisor profile
-    // For now, return a placeholder - this should be implemented with actual supervisor data
-    return _currentSupervisorAssignment!.supervisorName.isNotEmpty ? '01234567890' : '';
+    // Use FutureBuilder to get supervisor info in the UI instead
+    return 'جاري التحميل...';
+  }
+
+  // Get supervisor name
+  String _getSupervisorName() {
+    if (_currentSupervisorAssignment == null) return 'غير محدد';
+    return _currentSupervisorAssignment!.supervisorName;
   }
 
   // Get supervision period description

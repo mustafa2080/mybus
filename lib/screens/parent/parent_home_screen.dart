@@ -796,8 +796,25 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
               if (busData != null) ...[
                 _buildBusInfoRow('وصف الباص', busData['description'] ?? 'غير محدد'),
                 _buildBusInfoRow('خط السير', student.busRoute.isNotEmpty ? student.busRoute : 'غير محدد'),
-                _buildBusInfoRow('المشرف', 'سيتم تحديد المشرف حسب الوقت'),
-                _buildBusInfoRow('هاتف المشرف', 'متاح عند تحديد المشرف', isPhone: false),
+                // Show supervisor info based on current time and assignment
+                FutureBuilder<Map<String, String>>(
+                  future: _databaseService.getSupervisorInfoForParent(student.busId),
+                  builder: (context, supervisorSnapshot) {
+                    final supervisorInfo = supervisorSnapshot.data ?? {};
+                    return Column(
+                      children: [
+                        _buildBusInfoRow('المشرف', supervisorInfo['name'] ?? 'غير محدد'),
+                        _buildBusInfoRow(
+                          'هاتف المشرف',
+                          supervisorInfo['phone'] ?? 'غير محدد',
+                          isPhone: supervisorInfo['phone']?.isNotEmpty == true,
+                        ),
+                        if (supervisorInfo['direction']?.isNotEmpty == true)
+                          _buildBusInfoRow('فترة الإشراف', supervisorInfo['direction']!),
+                      ],
+                    );
+                  },
+                ),
               ] else ...[
                 _buildBusInfoRow('خط السير', student.busRoute.isNotEmpty ? student.busRoute : 'غير محدد'),
                 const Text(
@@ -1603,15 +1620,15 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
 
       if (busId == null || busId.isEmpty) return {};
 
-      // For now, return placeholder data since supervisor-bus assignment system is not implemented yet
-      // In the future, this would query the supervisor assigned to this bus
-      return {
-        'name': 'سيتم تحديدها من قبل الإدارة',
-        'phone': _schoolInfo['phone'] ?? '', // Use admin phone for now
-      };
+      // Get supervisor info using the new system
+      return await _databaseService.getSupervisorInfoForParent(busId);
     } catch (e) {
       debugPrint('Error getting supervisor info: $e');
-      return {};
+      return {
+        'name': 'خطأ في التحميل',
+        'phone': '',
+        'direction': '',
+      };
     }
   }
 
