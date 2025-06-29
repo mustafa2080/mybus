@@ -1576,43 +1576,7 @@ class DatabaseService {
     }
   }
 
-  // Create supervisor assignment
-  Future<void> createSupervisorAssignment({
-    required String supervisorId,
-    required String supervisorName,
-    required String busId,
-    required String busPlateNumber,
-    required TripDirection direction,
-    required String assignedBy,
-    required String assignedByName,
-    String? notes,
-  }) async {
-    try {
-      final assignmentId = _uuid.v4();
-      final assignment = SupervisorAssignmentModel(
-        id: assignmentId,
-        supervisorId: supervisorId,
-        supervisorName: supervisorName,
-        busId: busId,
-        busPlateNumber: busPlateNumber,
-        direction: direction,
-        assignedAt: DateTime.now(),
-        assignedBy: assignedBy,
-        assignedByName: assignedByName,
-        notes: notes,
-      );
 
-      await _firestore
-          .collection('supervisor_assignments')
-          .doc(assignmentId)
-          .set(assignment.toMap());
-
-      debugPrint('✅ Supervisor assignment created successfully: $assignmentId');
-    } catch (e) {
-      debugPrint('❌ Error creating supervisor assignment: $e');
-      throw Exception('خطأ في إنشاء التعيين: $e');
-    }
-  }
 
   // Get parent complaints
   Stream<List<ComplaintModel>> getParentComplaints(String parentId) {

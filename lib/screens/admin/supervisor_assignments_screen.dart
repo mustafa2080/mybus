@@ -710,12 +710,10 @@ class _CreateAssignmentDialogState extends State<_CreateAssignmentDialog> {
       setState(() => _isLoading = true);
 
       // Load supervisors
-      final supervisorsSnapshot = await widget.databaseService.getAllSupervisors().first;
-      _supervisors = supervisorsSnapshot;
+      _supervisors = await widget.databaseService.getAllSupervisors();
 
       // Load buses
-      final busesSnapshot = await widget.databaseService.getAllBuses().first;
-      _buses = busesSnapshot;
+      _buses = await widget.databaseService.getAllBuses().first;
 
       setState(() => _isLoading = false);
     } catch (e) {
@@ -757,7 +755,7 @@ class _CreateAssignmentDialogState extends State<_CreateAssignmentDialog> {
                     items: _supervisors.map((supervisor) {
                       return DropdownMenuItem(
                         value: supervisor.id,
-                        child: Text(supervisor.fullName),
+                        child: Text(supervisor.name),
                       );
                     }).toList(),
                     onChanged: (value) {
@@ -859,16 +857,21 @@ class _CreateAssignmentDialogState extends State<_CreateAssignmentDialog> {
       final supervisor = _supervisors.firstWhere((s) => s.id == _selectedSupervisorId);
       final bus = _buses.firstWhere((b) => b.id == _selectedBusId);
 
-      await widget.databaseService.createSupervisorAssignment(
+      final assignmentId = widget.databaseService.generateTripId();
+      final assignment = SupervisorAssignmentModel(
+        id: assignmentId,
         supervisorId: _selectedSupervisorId!,
-        supervisorName: supervisor.fullName,
+        supervisorName: supervisor.name,
         busId: _selectedBusId!,
         busPlateNumber: bus.plateNumber,
         direction: _selectedDirection,
+        assignedAt: DateTime.now(),
         assignedBy: widget.currentUser?.id ?? '',
-        assignedByName: widget.currentUser?.fullName ?? 'مدير',
+        assignedByName: widget.currentUser?.name ?? 'مدير',
         notes: _notes.isNotEmpty ? _notes : null,
       );
+
+      await widget.databaseService.createSupervisorAssignment(assignment);
 
       if (mounted) {
         Navigator.pop(context);
