@@ -27,9 +27,29 @@ class _SupervisorEvaluationScreenState extends State<SupervisorEvaluationScreen>
 
   Future<void> _loadSupervisors() async {
     try {
+      debugPrint('🔄 Starting to load supervisors...');
       final parentId = _authService.currentUser?.uid ?? '';
       if (parentId.isNotEmpty) {
         debugPrint('🔍 Loading supervisors for parent: $parentId');
+
+        // First check if parent has students
+        final students = await _databaseService.getStudentsByParentOnce(parentId);
+        debugPrint('👨‍👩‍👧‍👦 Found ${students.length} students for parent');
+
+        if (students.isEmpty) {
+          setState(() => _isLoading = false);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('لا يوجد طلاب مسجلين. يرجى إضافة طالب أولاً.'),
+                backgroundColor: Colors.orange,
+                duration: Duration(seconds: 5),
+              ),
+            );
+          }
+          return;
+        }
+
         final supervisors = await _databaseService.getSupervisorsForParent(parentId);
 
         setState(() {
@@ -42,14 +62,17 @@ class _SupervisorEvaluationScreenState extends State<SupervisorEvaluationScreen>
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text('لم يتم العثور على مشرفين مُعينين لأطفالك. يرجى التواصل مع الإدارة.'),
+                content: Text('لم يتم العثور على مشرفين مُعينين لأطفالك. يرجى التواصل مع الإدارة لتعيين مشرف للباص.'),
                 backgroundColor: Colors.orange,
-                duration: Duration(seconds: 5),
+                duration: Duration(seconds: 6),
               ),
             );
           }
         } else {
           debugPrint('✅ Found ${supervisors.length} supervisors');
+          for (final supervisor in supervisors) {
+            debugPrint('   - ${supervisor.name} (${supervisor.id})');
+          }
         }
       } else {
         setState(() => _isLoading = false);
@@ -215,6 +238,26 @@ class _SupervisorEvaluationScreenState extends State<SupervisorEvaluationScreen>
                     textAlign: TextAlign.center,
                   ),
                 ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  setState(() => _isLoading = true);
+                  _loadSupervisors();
+                },
+                icon: const Icon(Icons.refresh),
+                label: const Text('إعادة المحاولة'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue[600],
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
               ),
             ),
           ],

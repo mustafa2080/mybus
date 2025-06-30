@@ -443,7 +443,7 @@ class _SurveysScreenState extends State<SurveysScreen> {
               color: const Color(0xFF7C3AED),
               onTap: () {
                 Navigator.pop(context);
-                Navigator.pushNamed(context, '/parent/supervisor-evaluation');
+                context.push('/parent/supervisor-evaluation');
               },
             ),
 
