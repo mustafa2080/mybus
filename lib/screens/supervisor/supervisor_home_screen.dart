@@ -1081,7 +1081,7 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen> {
                 child: _buildMiniStatCard(
                   'الطلاب النشطين',
                   activeStudents,
-                  Icons.person_check,
+                  Icons.person_add_alt_1,
                   Colors.green,
                 ),
               ),

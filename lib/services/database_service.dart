@@ -101,7 +101,7 @@ class DatabaseService {
           await _cacheService.set(
             cacheKey,
             userData,
-            priority: CacheService.CachePriority.high,
+            priority: CachePriority.high,
             persistToDisk: true,
           );
         }
@@ -336,7 +336,7 @@ class DatabaseService {
         await _cacheService.set(
           cacheKey,
           studentData,
-          priority: CacheService.CachePriority.normal,
+          priority: CachePriority.normal,
         );
 
         return StudentModel.fromMap(studentData);
@@ -684,7 +684,7 @@ class DatabaseService {
           cacheKey,
           busData,
           expiration: const Duration(minutes: 15),
-          priority: CacheService.CachePriority.normal,
+          priority: CachePriority.normal,
           persistToDisk: true,
         );
 
@@ -3086,12 +3086,17 @@ class DatabaseService {
       }
 
       // Create new emergency assignment
+      // Get bus route for the assignment
+      final bus = await getBusById(busId);
+      final busRoute = bus?.route ?? '';
+
       final emergencyAssignment = SupervisorAssignmentModel(
         id: _uuid.v4(),
         supervisorId: newSupervisorId,
         supervisorName: newSupervisorName,
         busId: busId,
         busPlateNumber: busPlateNumber,
+        busRoute: busRoute,
         direction: direction,
         status: AssignmentStatus.emergency,
         assignedAt: DateTime.now(),

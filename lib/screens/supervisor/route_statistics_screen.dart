@@ -379,7 +379,7 @@ class _RouteStatisticsScreenState extends State<RouteStatisticsScreen> {
               child: _buildStatCard(
                 'الطلاب النشطين',
                 activeStudents.toString(),
-                Icons.person_check,
+                Icons.person_add_alt_1,
                 Colors.green,
               ),
             ),
