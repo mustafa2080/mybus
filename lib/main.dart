@@ -8,6 +8,7 @@ import 'screens/splash_screen.dart';
 import 'services/theme_service.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/auth/register_screen.dart';
+import 'screens/auth/forgot_password_screen.dart';
 import 'screens/parent/parent_home_screen.dart';
 import 'screens/parent/complete_profile_screen.dart';
 import 'screens/parent/parent_profile_screen.dart';
@@ -133,6 +134,10 @@ final GoRouter _router = GoRouter(
     GoRoute(
       path: '/register',
       builder: (context, state) => const RegisterScreen(),
+    ),
+    GoRoute(
+      path: '/forgot-password',
+      builder: (context, state) => const ForgotPasswordScreen(),
     ),
     GoRoute(
       path: '/parent',

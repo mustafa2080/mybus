@@ -206,12 +206,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 // Forgot Password
                 TextButton(
                   onPressed: () {
-                    // TODO: Implement forgot password
+                    context.push('/forgot-password');
                   },
                   child: const Text(
                     'نسيت كلمة المرور؟',
                     style: TextStyle(
                       color: Color(0xFF1E88E5),
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
