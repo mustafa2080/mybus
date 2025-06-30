@@ -2299,6 +2299,24 @@ class DatabaseService {
     }
   }
 
+  // Get supervisor evaluations
+  Future<List<SupervisorEvaluationModel>> getSupervisorEvaluations(String supervisorId) async {
+    try {
+      final snapshot = await _firestore
+          .collection('supervisor_evaluations')
+          .where('supervisorId', isEqualTo: supervisorId)
+          .orderBy('evaluatedAt', descending: true)
+          .get();
+
+      return snapshot.docs
+          .map((doc) => SupervisorEvaluationModel.fromMap(doc.data()))
+          .toList();
+    } catch (e) {
+      debugPrint('❌ Error getting supervisor evaluations: $e');
+      return [];
+    }
+  }
+
   // Get supervisor evaluations for a parent
   Stream<List<SupervisorEvaluationModel>> getParentSupervisorEvaluations(String parentId) {
     return _firestore

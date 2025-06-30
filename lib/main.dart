@@ -196,6 +196,14 @@ final GoRouter _router = GoRouter(
       builder: (context, state) => const SupervisorEvaluationScreen(),
     ),
     GoRoute(
+      path: '/parent/evaluate-supervisor/:supervisorId',
+      builder: (context, state) {
+        final supervisorId = state.pathParameters['supervisorId']!;
+        // This route will be handled by Navigator.push from SupervisorEvaluationScreen
+        return const SupervisorEvaluationScreen();
+      },
+    ),
+    GoRoute(
       path: '/parent/supervisor-info',
       builder: (context, state) => const SupervisorInfoScreen(),
     ),

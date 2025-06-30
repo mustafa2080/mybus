@@ -420,16 +420,20 @@ class _EvaluateSupervisorScreenState extends State<EvaluateSupervisorScreen> {
     setState(() => _isSubmitting = true);
 
     try {
+      debugPrint('🔄 Starting evaluation submission...');
+
       final currentUser = _authService.currentUser;
       if (currentUser == null) {
         throw Exception('المستخدم غير مسجل الدخول');
       }
+      debugPrint('✅ User authenticated: ${currentUser.uid}');
 
       // Get parent's student info for the evaluation
       final students = await _databaseService.getStudentsByParentOnce(currentUser.uid);
       if (students.isEmpty) {
         throw Exception('لا يوجد طلاب مسجلين');
       }
+      debugPrint('✅ Found ${students.length} students');
 
       final student = students.first; // Use first student for now
       final now = DateTime.now();
@@ -455,7 +459,13 @@ class _EvaluateSupervisorScreenState extends State<EvaluateSupervisorScreen> {
         year: now.year,
       );
 
+      debugPrint('📝 Evaluation data prepared:');
+      debugPrint('   - Supervisor: ${evaluation.supervisorName}');
+      debugPrint('   - Student: ${evaluation.studentName}');
+      debugPrint('   - Ratings count: ${evaluation.ratings.length}');
+
       await _databaseService.createSupervisorEvaluation(evaluation);
+      debugPrint('✅ Evaluation saved successfully');
 
       if (mounted) {
         Navigator.pop(context);
@@ -465,15 +475,18 @@ class _EvaluateSupervisorScreenState extends State<EvaluateSupervisorScreen> {
           const SnackBar(
             content: Text('تم إرسال التقييم بنجاح'),
             backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
           ),
         );
       }
     } catch (e) {
+      debugPrint('❌ Error submitting evaluation: $e');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('خطأ في إرسال التقييم: $e'),
             backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
           ),
         );
       }
