@@ -387,12 +387,12 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: _getTripTypeColor(trip.type).withAlpha(25),
+                  color: _getTripTypeColor(trip.tripType).withAlpha(25),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Icon(
-                  _getTripTypeIcon(trip.type),
-                  color: _getTripTypeColor(trip.type),
+                  _getTripTypeIcon(trip.tripType),
+                  color: _getTripTypeColor(trip.tripType),
                   size: 20,
                 ),
               ),
@@ -402,7 +402,7 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _getTripTypeText(trip.type),
+                      _getTripTypeText(trip.tripType),
                       style: const TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -422,27 +422,26 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: _getStatusColor(trip.status).withAlpha(25),
+                  color: _getActionColor(trip.action).withAlpha(25),
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
-                  _getStatusText(trip.status),
+                  _getActionText(trip.action),
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: _getStatusColor(trip.status),
+                    color: _getActionColor(trip.action),
                   ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 12),
-          _buildInfoRow(Icons.location_on, 'الموقع', trip.location),
-          _buildInfoRow(Icons.directions_bus, 'الباص', trip.busNumber),
+          _buildInfoRow(Icons.route, 'خط السير', trip.busRoute),
           if (trip.supervisorName.isNotEmpty)
             _buildInfoRow(Icons.person, 'المشرف', trip.supervisorName),
-          if (trip.notes.isNotEmpty)
-            _buildInfoRow(Icons.note, 'ملاحظات', trip.notes),
+          if (trip.notes != null && trip.notes!.isNotEmpty)
+            _buildInfoRow(Icons.note, 'ملاحظات', trip.notes!),
         ],
       ),
     );
@@ -477,60 +476,68 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
     );
   }
 
-  IconData _getTripTypeIcon(String type) {
+  IconData _getTripTypeIcon(TripType type) {
     switch (type) {
-      case 'pickup':
-        return Icons.home;
-      case 'dropoff':
+      case TripType.toSchool:
         return Icons.school;
+      case TripType.fromSchool:
+        return Icons.home;
       default:
         return Icons.directions_bus;
     }
   }
 
-  Color _getTripTypeColor(String type) {
+  Color _getTripTypeColor(TripType type) {
     switch (type) {
-      case 'pickup':
-        return Colors.green;
-      case 'dropoff':
+      case TripType.toSchool:
         return Colors.blue;
+      case TripType.fromSchool:
+        return Colors.green;
       default:
         return Colors.orange;
     }
   }
 
-  String _getTripTypeText(String type) {
+  String _getTripTypeText(TripType type) {
     switch (type) {
-      case 'pickup':
-        return 'رحلة الذهاب';
-      case 'dropoff':
-        return 'رحلة العودة';
+      case TripType.toSchool:
+        return 'رحلة الذهاب للمدرسة';
+      case TripType.fromSchool:
+        return 'رحلة العودة للمنزل';
       default:
         return 'رحلة';
     }
   }
 
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'completed':
-        return Colors.green;
-      case 'in_progress':
+  Color _getActionColor(TripAction action) {
+    switch (action) {
+      case TripAction.boardBusToSchool:
+      case TripAction.boardBus:
         return Colors.orange;
-      case 'cancelled':
-        return Colors.red;
+      case TripAction.arriveAtSchool:
+        return Colors.blue;
+      case TripAction.boardBusToHome:
+        return Colors.purple;
+      case TripAction.arriveAtHome:
+      case TripAction.leaveBus:
+        return Colors.green;
       default:
         return Colors.grey;
     }
   }
 
-  String _getStatusText(String status) {
-    switch (status) {
-      case 'completed':
-        return 'مكتملة';
-      case 'in_progress':
-        return 'جارية';
-      case 'cancelled':
-        return 'ملغية';
+  String _getActionText(TripAction action) {
+    switch (action) {
+      case TripAction.boardBusToSchool:
+      case TripAction.boardBus:
+        return 'ركب الباص';
+      case TripAction.arriveAtSchool:
+        return 'وصل المدرسة';
+      case TripAction.boardBusToHome:
+        return 'ركب للعودة';
+      case TripAction.arriveAtHome:
+      case TripAction.leaveBus:
+        return 'وصل المنزل';
       default:
         return 'غير محدد';
     }
