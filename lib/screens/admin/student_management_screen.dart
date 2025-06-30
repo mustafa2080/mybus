@@ -253,54 +253,61 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
   Widget _buildFilters() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
           // Status Filter
           Expanded(
+            flex: 2,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              height: 45,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: Colors.grey[300]!),
               ),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<StudentStatus?>(
                   value: _selectedStatus,
-                  hint: const Text('الحالة'),
+                  hint: const Text('الحالة', style: TextStyle(fontSize: 13)),
                   isExpanded: true,
+                  style: const TextStyle(fontSize: 13, color: Colors.black),
                   items: [
                     const DropdownMenuItem<StudentStatus?>(
                       value: null,
-                      child: Text('جميع الحالات'),
+                      child: Text('الكل', style: TextStyle(fontSize: 13)),
                     ),
                     DropdownMenuItem<StudentStatus?>(
                       value: StudentStatus.home,
                       child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.home, size: 16, color: Colors.green),
-                          const SizedBox(width: 8),
-                          const Text('في المنزل'),
+                          Icon(Icons.home, size: 14, color: Colors.green),
+                          const SizedBox(width: 6),
+                          const Text('منزل', style: TextStyle(fontSize: 13)),
                         ],
                       ),
                     ),
                     DropdownMenuItem<StudentStatus?>(
                       value: StudentStatus.onBus,
                       child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.directions_bus, size: 16, color: Colors.orange),
-                          const SizedBox(width: 8),
-                          const Text('في الباص'),
+                          Icon(Icons.directions_bus, size: 14, color: Colors.orange),
+                          const SizedBox(width: 6),
+                          const Text('باص', style: TextStyle(fontSize: 13)),
                         ],
                       ),
                     ),
                     DropdownMenuItem<StudentStatus?>(
                       value: StudentStatus.atSchool,
                       child: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(Icons.school, size: 16, color: Colors.blue),
-                          const SizedBox(width: 8),
-                          const Text('في المدرسة'),
+                          Icon(Icons.school, size: 14, color: Colors.blue),
+                          const SizedBox(width: 6),
+                          const Text('مدرسة', style: TextStyle(fontSize: 13)),
                         ],
                       ),
                     ),
@@ -314,30 +321,33 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           // Grade Filter
           Expanded(
+            flex: 2,
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 12),
+              height: 45,
+              padding: const EdgeInsets.symmetric(horizontal: 10),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(10),
                 border: Border.all(color: Colors.grey[300]!),
               ),
               child: DropdownButtonHideUnderline(
                 child: DropdownButton<String?>(
                   value: _selectedGrade,
-                  hint: const Text('الصف'),
+                  hint: const Text('الصف', style: TextStyle(fontSize: 13)),
                   isExpanded: true,
+                  style: const TextStyle(fontSize: 13, color: Colors.black),
                   items: [
                     const DropdownMenuItem<String?>(
                       value: null,
-                      child: Text('جميع الصفوف'),
+                      child: Text('الكل', style: TextStyle(fontSize: 13)),
                     ),
                     ...['الأول', 'الثاني', 'الثالث', 'الرابع', 'الخامس', 'السادس']
                         .map((grade) => DropdownMenuItem<String?>(
                               value: grade,
-                              child: Text('الصف $grade'),
+                              child: Text('$grade', style: const TextStyle(fontSize: 13)),
                             )),
                   ],
                   onChanged: (value) {
@@ -349,12 +359,14 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
               ),
             ),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 8),
           // Clear Filters Button
           Container(
+            height: 45,
+            width: 45,
             decoration: BoxDecoration(
               color: Colors.grey[100],
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(10),
             ),
             child: IconButton(
               onPressed: () {
@@ -363,8 +375,8 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
                   _selectedGrade = null;
                 });
               },
-              icon: const Icon(Icons.clear_all),
-              tooltip: 'مسح الفلاتر',
+              icon: const Icon(Icons.clear_all, size: 18),
+              tooltip: 'مسح',
             ),
           ),
         ],
@@ -467,15 +479,15 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
 
   Widget _buildStudentCard(StudentModel student) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
+      margin: const EdgeInsets.only(bottom: 8),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withAlpha(25),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.grey.withAlpha(20),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
           ),
         ],
         border: Border.all(
@@ -484,7 +496,7 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
         ),
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -493,7 +505,7 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
               children: [
                 Container(
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(10),
                     border: Border.all(
                       color: _getStatusColor(student.currentStatus).withAlpha(76),
                       width: 2,
@@ -502,10 +514,10 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
                   child: StudentAvatarWidget(
                     imageUrl: student.photoUrl,
                     studentName: student.name,
-                    radius: 28,
+                    radius: 22,
                   ),
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -513,42 +525,45 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
                       Text(
                         student.name,
                         style: const TextStyle(
-                          fontSize: 18,
+                          fontSize: 16,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF2D3748),
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(height: 3),
                       Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
                               color: Colors.blue.withAlpha(25),
-                              borderRadius: BorderRadius.circular(8),
+                              borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
-                              'الصف: ${student.grade}',
+                              '${student.grade}',
                               style: const TextStyle(
                                 color: Colors.blue,
-                                fontSize: 12,
+                                fontSize: 11,
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
                           ),
-                          const SizedBox(width: 8),
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.purple.withAlpha(25),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            child: Text(
-                              student.schoolName,
-                              style: const TextStyle(
-                                color: Colors.purple,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: Colors.purple.withAlpha(25),
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              child: Text(
+                                student.schoolName,
+                                style: const TextStyle(
+                                  color: Colors.purple,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                overflow: TextOverflow.ellipsis,
                               ),
                             ),
                           ),
@@ -561,11 +576,11 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
               ],
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 10),
 
             // Information Section
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: Colors.grey[50],
                 borderRadius: BorderRadius.circular(12),
@@ -627,7 +642,7 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
 
   Widget _buildActionButton(String text, IconData icon, Color color, VoidCallback onPressed) {
     return Container(
-      height: 40,
+      height: 32,
       child: ElevatedButton(
         onPressed: onPressed,
         style: ElevatedButton.styleFrom(
@@ -635,20 +650,20 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
           foregroundColor: color,
           elevation: 0,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(10),
+            borderRadius: BorderRadius.circular(8),
             side: BorderSide(color: color.withAlpha(76)),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 6),
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, size: 16),
-            const SizedBox(width: 4),
+            Icon(icon, size: 14),
+            const SizedBox(width: 3),
             Text(
               text,
               style: const TextStyle(
-                fontSize: 12,
+                fontSize: 11,
                 fontWeight: FontWeight.w600,
               ),
             ),

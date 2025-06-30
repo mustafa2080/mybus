@@ -436,14 +436,14 @@ class _SupervisorAssignmentsScreenState extends State<SupervisorAssignmentsScree
 
   Widget _buildAssignmentCard(SupervisorAssignmentModel assignment) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withAlpha(25),
-            blurRadius: 8,
+            color: Colors.black.withAlpha(20),
+            blurRadius: 6,
             offset: const Offset(0, 2),
           ),
         ],
@@ -455,9 +455,9 @@ class _SupervisorAssignmentsScreenState extends State<SupervisorAssignmentsScree
         children: [
           // Modern Header
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
               gradient: LinearGradient(
                 colors: assignment.isEmergencyAssignment
                     ? [Colors.red[400]!, Colors.red[600]!]
@@ -469,18 +469,18 @@ class _SupervisorAssignmentsScreenState extends State<SupervisorAssignmentsScree
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
                     color: Colors.white.withAlpha(51),
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(6),
                   ),
                   child: Icon(
                     assignment.isEmergencyAssignment ? Icons.emergency : Icons.assignment_turned_in,
                     color: Colors.white,
-                    size: 20,
+                    size: 16,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -489,7 +489,7 @@ class _SupervisorAssignmentsScreenState extends State<SupervisorAssignmentsScree
                         assignment.isEmergencyAssignment ? 'تعيين طوارئ' : 'تعيين عادي',
                         style: const TextStyle(
                           color: Colors.white,
-                          fontSize: 16,
+                          fontSize: 14,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -497,7 +497,7 @@ class _SupervisorAssignmentsScreenState extends State<SupervisorAssignmentsScree
                         'تم في ${_formatDate(assignment.assignedAt)}',
                         style: TextStyle(
                           color: Colors.white.withAlpha(204),
-                          fontSize: 12,
+                          fontSize: 11,
                         ),
                       ),
                     ],
@@ -524,7 +524,7 @@ class _SupervisorAssignmentsScreenState extends State<SupervisorAssignmentsScree
 
           // Content Section
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
             child: Column(
               children: [
                 // Bus and Supervisor Info Row
@@ -569,7 +569,7 @@ class _SupervisorAssignmentsScreenState extends State<SupervisorAssignmentsScree
                       ),
                     ),
 
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 10),
 
                     // Supervisor Info
                     Expanded(
@@ -607,7 +607,7 @@ class _SupervisorAssignmentsScreenState extends State<SupervisorAssignmentsScree
                   ],
                 ),
 
-                const SizedBox(height: 16),
+                const SizedBox(height: 10),
 
                 // Assignment Details
                 _buildModernInfoCard(
@@ -783,10 +783,10 @@ class _SupervisorAssignmentsScreenState extends State<SupervisorAssignmentsScree
     required Widget child,
   }) {
     return Container(
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
         color: color.withAlpha(25),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: color.withAlpha(76)),
       ),
       child: Column(
@@ -794,19 +794,22 @@ class _SupervisorAssignmentsScreenState extends State<SupervisorAssignmentsScree
         children: [
           Row(
             children: [
-              Icon(icon, color: color, size: 18),
-              const SizedBox(width: 8),
-              Text(
-                title,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.bold,
-                  color: color,
+              Icon(icon, color: color, size: 16),
+              const SizedBox(width: 6),
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: color,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           child,
         ],
       ),
@@ -818,20 +821,31 @@ class _SupervisorAssignmentsScreenState extends State<SupervisorAssignmentsScree
     required String label,
     required String value,
   }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.grey[50],
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey[200]!),
+      ),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(icon, size: 14, color: Colors.grey[600]),
-          const SizedBox(width: 6),
-          Text(
-            '$label: ',
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey[700],
-              fontWeight: FontWeight.w500,
+          const SizedBox(width: 8),
+          SizedBox(
+            width: 80,
+            child: Text(
+              '$label:',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[700],
+                fontWeight: FontWeight.w500,
+              ),
             ),
           ),
+          const SizedBox(width: 4),
           Expanded(
             child: Text(
               value,
@@ -840,6 +854,8 @@ class _SupervisorAssignmentsScreenState extends State<SupervisorAssignmentsScree
                 color: Color(0xFF2D3748),
                 fontWeight: FontWeight.w600,
               ),
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ],
