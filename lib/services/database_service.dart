@@ -102,7 +102,6 @@ class DatabaseService {
             cacheKey,
             userData,
             priority: CachePriority.high,
-            persistToDisk: true,
           );
         }
 
@@ -685,7 +684,6 @@ class DatabaseService {
           busData,
           expiration: const Duration(minutes: 15),
           priority: CachePriority.normal,
-          persistToDisk: true,
         );
 
         return BusModel.fromMap(busData);
