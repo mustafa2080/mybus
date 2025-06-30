@@ -822,40 +822,54 @@ class _SupervisorAssignmentsScreenState extends State<SupervisorAssignmentsScree
     required String value,
   }) {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 3),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+      margin: const EdgeInsets.symmetric(vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.grey[50],
+        color: Colors.white,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey[200]!),
+        border: Border.all(color: Colors.grey[300]!),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withAlpha(20),
+            blurRadius: 2,
+            offset: const Offset(0, 1),
+          ),
+        ],
       ),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(icon, size: 14, color: Colors.grey[600]),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 80,
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(
+              color: Colors.blue.withAlpha(25),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Icon(icon, size: 14, color: Colors.blue[700]),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            flex: 2,
             child: Text(
-              '$label:',
+              label,
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey[700],
-                fontWeight: FontWeight.w500,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 8),
           Expanded(
+            flex: 3,
             child: Text(
               value,
               style: const TextStyle(
                 fontSize: 12,
                 color: Color(0xFF2D3748),
-                fontWeight: FontWeight.w600,
+                fontWeight: FontWeight.w700,
               ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.end,
             ),
           ),
         ],

@@ -113,21 +113,21 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
         children: [
           // Search and Filter Section
           Container(
-            margin: const EdgeInsets.all(16),
+            margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(20),
+              borderRadius: BorderRadius.circular(12),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withAlpha(13),
+                  color: Colors.black.withAlpha(10),
                   spreadRadius: 0,
-                  blurRadius: 20,
-                  offset: const Offset(0, 4),
+                  blurRadius: 8,
+                  offset: const Offset(0, 2),
                 ),
               ],
             ),
             child: Padding(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -135,54 +135,55 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
                   Row(
                     children: [
                       Container(
-                        padding: const EdgeInsets.all(10),
+                        padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
                           gradient: const LinearGradient(
                             colors: [Color(0xFF1E88E5), Color(0xFF1976D2)],
                           ),
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Icon(
                           Icons.search,
                           color: Colors.white,
-                          size: 20,
+                          size: 16,
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 8),
                       const Text(
                         'البحث والفلترة',
                         style: TextStyle(
-                          fontSize: 18,
+                          fontSize: 14,
                           fontWeight: FontWeight.bold,
                           color: Color(0xFF2D3748),
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 12),
 
                   // Search Bar
                   Container(
+                    height: 40,
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
+                      borderRadius: BorderRadius.circular(10),
                       border: Border.all(color: Colors.grey[200]!),
                       color: const Color(0xFFF8FAFC),
                     ),
                     child: TextField(
                       decoration: InputDecoration(
-                        hintText: 'ابحث عن طالب بالاسم، المدرسة، أو ولي الأمر...',
-                        hintStyle: TextStyle(color: Colors.grey[500]),
+                        hintText: 'ابحث عن طالب...',
+                        hintStyle: TextStyle(color: Colors.grey[500], fontSize: 13),
                         prefixIcon: Container(
-                          padding: const EdgeInsets.all(12),
+                          padding: const EdgeInsets.all(8),
                           child: Icon(
                             Icons.search,
                             color: Colors.grey[400],
-                            size: 20,
+                            size: 16,
                           ),
                         ),
                         suffixIcon: _searchQuery.isNotEmpty
                             ? IconButton(
-                                icon: Icon(Icons.clear, color: Colors.grey[400]),
+                                icon: Icon(Icons.clear, color: Colors.grey[400], size: 16),
                                 onPressed: () {
                                   setState(() {
                                     _searchQuery = '';
@@ -191,7 +192,7 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
                               )
                             : null,
                         border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                       ),
                       onChanged: (value) {
                         setState(() {
@@ -200,35 +201,37 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
                       },
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 10),
 
                   // Filters Row
                   Row(
                     children: [
                       Expanded(
                         child: Container(
+                          height: 35,
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(8),
                             border: Border.all(color: Colors.grey[200]!),
                             color: Colors.white,
                           ),
                           child: DropdownButtonFormField<String>(
                             value: _selectedGrade,
                             decoration: InputDecoration(
-                              labelText: 'الصف الدراسي',
-                              labelStyle: TextStyle(color: Colors.grey[600]),
-                              prefixIcon: Icon(Icons.class_, color: Colors.grey[500], size: 20),
+                              labelText: 'الصف',
+                              labelStyle: TextStyle(color: Colors.grey[600], fontSize: 12),
+                              prefixIcon: Icon(Icons.class_, color: Colors.grey[500], size: 16),
                               border: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             ),
                             dropdownColor: Colors.white,
+                            style: const TextStyle(fontSize: 12, color: Color(0xFF2D3748)),
                             items: _grades.map((grade) {
                               return DropdownMenuItem(
                                 value: grade,
                                 child: Text(
                                   grade,
                                   style: const TextStyle(
-                                    fontSize: 14,
+                                    fontSize: 12,
                                     color: Color(0xFF2D3748),
                                   ),
                                 ),
@@ -242,42 +245,44 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 8),
                       Expanded(
                         child: Container(
+                          height: 35,
                           decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(12),
+                            borderRadius: BorderRadius.circular(8),
                             border: Border.all(color: Colors.grey[200]!),
                             color: Colors.white,
                           ),
                           child: DropdownButtonFormField<String>(
                             value: _selectedStatus,
                             decoration: InputDecoration(
-                              labelText: 'حالة الطالب',
-                              labelStyle: TextStyle(color: Colors.grey[600]),
-                              prefixIcon: Icon(Icons.location_on, color: Colors.grey[500], size: 20),
+                              labelText: 'الحالة',
+                              labelStyle: TextStyle(color: Colors.grey[600], fontSize: 12),
+                              prefixIcon: Icon(Icons.location_on, color: Colors.grey[500], size: 16),
                               border: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                             ),
                             dropdownColor: Colors.white,
+                            style: const TextStyle(fontSize: 12, color: Color(0xFF2D3748)),
                             items: _statuses.map((status) {
                               return DropdownMenuItem(
                                 value: status,
                                 child: Row(
                                   children: [
                                     Container(
-                                      width: 8,
-                                      height: 8,
+                                      width: 6,
+                                      height: 6,
                                       decoration: BoxDecoration(
                                         color: _getStatusColorFromText(status),
                                         shape: BoxShape.circle,
                                       ),
                                     ),
-                                    const SizedBox(width: 8),
+                                    const SizedBox(width: 6),
                                     Text(
                                       status,
                                       style: const TextStyle(
-                                        fontSize: 14,
+                                        fontSize: 12,
                                         color: Color(0xFF2D3748),
                                       ),
                                     ),
@@ -569,30 +574,30 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
                   children: [
                     // Statistics Cards
                     Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 16),
+                      margin: const EdgeInsets.symmetric(horizontal: 12),
                       child: Row(
                         children: [
                           Expanded(
                             child: _buildStatCard(
-                              'إجمالي الطلاب',
+                              'الكل',
                               '${allStudents.length}',
                               Icons.school,
                               const Color(0xFF1E88E5),
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 8),
                           Expanded(
                             child: _buildStatCard(
-                              'النتائج المعروضة',
+                              'المعروض',
                               '${filteredStudents.length}',
                               Icons.filter_list,
                               const Color(0xFF43A047),
                             ),
                           ),
-                          const SizedBox(width: 12),
+                          const SizedBox(width: 8),
                           Expanded(
                             child: _buildStatCard(
-                              'في الباص',
+                              'بالباص',
                               '${filteredStudents.where((s) => s.currentStatus == StudentStatus.onBus).length}',
                               Icons.directions_bus,
                               const Color(0xFFFF9800),
@@ -601,7 +606,7 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
                         ],
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 8),
 
                     // Students List
                     Expanded(
@@ -717,16 +722,16 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
 
   Widget _buildStatCard(String title, String value, IconData icon, Color color) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(10),
         boxShadow: [
           BoxShadow(
-            color: color.withAlpha(25),
+            color: color.withAlpha(20),
             spreadRadius: 0,
-            blurRadius: 10,
-            offset: const Offset(0, 2),
+            blurRadius: 6,
+            offset: const Offset(0, 1),
           ),
         ],
         border: Border.all(color: color.withAlpha(51), width: 1),
@@ -734,31 +739,31 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(12),
+            padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
               color: color.withAlpha(25),
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(8),
             ),
             child: Icon(
               icon,
               color: color,
-              size: 24,
+              size: 16,
             ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 6),
           Text(
             value,
             style: TextStyle(
-              fontSize: 24,
+              fontSize: 16,
               fontWeight: FontWeight.bold,
               color: color,
             ),
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 2),
           Text(
             title,
             style: TextStyle(
-              fontSize: 12,
+              fontSize: 10,
               color: Colors.grey[600],
               fontWeight: FontWeight.w500,
             ),
