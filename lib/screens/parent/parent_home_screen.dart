@@ -1674,23 +1674,7 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Emergency numbers
-              const Row(
-                children: [
-                  Icon(Icons.local_hospital, color: Colors.red, size: 20),
-                  SizedBox(width: 12),
-                  Text('الإسعاف: 997'),
-                ],
-              ),
-              const SizedBox(height: 8),
-              const Row(
-                children: [
-                  Icon(Icons.local_police, color: Colors.blue, size: 20),
-                  SizedBox(width: 12),
-                  Text('الشرطة: 999'),
-                ],
-              ),
-              const SizedBox(height: 16),
+
 
               // School contact
               if (_schoolInfo.isNotEmpty) ...[

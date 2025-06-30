@@ -2788,6 +2788,30 @@ class DatabaseService {
             .toList());
   }
 
+  /// Get student trips for a specific date
+  Future<List<TripModel>> getStudentTrips(String studentId, DateTime date) async {
+    try {
+      // Get start and end of the selected date
+      final startOfDay = DateTime(date.year, date.month, date.day);
+      final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59);
+
+      final querySnapshot = await _firestore
+          .collection('trips')
+          .where('studentId', isEqualTo: studentId)
+          .where('timestamp', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+          .where('timestamp', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
+          .orderBy('timestamp', descending: true)
+          .get();
+
+      return querySnapshot.docs
+          .map((doc) => TripModel.fromMap(doc.data()))
+          .toList();
+    } catch (e) {
+      debugPrint('❌ Error getting student trips: $e');
+      return [];
+    }
+  }
+
   /// Check if user has responded to survey
   Future<bool> hasUserRespondedToSurvey(String surveyId, String userId) async {
     try {
@@ -2958,7 +2982,8 @@ class DatabaseService {
   /// Get active supervisor for a specific bus route
   Future<SupervisorAssignmentModel?> getActiveSupervisorForRoute(String busRoute) async {
     try {
-      final querySnapshot = await _firestore
+      // First try to find by busRoute
+      var querySnapshot = await _firestore
           .collection('supervisor_assignments')
           .where('busRoute', isEqualTo: busRoute)
           .where('status', isEqualTo: 'active')
@@ -2968,6 +2993,28 @@ class DatabaseService {
       if (querySnapshot.docs.isNotEmpty) {
         return SupervisorAssignmentModel.fromMap(querySnapshot.docs.first.data());
       }
+
+      // If not found, try to find by busId (get bus first, then find assignment)
+      final buses = await _firestore
+          .collection('buses')
+          .where('route', isEqualTo: busRoute)
+          .limit(1)
+          .get();
+
+      if (buses.docs.isNotEmpty) {
+        final busId = buses.docs.first.id;
+        querySnapshot = await _firestore
+            .collection('supervisor_assignments')
+            .where('busId', isEqualTo: busId)
+            .where('status', isEqualTo: 'active')
+            .limit(1)
+            .get();
+
+        if (querySnapshot.docs.isNotEmpty) {
+          return SupervisorAssignmentModel.fromMap(querySnapshot.docs.first.data());
+        }
+      }
+
       return null;
     } catch (e) {
       debugPrint('❌ Error getting active supervisor for route: $e');

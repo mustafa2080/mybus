@@ -17,6 +17,7 @@ import 'screens/parent/simple_activity_screen.dart';
 import 'screens/parent/notifications_screen.dart';
 import 'screens/parent/surveys_screen.dart';
 import 'screens/parent/take_survey_screen.dart';
+import 'screens/parent/trip_history_screen.dart';
 import 'screens/supervisor/supervisor_home_screen.dart';
 import 'screens/supervisor/qr_scanner_screen.dart';
 import 'screens/supervisor/students_list_screen.dart';
@@ -204,6 +205,10 @@ final GoRouter _router = GoRouter(
         final surveyId = state.pathParameters['surveyId']!;
         return TakeSurveyScreen(surveyId: surveyId);
       },
+    ),
+    GoRoute(
+      path: '/parent/trip-history',
+      builder: (context, state) => const TripHistoryScreen(),
     ),
     GoRoute(
       path: '/supervisor',
