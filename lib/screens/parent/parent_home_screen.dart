@@ -504,6 +504,25 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
               ),
             ],
           ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildQuickActionButton(
+                  icon: Icons.supervisor_account,
+                  label: 'معلومات المشرفين',
+                  color: const Color(0xFF1E88E5),
+                  onTap: () {
+                    context.push('/parent/supervisor-info');
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Container(), // مساحة فارغة للتوازن
+              ),
+            ],
+          ),
         ],
       ),
     );

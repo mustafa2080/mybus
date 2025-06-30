@@ -40,6 +40,7 @@ import 'screens/admin/advanced_analytics_screen.dart';
 import 'screens/admin/complaints_management_screen.dart';
 import 'screens/admin/absence_management_screen.dart';
 import 'screens/admin/surveys_reports_screen.dart';
+import 'screens/admin/performance_monitor_screen.dart';
 import 'screens/parent/parent_settings_screen.dart';
 import 'screens/parent/bus_info_screen.dart';
 import 'screens/parent/add_complaint_screen.dart';
@@ -47,6 +48,8 @@ import 'screens/parent/complaints_screen.dart';
 import 'screens/parent/update_student_photo_screen.dart';
 import 'screens/parent/supervisor_evaluation_screen.dart';
 import 'screens/parent/evaluate_supervisor_screen.dart';
+import 'screens/parent/supervisor_info_screen.dart';
+import 'screens/supervisor/route_statistics_screen.dart';
 
 import 'widgets/admin_shell.dart';
 
@@ -192,6 +195,10 @@ final GoRouter _router = GoRouter(
       builder: (context, state) => const SupervisorEvaluationScreen(),
     ),
     GoRoute(
+      path: '/parent/supervisor-info',
+      builder: (context, state) => const SupervisorInfoScreen(),
+    ),
+    GoRoute(
       path: '/parent/take-survey/:surveyId',
       builder: (context, state) {
         final surveyId = state.pathParameters['surveyId']!;
@@ -228,6 +235,10 @@ final GoRouter _router = GoRouter(
         final surveyId = state.pathParameters['surveyId']!;
         return TakeSupervisorSurveyScreen(surveyId: surveyId);
       },
+    ),
+    GoRoute(
+      path: '/supervisor/route-statistics',
+      builder: (context, state) => const RouteStatisticsScreen(),
     ),
     GoRoute(
       path: '/supervisor/notifications',
@@ -303,6 +314,10 @@ final GoRouter _router = GoRouter(
         GoRoute(
           path: '/admin/surveys-reports',
           builder: (context, state) => const SurveysReportsScreen(),
+        ),
+        GoRoute(
+          path: '/admin/performance-monitor',
+          builder: (context, state) => const PerformanceMonitorScreen(),
         ),
       ],
     ),

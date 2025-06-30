@@ -33,108 +33,270 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.grey[50],
+      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text('جميع الطلاب'),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withAlpha(51),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Icon(
+                Icons.school,
+                color: Colors.white,
+                size: 24,
+              ),
+            ),
+            const SizedBox(width: 12),
+            const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'إدارة الطلاب',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                Text(
+                  'عرض وإدارة جميع الطلاب',
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Colors.white70,
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
         backgroundColor: const Color(0xFF1E88E5),
         foregroundColor: Colors.white,
         elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.add),
-            onPressed: () => context.push('/admin/add-student'),
+        flexibleSpace: Container(
+          decoration: const BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                Color(0xFF1E88E5),
+                Color(0xFF1976D2),
+                Color(0xFF1565C0),
+              ],
+            ),
           ),
+        ),
+        actions: [
+          Container(
+            margin: const EdgeInsets.only(right: 8),
+            child: ElevatedButton.icon(
+              onPressed: () => context.push('/admin/add-student'),
+              icon: const Icon(Icons.add, size: 18),
+              label: const Text('إضافة طالب'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.white,
+                foregroundColor: const Color(0xFF1E88E5),
+                elevation: 2,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
         ],
       ),
       body: Column(
         children: [
           // Search and Filter Section
           Container(
-            padding: const EdgeInsets.all(16),
+            margin: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
+              borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.grey.withAlpha(25),
-                  spreadRadius: 1,
-                  blurRadius: 5,
+                  color: Colors.black.withAlpha(13),
+                  spreadRadius: 0,
+                  blurRadius: 20,
+                  offset: const Offset(0, 4),
                 ),
               ],
             ),
-            child: Column(
-              children: [
-                // Search Bar
-                TextField(
-                  decoration: InputDecoration(
-                    hintText: 'البحث عن طالب...',
-                    prefixIcon: const Icon(Icons.search),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    filled: true,
-                    fillColor: Colors.grey[100],
+            child: Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Header
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          gradient: const LinearGradient(
+                            colors: [Color(0xFF1E88E5), Color(0xFF1976D2)],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.search,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Text(
+                        'البحث والفلترة',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF2D3748),
+                        ),
+                      ),
+                    ],
                   ),
-                  onChanged: (value) {
-                    setState(() {
-                      _searchQuery = value;
-                    });
-                  },
-                ),
-                const SizedBox(height: 16),
-                // Filters
-                Row(
-                  children: [
-                    Expanded(
-                      child: DropdownButtonFormField<String>(
-                        value: _selectedGrade,
-                        decoration: InputDecoration(
-                          labelText: 'الصف',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        ),
-                        items: _grades.map((grade) {
-                          return DropdownMenuItem(
-                            value: grade,
-                            child: Text(grade),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedGrade = value!;
-                          });
-                        },
-                      ),
+                  const SizedBox(height: 20),
+
+                  // Search Bar
+                  Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: Colors.grey[200]!),
+                      color: const Color(0xFFF8FAFC),
                     ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: DropdownButtonFormField<String>(
-                        value: _selectedStatus,
-                        decoration: InputDecoration(
-                          labelText: 'الحالة',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
+                    child: TextField(
+                      decoration: InputDecoration(
+                        hintText: 'ابحث عن طالب بالاسم، المدرسة، أو ولي الأمر...',
+                        hintStyle: TextStyle(color: Colors.grey[500]),
+                        prefixIcon: Container(
+                          padding: const EdgeInsets.all(12),
+                          child: Icon(
+                            Icons.search,
+                            color: Colors.grey[400],
+                            size: 20,
                           ),
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                         ),
-                        items: _statuses.map((status) {
-                          return DropdownMenuItem(
-                            value: status,
-                            child: Text(status),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          setState(() {
-                            _selectedStatus = value!;
-                          });
-                        },
+                        suffixIcon: _searchQuery.isNotEmpty
+                            ? IconButton(
+                                icon: Icon(Icons.clear, color: Colors.grey[400]),
+                                onPressed: () {
+                                  setState(() {
+                                    _searchQuery = '';
+                                  });
+                                },
+                              )
+                            : null,
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                       ),
+                      onChanged: (value) {
+                        setState(() {
+                          _searchQuery = value;
+                        });
+                      },
                     ),
-                  ],
-                ),
-              ],
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Filters Row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey[200]!),
+                            color: Colors.white,
+                          ),
+                          child: DropdownButtonFormField<String>(
+                            value: _selectedGrade,
+                            decoration: InputDecoration(
+                              labelText: 'الصف الدراسي',
+                              labelStyle: TextStyle(color: Colors.grey[600]),
+                              prefixIcon: Icon(Icons.class_, color: Colors.grey[500], size: 20),
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            ),
+                            dropdownColor: Colors.white,
+                            items: _grades.map((grade) {
+                              return DropdownMenuItem(
+                                value: grade,
+                                child: Text(
+                                  grade,
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    color: Color(0xFF2D3748),
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedGrade = value!;
+                              });
+                            },
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Container(
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.grey[200]!),
+                            color: Colors.white,
+                          ),
+                          child: DropdownButtonFormField<String>(
+                            value: _selectedStatus,
+                            decoration: InputDecoration(
+                              labelText: 'حالة الطالب',
+                              labelStyle: TextStyle(color: Colors.grey[600]),
+                              prefixIcon: Icon(Icons.location_on, color: Colors.grey[500], size: 20),
+                              border: InputBorder.none,
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            ),
+                            dropdownColor: Colors.white,
+                            items: _statuses.map((status) {
+                              return DropdownMenuItem(
+                                value: status,
+                                child: Row(
+                                  children: [
+                                    Container(
+                                      width: 8,
+                                      height: 8,
+                                      decoration: BoxDecoration(
+                                        color: _getStatusColorFromText(status),
+                                        shape: BoxShape.circle,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      status,
+                                      style: const TextStyle(
+                                        fontSize: 14,
+                                        color: Color(0xFF2D3748),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedStatus = value!;
+                              });
+                            },
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
             ),
           ),
           
@@ -144,40 +306,133 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
               stream: _databaseService.getAllStudents(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(
-                    child: CircularProgressIndicator(
-                      color: Color(0xFF1E88E5),
+                  return Center(
+                    child: Container(
+                      margin: const EdgeInsets.all(32),
+                      padding: const EdgeInsets.all(32),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withAlpha(13),
+                            spreadRadius: 0,
+                            blurRadius: 20,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(20),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  const Color(0xFF1E88E5).withAlpha(25),
+                                  const Color(0xFF1976D2).withAlpha(25),
+                                ],
+                              ),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const CircularProgressIndicator(
+                              color: Color(0xFF1E88E5),
+                              strokeWidth: 3,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          const Text(
+                            'جاري تحميل الطلاب...',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF2D3748),
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'يرجى الانتظار قليلاً',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   );
                 }
 
                 if (snapshot.hasError) {
                   return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.error_outline,
-                          size: 64,
-                          color: Colors.red[300],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'خطأ في تحميل البيانات',
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: Colors.grey[600],
+                    child: Container(
+                      margin: const EdgeInsets.all(32),
+                      padding: const EdgeInsets.all(32),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withAlpha(13),
+                            spreadRadius: 0,
+                            blurRadius: 20,
+                            offset: const Offset(0, 4),
                           ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          snapshot.error.toString(),
-                          style: TextStyle(
-                            color: Colors.grey[500],
+                        ],
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              color: Colors.red[50],
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              Icons.error_outline,
+                              size: 64,
+                              color: Colors.red[400],
+                            ),
                           ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ],
+                          const SizedBox(height: 24),
+                          const Text(
+                            'خطأ في تحميل البيانات',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF2D3748),
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'حدث خطأ أثناء تحميل قائمة الطلاب',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 24),
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              setState(() {});
+                            },
+                            icon: const Icon(Icons.refresh, size: 18),
+                            label: const Text('إعادة المحاولة'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red[400],
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   );
                 }
@@ -187,63 +442,167 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
 
                 if (filteredStudents.isEmpty) {
                   return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.school_outlined,
-                          size: 64,
-                          color: Colors.grey[400],
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          allStudents.isEmpty ? 'لا يوجد طلاب مسجلين' : 'لا توجد نتائج للبحث',
-                          style: TextStyle(
-                            fontSize: 18,
-                            color: Colors.grey[600],
-                          ),
-                        ),
-                        if (allStudents.isEmpty) ...[
-                          const SizedBox(height: 16),
-                          ElevatedButton.icon(
-                            onPressed: () => context.push('/admin/add-student'),
-                            icon: const Icon(Icons.add),
-                            label: const Text('إضافة طالب جديد'),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF1E88E5),
-                              foregroundColor: Colors.white,
-                            ),
+                    child: Container(
+                      margin: const EdgeInsets.all(32),
+                      padding: const EdgeInsets.all(32),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withAlpha(13),
+                            spreadRadius: 0,
+                            blurRadius: 20,
+                            offset: const Offset(0, 4),
                           ),
                         ],
-                      ],
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(24),
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                colors: [
+                                  Colors.grey[100]!,
+                                  Colors.grey[50]!,
+                                ],
+                              ),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              allStudents.isEmpty ? Icons.school_outlined : Icons.search_off,
+                              size: 64,
+                              color: Colors.grey[400],
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          Text(
+                            allStudents.isEmpty ? 'لا يوجد طلاب مسجلين' : 'لا توجد نتائج للبحث',
+                            style: const TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF2D3748),
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            allStudents.isEmpty
+                                ? 'ابدأ بإضافة أول طالب في النظام'
+                                : 'جرب تغيير معايير البحث أو الفلترة',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          if (allStudents.isEmpty) ...[
+                            const SizedBox(height: 24),
+                            Container(
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [Color(0xFF1E88E5), Color(0xFF1976D2)],
+                                ),
+                                borderRadius: BorderRadius.circular(16),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: const Color(0xFF1E88E5).withAlpha(76),
+                                    spreadRadius: 0,
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: ElevatedButton.icon(
+                                onPressed: () => context.push('/admin/add-student'),
+                                icon: const Icon(Icons.add, size: 20),
+                                label: const Text(
+                                  'إضافة طالب جديد',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.transparent,
+                                  foregroundColor: Colors.white,
+                                  shadowColor: Colors.transparent,
+                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ] else ...[
+                            const SizedBox(height: 24),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                TextButton.icon(
+                                  onPressed: () {
+                                    setState(() {
+                                      _searchQuery = '';
+                                      _selectedGrade = 'الكل';
+                                      _selectedStatus = 'الكل';
+                                    });
+                                  },
+                                  icon: const Icon(Icons.refresh, size: 18),
+                                  label: const Text('إعادة تعيين الفلاتر'),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: const Color(0xFF1E88E5),
+                                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
                   );
                 }
 
                 return Column(
                   children: [
-                    // Results Count
+                    // Statistics Cards
                     Container(
-                      padding: const EdgeInsets.all(16),
+                      margin: const EdgeInsets.symmetric(horizontal: 16),
                       child: Row(
                         children: [
-                          Icon(
-                            Icons.info_outline,
-                            color: Colors.grey[600],
-                            size: 20,
+                          Expanded(
+                            child: _buildStatCard(
+                              'إجمالي الطلاب',
+                              '${allStudents.length}',
+                              Icons.school,
+                              const Color(0xFF1E88E5),
+                            ),
                           ),
-                          const SizedBox(width: 8),
-                          Text(
-                            'عدد النتائج: ${filteredStudents.length} من ${allStudents.length}',
-                            style: TextStyle(
-                              color: Colors.grey[600],
-                              fontSize: 14,
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildStatCard(
+                              'النتائج المعروضة',
+                              '${filteredStudents.length}',
+                              Icons.filter_list,
+                              const Color(0xFF43A047),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildStatCard(
+                              'في الباص',
+                              '${filteredStudents.where((s) => s.currentStatus == StudentStatus.onBus).length}',
+                              Icons.directions_bus,
+                              const Color(0xFFFF9800),
                             ),
                           ),
                         ],
                       ),
                     ),
-                    
+                    const SizedBox(height: 16),
+
                     // Students List
                     Expanded(
                       child: ListView.builder(
@@ -251,7 +610,7 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
                         itemCount: filteredStudents.length,
                         itemBuilder: (context, index) {
                           final student = filteredStudents[index];
-                          return _buildStudentCard(student);
+                          return _buildModernStudentCard(student, index);
                         },
                       ),
                     ),
@@ -261,6 +620,42 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
             ),
           ),
         ],
+      ),
+      floatingActionButton: Container(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            colors: [Color(0xFF1E88E5), Color(0xFF1976D2)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF1E88E5).withAlpha(76),
+              spreadRadius: 0,
+              blurRadius: 15,
+              offset: const Offset(0, 6),
+            ),
+          ],
+        ),
+        child: FloatingActionButton.extended(
+          onPressed: () => context.push('/admin/add-student'),
+          backgroundColor: Colors.transparent,
+          elevation: 0,
+          icon: const Icon(
+            Icons.add,
+            color: Colors.white,
+            size: 24,
+          ),
+          label: const Text(
+            'إضافة طالب',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.bold,
+              fontSize: 16,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -305,6 +700,390 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
       case StudentStatus.atSchool:
         return Colors.blue;
     }
+  }
+
+  Color _getStatusColorFromText(String status) {
+    switch (status) {
+      case 'في المنزل':
+        return Colors.green;
+      case 'في الباص':
+        return Colors.orange;
+      case 'في المدرسة':
+        return Colors.blue;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  Widget _buildStatCard(String title, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: color.withAlpha(25),
+            spreadRadius: 0,
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+        border: Border.all(color: color.withAlpha(51), width: 1),
+      ),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: color.withAlpha(25),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(
+              icon,
+              color: color,
+              size: 24,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildModernStudentCard(StudentModel student, int index) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(13),
+            spreadRadius: 0,
+            blurRadius: 20,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () => _showStudentDetails(student),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              children: [
+                // Header Row
+                Row(
+                  children: [
+                    // Student Avatar
+                    Hero(
+                      tag: 'student_avatar_${student.id}',
+                      child: Container(
+                        width: 60,
+                        height: 60,
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [
+                              const Color(0xFF1E88E5),
+                              const Color(0xFF1976D2),
+                            ],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: [
+                            BoxShadow(
+                              color: const Color(0xFF1E88E5).withAlpha(76),
+                              spreadRadius: 0,
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Center(
+                          child: Text(
+                            student.name.isNotEmpty ? student.name[0] : 'ط',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 24,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+
+                    // Student Info
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            student.name,
+                            style: const TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF2D3748),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.school,
+                                size: 16,
+                                color: Colors.grey[500],
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  '${student.schoolName} - ${student.grade}',
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 4),
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.person,
+                                size: 16,
+                                color: Colors.grey[500],
+                              ),
+                              const SizedBox(width: 4),
+                              Expanded(
+                                child: Text(
+                                  'ولي الأمر: ${student.parentName}',
+                                  style: TextStyle(
+                                    color: Colors.grey[600],
+                                    fontSize: 14,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    // Status Badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: _getStatusColor(student.currentStatus).withAlpha(25),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: _getStatusColor(student.currentStatus).withAlpha(76),
+                          width: 1,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: _getStatusColor(student.currentStatus),
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            _getStatusText(student.currentStatus),
+                            style: TextStyle(
+                              color: _getStatusColor(student.currentStatus),
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+
+                const SizedBox(height: 16),
+
+                // Details Row
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF8FAFC),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _buildDetailItem(
+                          Icons.directions_bus,
+                          'خط الباص',
+                          student.busRoute.isNotEmpty ? student.busRoute : 'غير محدد',
+                          const Color(0xFF1E88E5),
+                        ),
+                      ),
+                      Container(
+                        width: 1,
+                        height: 40,
+                        color: Colors.grey[300],
+                      ),
+                      Expanded(
+                        child: _buildDetailItem(
+                          Icons.qr_code,
+                          'رمز QR',
+                          student.qrCode,
+                          const Color(0xFF43A047),
+                        ),
+                      ),
+                      Container(
+                        width: 1,
+                        height: 40,
+                        color: Colors.grey[300],
+                      ),
+                      Expanded(
+                        child: _buildDetailItem(
+                          Icons.phone,
+                          'هاتف ولي الأمر',
+                          student.parentPhone.isNotEmpty ? student.parentPhone : 'غير محدد',
+                          const Color(0xFFFF9800),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // Action Buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildActionButton(
+                        'عرض التفاصيل',
+                        Icons.visibility,
+                        const Color(0xFF1E88E5),
+                        () => _showStudentDetails(student),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildActionButton(
+                        'تعديل',
+                        Icons.edit,
+                        const Color(0xFF43A047),
+                        () => context.push('/admin/students/edit/${student.id}'),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildActionButton(
+                        'تسكين باص',
+                        Icons.directions_bus,
+                        const Color(0xFFFF9800),
+                        () => _showBusAssignmentDialog(student),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailItem(IconData icon, String label, String value, Color color) {
+    return Column(
+      children: [
+        Icon(
+          icon,
+          color: color,
+          size: 20,
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(
+            fontSize: 10,
+            color: Colors.grey[600],
+            fontWeight: FontWeight.w500,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 12,
+            color: color,
+            fontWeight: FontWeight.bold,
+          ),
+          textAlign: TextAlign.center,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionButton(String label, IconData icon, Color color, VoidCallback onPressed) {
+    return Material(
+      color: color.withAlpha(25),
+      borderRadius: BorderRadius.circular(12),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onPressed,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          child: Column(
+            children: [
+              Icon(
+                icon,
+                color: color,
+                size: 18,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 11,
+                  fontWeight: FontWeight.bold,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildStudentCard(StudentModel student) {

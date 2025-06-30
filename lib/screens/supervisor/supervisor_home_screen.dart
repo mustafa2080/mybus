@@ -7,6 +7,7 @@ import '../../services/database_service.dart';
 import '../../services/notification_service.dart';
 import '../../models/absence_model.dart';
 import '../../models/student_model.dart';
+import '../../models/supervisor_assignment_model.dart';
 import '../../widgets/curved_app_bar.dart';
 import 'school_info_screen.dart';
 import 'absence_management_screen.dart';
@@ -75,7 +76,16 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen> {
       backgroundColor: Colors.grey[50],
       appBar: EnhancedCurvedAppBar(
         title: 'باصي - المشرف',
-        subtitle: const Text('إدارة رحلات الطلاب'),
+        subtitle: FutureBuilder<List<SupervisorAssignmentModel>>(
+          future: _databaseService.getSupervisorAssignments(_authService.currentUser?.uid ?? '').first,
+          builder: (context, snapshot) {
+            if (snapshot.hasData && snapshot.data!.isNotEmpty) {
+              final assignment = snapshot.data!.first;
+              return Text('خط السير: ${assignment.busRoute} - ${assignment.busPlateNumber}');
+            }
+            return const Text('إدارة رحلات الطلاب');
+          },
+        ),
         backgroundColor: const Color(0xFF1E88E5),
         foregroundColor: Colors.white,
         height: 240,
@@ -857,8 +867,11 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen> {
   }
 
   Widget _buildQuickStats() {
-    return Row(
+    return Column(
       children: [
+        // الصف الأول - الإحصائيات الحالية
+        Row(
+          children: [
         Expanded(
           child: StreamBuilder<List<StudentModel>>(
             stream: _studentsOnBusStream,
@@ -947,7 +960,175 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen> {
             },
           ),
         ),
+          ],
+        ),
+
+        const SizedBox(height: 16),
+
+        // الصف الثاني - إحصائيات خط السير
+        FutureBuilder<List<SupervisorAssignmentModel>>(
+          future: _databaseService.getSupervisorAssignments(_authService.currentUser?.uid ?? '').first,
+          builder: (context, assignmentSnapshot) {
+            if (assignmentSnapshot.hasData && assignmentSnapshot.data!.isNotEmpty) {
+              final assignment = assignmentSnapshot.data!.first;
+              return StreamBuilder<List<StudentModel>>(
+                stream: _databaseService.getStudentsByRoute(assignment.busRoute),
+                builder: (context, studentsSnapshot) {
+                  if (studentsSnapshot.connectionState == ConnectionState.waiting) {
+                    return _buildRouteStatsCard('...', '...', assignment.busRoute);
+                  }
+
+                  final allStudents = studentsSnapshot.data ?? [];
+                  final activeStudents = allStudents.where((s) => s.isActive).length;
+
+                  return GestureDetector(
+                    onTap: () => context.push('/supervisor/route-statistics'),
+                    child: _buildRouteStatsCard(
+                      allStudents.length.toString(),
+                      activeStudents.toString(),
+                      assignment.busRoute,
+                    ),
+                  );
+                },
+              );
+            }
+            return const SizedBox.shrink();
+          },
+        ),
       ],
+    );
+  }
+
+  Widget _buildRouteStatsCard(String totalStudents, String activeStudents, String routeName) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFF1E88E5).withAlpha(25),
+            const Color(0xFF1976D2).withAlpha(25),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF1E88E5).withAlpha(76)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E88E5),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: const Icon(
+                  Icons.route,
+                  color: Colors.white,
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'إحصائيات خط السير',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey[800],
+                      ),
+                    ),
+                    Text(
+                      routeName,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E88E5).withAlpha(25),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Icon(
+                  Icons.arrow_forward_ios,
+                  color: Color(0xFF1E88E5),
+                  size: 16,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _buildMiniStatCard(
+                  'إجمالي الطلاب',
+                  totalStudents,
+                  Icons.group,
+                  const Color(0xFF1E88E5),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildMiniStatCard(
+                  'الطلاب النشطين',
+                  activeStudents,
+                  Icons.person_check,
+                  Colors.green,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMiniStatCard(String title, String value, IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha(13),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 10,
+              color: Colors.grey[600],
+              fontWeight: FontWeight.w500,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
     );
   }
 

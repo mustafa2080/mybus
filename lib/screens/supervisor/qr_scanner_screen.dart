@@ -9,6 +9,7 @@ import '../../services/connectivity_service.dart';
 import '../../utils/permissions_helper.dart';
 import '../../models/student_model.dart';
 import '../../models/trip_model.dart';
+import '../../models/supervisor_assignment_model.dart';
 import '../../widgets/custom_button.dart';
 
 class QRScannerScreen extends StatefulWidget {
@@ -71,17 +72,29 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
 
   Future<void> _loadStudentsCount() async {
     try {
-      // Get current supervisor's bus assignment (placeholder for now)
-      // In a real implementation, this would get the supervisor's assigned bus
-      final studentsSnapshot = await _firestore
-          .collection('students')
-          .where('currentStatus', isEqualTo: 'onBus')
-          .where('isActive', isEqualTo: true)
-          .get();
+      // احصل على خط السير الخاص بالمشرف
+      final supervisorId = _authService.currentUser?.uid ?? '';
+      final assignments = await _databaseService.getSupervisorAssignments(supervisorId).first;
 
-      setState(() {
-        _studentsOnBusCount = studentsSnapshot.docs.length;
-      });
+      if (assignments.isNotEmpty) {
+        final supervisorRoute = assignments.first.busRoute;
+
+        // احصل على عدد الطلاب في الباص لخط السير الخاص بالمشرف
+        final studentsSnapshot = await _firestore
+            .collection('students')
+            .where('currentStatus', isEqualTo: 'onBus')
+            .where('isActive', isEqualTo: true)
+            .where('busRoute', isEqualTo: supervisorRoute)
+            .get();
+
+        setState(() {
+          _studentsOnBusCount = studentsSnapshot.docs.length;
+        });
+      } else {
+        setState(() {
+          _studentsOnBusCount = 0;
+        });
+      }
     } catch (e) {
       debugPrint('Error loading students count: $e');
     }

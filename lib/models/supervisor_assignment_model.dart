@@ -18,6 +18,7 @@ class SupervisorAssignmentModel {
   final String supervisorName;
   final String busId;
   final String busPlateNumber;
+  final String busRoute; // خط السير الذي يعمل عليه المشرف
   final TripDirection direction;
   final AssignmentStatus status;
   final DateTime assignedAt;
@@ -34,6 +35,7 @@ class SupervisorAssignmentModel {
     required this.supervisorName,
     required this.busId,
     required this.busPlateNumber,
+    required this.busRoute,
     required this.direction,
     this.status = AssignmentStatus.active,
     required this.assignedAt,
@@ -52,6 +54,7 @@ class SupervisorAssignmentModel {
       'supervisorName': supervisorName,
       'busId': busId,
       'busPlateNumber': busPlateNumber,
+      'busRoute': busRoute,
       'direction': direction.toString().split('.').last,
       'status': status.toString().split('.').last,
       'assignedAt': Timestamp.fromDate(assignedAt),
@@ -71,6 +74,7 @@ class SupervisorAssignmentModel {
       supervisorName: map['supervisorName'] ?? '',
       busId: map['busId'] ?? '',
       busPlateNumber: map['busPlateNumber'] ?? '',
+      busRoute: map['busRoute'] ?? '',
       direction: _parseTripDirection(map['direction']),
       status: _parseAssignmentStatus(map['status']),
       assignedAt: _parseTimestamp(map['assignedAt']),
@@ -114,6 +118,7 @@ class SupervisorAssignmentModel {
     String? supervisorName,
     String? busId,
     String? busPlateNumber,
+    String? busRoute,
     TripDirection? direction,
     AssignmentStatus? status,
     DateTime? assignedAt,
@@ -130,6 +135,7 @@ class SupervisorAssignmentModel {
       supervisorName: supervisorName ?? this.supervisorName,
       busId: busId ?? this.busId,
       busPlateNumber: busPlateNumber ?? this.busPlateNumber,
+      busRoute: busRoute ?? this.busRoute,
       direction: direction ?? this.direction,
       status: status ?? this.status,
       assignedAt: assignedAt ?? this.assignedAt,

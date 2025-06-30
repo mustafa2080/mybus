@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/student_model.dart';
 import '../models/trip_model.dart';
 import '../models/bus_model.dart';
@@ -14,22 +15,98 @@ import '../models/supervisor_assignment_model.dart';
 import '../models/student_behavior_model.dart';
 import '../models/notification_model.dart';
 import '../models/supervisor_evaluation_model.dart';
+import 'rate_limit_service.dart';
+import 'cache_service.dart';
 
 
 class DatabaseService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final Uuid _uuid = const Uuid();
+  final RateLimitService _rateLimitService = RateLimitService();
+  final CacheService _cacheService = CacheService();
+
+  // Initialize Firestore settings for better performance
+  DatabaseService() {
+    _initializeFirestore();
+  }
+
+  void _initializeFirestore() {
+    try {
+      _firestore.settings = const Settings(
+        persistenceEnabled: true,
+        cacheSizeBytes: Settings.CACHE_SIZE_UNLIMITED,
+      );
+      debugPrint('✅ Firestore settings initialized for better performance');
+    } catch (e) {
+      debugPrint('⚠️ Could not set Firestore settings: $e');
+    }
+  }
+
+  // ==================== HELPER METHODS ====================
+
+  /// Check rate limit and record request
+  Future<bool> _checkAndRecordRateLimit(String userId, String operation) async {
+    final canMakeRequest = await _rateLimitService.canMakeRequest(userId, operation);
+    if (canMakeRequest) {
+      _rateLimitService.recordRequest(userId, operation);
+    }
+    return canMakeRequest;
+  }
+
+  /// Get current user ID safely
+  String _getCurrentUserId() {
+    return FirebaseAuth.instance.currentUser?.uid ?? 'anonymous';
+  }
+
+  /// Get cache statistics (delegated to cache service)
+  Map<String, dynamic> getCacheStats() {
+    return _cacheService.getStats();
+  }
+
+  /// Get rate limit status (delegated to rate limit service)
+  Map<String, dynamic> getRateLimitStatus(String userId, String operation) {
+    return _rateLimitService.getRateLimitStatus(userId, operation).toMap();
+  }
+
+  /// Clear all caches
+  Future<void> clearCache() async {
+    await _cacheService.clear();
+  }
 
   // User Data Methods
   Future<Map<String, dynamic>?> getUserData(String userId) async {
     try {
+      // Check rate limit
+      if (!await _checkAndRecordRateLimit(userId, 'getUserData')) {
+        throw Exception('تم تجاوز الحد المسموح من الطلبات. يرجى المحاولة لاحقاً.');
+      }
+
+      // Check cache first
+      final cacheKey = 'user_data_$userId';
+      final cachedData = await _cacheService.get<Map<String, dynamic>>(cacheKey);
+      if (cachedData != null) {
+        return cachedData;
+      }
+
       final DocumentSnapshot doc = await _firestore
           .collection('users')
           .doc(userId)
           .get();
 
       if (doc.exists) {
-        return doc.data() as Map<String, dynamic>?;
+        final userData = doc.data() as Map<String, dynamic>?;
+
+        // Store in cache with high priority for user data
+        if (userData != null) {
+          await _cacheService.set(
+            cacheKey,
+            userData,
+            priority: CacheService.CachePriority.high,
+            persistToDisk: true,
+          );
+        }
+
+        return userData;
       }
       return null;
     } catch (e) {
@@ -39,6 +116,11 @@ class DatabaseService {
 
   Future<void> updateUserData(String userId, Map<String, dynamic> data) async {
     try {
+      // Check rate limit
+      if (!await _checkAndRecordRateLimit(userId, 'updateUserData')) {
+        throw Exception('تم تجاوز الحد المسموح من الطلبات. يرجى المحاولة لاحقاً.');
+      }
+
       await _firestore
           .collection('users')
           .doc(userId)
@@ -46,6 +128,12 @@ class DatabaseService {
         ...data,
         'updatedAt': FieldValue.serverTimestamp(),
       });
+
+      // Invalidate cache for this user
+      final cacheKey = 'user_data_$userId';
+      await _cacheService.remove(cacheKey);
+      debugPrint('🗑️ Invalidated cache for user: $userId');
+
     } catch (e) {
       throw Exception('فشل في تحديث بيانات المستخدم: $e');
     }
@@ -227,9 +315,31 @@ class DatabaseService {
   // Get student by ID
   Future<StudentModel?> getStudent(String studentId) async {
     try {
+      // Check rate limit
+      final currentUserId = _getCurrentUserId();
+      if (!await _checkAndRecordRateLimit(currentUserId, 'getStudent')) {
+        throw Exception('تم تجاوز الحد المسموح من الطلبات. يرجى المحاولة لاحقاً.');
+      }
+
+      // Check cache first
+      final cacheKey = 'student_$studentId';
+      final cachedStudent = await _cacheService.get<Map<String, dynamic>>(cacheKey);
+      if (cachedStudent != null) {
+        return StudentModel.fromMap(cachedStudent);
+      }
+
       final doc = await _firestore.collection('students').doc(studentId).get();
       if (doc.exists) {
-        return StudentModel.fromMap(doc.data()!);
+        final studentData = doc.data()!;
+
+        // Store in cache with normal priority
+        await _cacheService.set(
+          cacheKey,
+          studentData,
+          priority: CacheService.CachePriority.normal,
+        );
+
+        return StudentModel.fromMap(studentData);
       }
       return null;
     } catch (e) {
@@ -313,6 +423,12 @@ class DatabaseService {
   // Update student status with enhanced logging and sync
   Future<void> updateStudentStatus(String studentId, StudentStatus status) async {
     try {
+      // Check rate limit
+      final currentUserId = _getCurrentUserId();
+      if (!await _checkAndRecordRateLimit(currentUserId, 'updateStudentStatus')) {
+        throw Exception('تم تجاوز الحد المسموح من الطلبات. يرجى المحاولة لاحقاً.');
+      }
+
       debugPrint('🔄 Updating student status: $studentId to ${status.toString().split('.').last}');
 
       await _firestore.collection('students').doc(studentId).update({
@@ -321,6 +437,11 @@ class DatabaseService {
       });
 
       debugPrint('✅ Student status updated successfully: $studentId');
+
+      // Invalidate cache for this student
+      final cacheKey = 'student_$studentId';
+      await _cacheService.remove(cacheKey);
+      debugPrint('🗑️ Invalidated cache for student: $studentId');
 
       // Force refresh any cached data by updating a timestamp
       await _firestore.collection('system_updates').doc('last_student_update').set({
@@ -541,9 +662,33 @@ class DatabaseService {
   // Get bus by ID
   Future<BusModel?> getBus(String busId) async {
     try {
+      // Check rate limit
+      final currentUserId = _getCurrentUserId();
+      if (!await _checkAndRecordRateLimit(currentUserId, 'getBus')) {
+        throw Exception('تم تجاوز الحد المسموح من الطلبات. يرجى المحاولة لاحقاً.');
+      }
+
+      // Check cache first
+      final cacheKey = 'bus_$busId';
+      final cachedBus = await _cacheService.get<Map<String, dynamic>>(cacheKey);
+      if (cachedBus != null) {
+        return BusModel.fromMap(cachedBus);
+      }
+
       final doc = await _firestore.collection('buses').doc(busId).get();
       if (doc.exists) {
-        return BusModel.fromMap(doc.data()!);
+        final busData = doc.data()!;
+
+        // Store in cache with longer expiration for buses (they change less frequently)
+        await _cacheService.set(
+          cacheKey,
+          busData,
+          expiration: const Duration(minutes: 15),
+          priority: CacheService.CachePriority.normal,
+          persistToDisk: true,
+        );
+
+        return BusModel.fromMap(busData);
       }
       return null;
     } catch (e) {
@@ -736,39 +881,41 @@ class DatabaseService {
             return <StudentModel>[];
           }
 
-          // Get bus IDs for this supervisor
-          final busIds = assignmentSnapshot.docs
+          // Get bus routes for this supervisor
+          final busRoutes = assignmentSnapshot.docs
               .map((doc) {
                 final data = doc.data();
-                final busId = data['busId'] as String;
-                debugPrint('🚌 Supervisor assigned to bus: $busId (${data['busPlateNumber']})');
-                return busId;
+                final busRoute = data['busRoute'] as String? ?? '';
+                final busPlateNumber = data['busPlateNumber'] as String? ?? '';
+                debugPrint('🚌 Supervisor assigned to route: $busRoute (Bus: $busPlateNumber)');
+                return busRoute;
               })
+              .where((route) => route.isNotEmpty)
               .toSet()
               .toList();
 
-          if (busIds.isEmpty) {
-            debugPrint('⚠️ No bus IDs found for supervisor $supervisorId');
+          if (busRoutes.isEmpty) {
+            debugPrint('⚠️ No bus routes found for supervisor $supervisorId');
             return <StudentModel>[];
           }
 
-          debugPrint('🔍 Looking for students on buses: $busIds');
+          debugPrint('🔍 Looking for students on routes: $busRoutes');
 
-          // Get students currently on these buses
+          // Get students currently on these routes
           final studentsSnapshot = await _firestore
               .collection('students')
               .where('isActive', isEqualTo: true)
               .where('currentStatus', isEqualTo: 'onBus')
-              .where('busId', whereIn: busIds)
+              .where('busRoute', whereIn: busRoutes)
               .get();
 
           final students = studentsSnapshot.docs
               .map((doc) => StudentModel.fromMap(doc.data()))
               .toList();
 
-          debugPrint('👥 Found ${students.length} students currently on supervisor buses');
+          debugPrint('👥 Found ${students.length} students currently on supervisor routes');
           for (final student in students) {
-            debugPrint('   - ${student.name} (Bus: ${student.busId})');
+            debugPrint('   - ${student.name} (Route: ${student.busRoute})');
           }
 
           // Sort by name for consistent display
@@ -2790,6 +2937,85 @@ class DatabaseService {
         .map((snapshot) => snapshot.docs
             .map((doc) => SupervisorAssignmentModel.fromMap(doc.data()))
             .toList());
+  }
+
+  /// Get supervisor assignments by bus route
+  Stream<List<SupervisorAssignmentModel>> getSupervisorAssignmentsByRoute(String busRoute) {
+    return _firestore
+        .collection('supervisor_assignments')
+        .where('busRoute', isEqualTo: busRoute)
+        .where('status', isEqualTo: 'active')
+        .snapshots()
+        .map((snapshot) {
+          final assignments = snapshot.docs
+              .map((doc) => SupervisorAssignmentModel.fromMap(doc.data()))
+              .toList();
+
+          // Sort manually to avoid index requirements
+          assignments.sort((a, b) => b.assignedAt.compareTo(a.assignedAt));
+          return assignments;
+        });
+  }
+
+  /// Get active supervisor for a specific bus route
+  Future<SupervisorAssignmentModel?> getActiveSupervisorForRoute(String busRoute) async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('supervisor_assignments')
+          .where('busRoute', isEqualTo: busRoute)
+          .where('status', isEqualTo: 'active')
+          .limit(1)
+          .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        return SupervisorAssignmentModel.fromMap(querySnapshot.docs.first.data());
+      }
+      return null;
+    } catch (e) {
+      debugPrint('❌ Error getting active supervisor for route: $e');
+      return null;
+    }
+  }
+
+  /// Get students by bus route
+  Stream<List<StudentModel>> getStudentsByRoute(String busRoute) {
+    return _firestore
+        .collection('students')
+        .where('busRoute', isEqualTo: busRoute)
+        .where('isActive', isEqualTo: true)
+        .snapshots()
+        .map((snapshot) {
+          final students = snapshot.docs
+              .map((doc) => StudentModel.fromMap(doc.data()))
+              .toList();
+
+          // Sort manually by name
+          students.sort((a, b) => a.name.compareTo(b.name));
+          return students;
+        });
+  }
+
+  /// Get absences in date range for supervisor
+  Future<List<AbsenceModel>> getAbsencesInDateRange(
+    String supervisorId,
+    DateTime startDate,
+    DateTime endDate,
+  ) async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('absences')
+          .where('supervisorId', isEqualTo: supervisorId)
+          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
+          .where('date', isLessThanOrEqualTo: Timestamp.fromDate(endDate))
+          .get();
+
+      return querySnapshot.docs
+          .map((doc) => AbsenceModel.fromMap(doc.data()))
+          .toList();
+    } catch (e) {
+      debugPrint('❌ Error getting absences in date range: $e');
+      return [];
+    }
   }
 
   /// Update supervisor assignment

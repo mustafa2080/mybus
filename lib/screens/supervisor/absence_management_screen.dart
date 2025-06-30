@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models/student_model.dart';
 import '../../models/absence_model.dart';
+import '../../models/supervisor_assignment_model.dart';
 import '../../services/database_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/auth_service.dart';
@@ -42,14 +43,27 @@ class _SupervisorAbsenceManagementScreenState extends State<SupervisorAbsenceMan
     });
 
     try {
-      // Load students
-      _databaseService.getAllStudents().listen((students) {
-        if (mounted) {
-          setState(() {
-            _students = students;
-          });
-        }
-      });
+      // احصل على خط السير الخاص بالمشرف
+      final supervisorId = _authService.currentUser?.uid ?? '';
+      final assignments = await _databaseService.getSupervisorAssignments(supervisorId).first;
+
+      if (assignments.isNotEmpty) {
+        final supervisorRoute = assignments.first.busRoute;
+
+        // احصل على طلاب خط السير الخاص بالمشرف فقط
+        _databaseService.getStudentsByRoute(supervisorRoute).listen((students) {
+          if (mounted) {
+            setState(() {
+              _students = students;
+            });
+          }
+        });
+      } else {
+        // إذا لم يكن للمشرف تعيينات، اعرض قائمة فارغة
+        setState(() {
+          _students = [];
+        });
+      }
 
       // Load today's absences
       _databaseService.getAllAbsencesStream().listen((absences) {

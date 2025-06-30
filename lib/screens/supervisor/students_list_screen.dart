@@ -3,7 +3,9 @@ import 'package:flutter/services.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models/student_model.dart';
+import '../../models/supervisor_assignment_model.dart';
 import '../../services/database_service.dart';
+import '../../services/auth_service.dart';
 
 class StudentsListScreen extends StatefulWidget {
   const StudentsListScreen({super.key});
@@ -14,10 +16,12 @@ class StudentsListScreen extends StatefulWidget {
 
 class _StudentsListScreenState extends State<StudentsListScreen> {
   final DatabaseService _databaseService = DatabaseService();
+  final AuthService _authService = AuthService();
   List<StudentModel> _students = [];
   List<StudentModel> _filteredStudents = [];
   bool _isLoading = true;
   String _searchQuery = '';
+  String _supervisorRoute = '';
   final TextEditingController _searchController = TextEditingController();
 
   @override
@@ -38,15 +42,31 @@ class _StudentsListScreenState extends State<StudentsListScreen> {
     });
 
     try {
-      _databaseService.getAllStudents().listen((students) {
-        if (mounted) {
-          setState(() {
-            _students = students;
-            _filteredStudents = students;
-            _isLoading = false;
-          });
-        }
-      });
+      // أولاً، احصل على خط السير الخاص بالمشرف
+      final supervisorId = _authService.currentUser?.uid ?? '';
+      final assignments = await _databaseService.getSupervisorAssignments(supervisorId).first;
+
+      if (assignments.isNotEmpty) {
+        _supervisorRoute = assignments.first.busRoute;
+
+        // احصل على الطلاب في خط السير الخاص بالمشرف فقط
+        _databaseService.getStudentsByRoute(_supervisorRoute).listen((students) {
+          if (mounted) {
+            setState(() {
+              _students = students;
+              _filteredStudents = students;
+              _isLoading = false;
+            });
+          }
+        });
+      } else {
+        // إذا لم يكن للمشرف تعيينات، اعرض قائمة فارغة
+        setState(() {
+          _students = [];
+          _filteredStudents = [];
+          _isLoading = false;
+        });
+      }
     } catch (e) {
       debugPrint('❌ Error loading students: $e');
       setState(() {
@@ -162,16 +182,29 @@ class _StudentsListScreenState extends State<StudentsListScreen> {
                   const SizedBox(width: 16),
                   
                   // Title
-                  const Expanded(
-                    child: Text(
-                      'قائمة الطلاب',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'قائمة الطلاب',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (_supervisorRoute.isNotEmpty)
+                          Text(
+                            'خط السير: $_supervisorRoute',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.white.withAlpha(204),
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                   
