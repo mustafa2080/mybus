@@ -20,7 +20,17 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
 
   final List<String> _grades = [
     'الكل',
-    ...AppConstants.studentGrades,
+    'كي جي 1',
+    'كي جي 2',
+    'الأول',
+    'الثاني',
+    'الثالث',
+    'الرابع',
+    'الخامس',
+    'السادس',
+    'الأول الإعدادي',
+    'الثاني الإعدادي',
+    'الثالث الإعدادي',
   ];
 
   final List<String> _statuses = [
@@ -208,7 +218,6 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
                     children: [
                       Expanded(
                         child: Container(
-                          height: 35,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(color: Colors.grey[200]!),
@@ -217,11 +226,15 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
                           child: DropdownButtonFormField<String>(
                             value: _selectedGrade,
                             decoration: InputDecoration(
-                              labelText: 'الصف',
-                              labelStyle: TextStyle(color: Colors.grey[600], fontSize: 12),
-                              prefixIcon: Icon(Icons.class_, color: Colors.grey[500], size: 16),
+                              hintText: 'الصف الدراسي',
+                              hintStyle: TextStyle(color: Colors.grey[500], fontSize: 12),
+                              prefixIcon: Padding(
+                                padding: const EdgeInsets.only(left: 8, right: 4),
+                                child: Icon(Icons.class_, color: Colors.grey[500], size: 16),
+                              ),
                               border: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              isDense: true,
                             ),
                             dropdownColor: Colors.white,
                             style: const TextStyle(fontSize: 12, color: Color(0xFF2D3748)),
@@ -248,7 +261,6 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
                       const SizedBox(width: 8),
                       Expanded(
                         child: Container(
-                          height: 35,
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(8),
                             border: Border.all(color: Colors.grey[200]!),
@@ -257,11 +269,15 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
                           child: DropdownButtonFormField<String>(
                             value: _selectedStatus,
                             decoration: InputDecoration(
-                              labelText: 'الحالة',
-                              labelStyle: TextStyle(color: Colors.grey[600], fontSize: 12),
-                              prefixIcon: Icon(Icons.location_on, color: Colors.grey[500], size: 16),
+                              hintText: 'حالة الطالب',
+                              hintStyle: TextStyle(color: Colors.grey[500], fontSize: 12),
+                              prefixIcon: Padding(
+                                padding: const EdgeInsets.only(left: 8, right: 4),
+                                child: Icon(Icons.location_on, color: Colors.grey[500], size: 16),
+                              ),
                               border: InputBorder.none,
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                              isDense: true,
                             ),
                             dropdownColor: Colors.white,
                             style: const TextStyle(fontSize: 12, color: Color(0xFF2D3748)),
@@ -626,42 +642,7 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
           ),
         ],
       ),
-      floatingActionButton: Container(
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            colors: [Color(0xFF1E88E5), Color(0xFF1976D2)],
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-          ),
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: const Color(0xFF1E88E5).withAlpha(76),
-              spreadRadius: 0,
-              blurRadius: 15,
-              offset: const Offset(0, 6),
-            ),
-          ],
-        ),
-        child: FloatingActionButton.extended(
-          onPressed: () => context.push('/admin/add-student'),
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          icon: const Icon(
-            Icons.add,
-            color: Colors.white,
-            size: 24,
-          ),
-          label: const Text(
-            'إضافة طالب',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-            ),
-          ),
-        ),
-      ),
+
     );
   }
 
@@ -674,8 +655,11 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
           student.busRoute.toLowerCase().contains(_searchQuery.toLowerCase()) ||
           student.parentName.toLowerCase().contains(_searchQuery.toLowerCase());
 
-      // Filter by grade
-      final matchesGrade = _selectedGrade == 'الكل' || student.grade == _selectedGrade;
+      // Filter by grade - more flexible matching
+      final matchesGrade = _selectedGrade == 'الكل' ||
+          student.grade == _selectedGrade ||
+          student.grade.contains(_selectedGrade) ||
+          _selectedGrade.contains(student.grade);
 
       // Filter by status
       final matchesStatus = _selectedStatus == 'الكل' ||
