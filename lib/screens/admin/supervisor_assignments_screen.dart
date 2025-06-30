@@ -543,6 +543,11 @@ class _SupervisorAssignmentsScreenState extends State<SupervisorAssignmentsScree
                             return Column(
                               children: [
                                 _buildModernInfoRow(
+                                  icon: Icons.directions_bus,
+                                  label: 'الحافلة',
+                                  value: bus?.description ?? 'غير محدد',
+                                ),
+                                _buildModernInfoRow(
                                   icon: Icons.confirmation_number,
                                   label: 'رقم اللوحة',
                                   value: bus?.plateNumber ?? 'غير محدد',
@@ -550,12 +555,7 @@ class _SupervisorAssignmentsScreenState extends State<SupervisorAssignmentsScree
                                 _buildModernInfoRow(
                                   icon: Icons.route,
                                   label: 'خط السير',
-                                  value: assignment.busRoute.isNotEmpty ? assignment.busRoute : (bus?.route ?? 'غير محدد'),
-                                ),
-                                _buildModernInfoRow(
-                                  icon: Icons.info_outline,
-                                  label: 'النوع',
-                                  value: bus?.description ?? 'غير محدد',
+                                  value: _getBusRoute(assignment, bus),
                                 ),
                                 _buildModernInfoRow(
                                   icon: Icons.people,
@@ -634,16 +634,10 @@ class _SupervisorAssignmentsScreenState extends State<SupervisorAssignmentsScree
                           ),
                         ],
                       ),
-                      FutureBuilder<UserModel?>(
-                        future: _databaseService.getUserById(assignment.assignedBy),
-                        builder: (context, snapshot) {
-                          final admin = snapshot.data;
-                          return _buildModernInfoRow(
-                            icon: Icons.admin_panel_settings,
-                            label: 'تم التعيين بواسطة',
-                            value: admin?.name ?? 'الأدمن',
-                          );
-                        },
+                      _buildModernInfoRow(
+                        icon: Icons.admin_panel_settings,
+                        label: 'تم التعيين بواسطة',
+                        value: _getAssignedByName(assignment),
                       ),
                       if (assignment.notes?.isNotEmpty == true)
                         _buildModernInfoRow(
@@ -814,6 +808,33 @@ class _SupervisorAssignmentsScreenState extends State<SupervisorAssignmentsScree
         ],
       ),
     );
+  }
+
+  String _getBusRoute(SupervisorAssignmentModel assignment, BusModel? bus) {
+    // First try to get route from assignment
+    if (assignment.busRoute.isNotEmpty && assignment.busRoute != 'غير محدد') {
+      return assignment.busRoute;
+    }
+
+    // Then try to get route from bus
+    if (bus?.route != null && bus!.route.isNotEmpty && bus.route != 'غير محدد') {
+      return bus.route;
+    }
+
+    // Default fallback
+    return 'غير محدد';
+  }
+
+  String _getAssignedByName(SupervisorAssignmentModel assignment) {
+    // Check if assignedByName is available and not empty
+    if (assignment.assignedByName != null &&
+        assignment.assignedByName!.isNotEmpty &&
+        assignment.assignedByName != 'غير محدد') {
+      return assignment.assignedByName!;
+    }
+
+    // Fallback to a default admin name
+    return 'الإدارة';
   }
 
   Widget _buildModernInfoRow({
