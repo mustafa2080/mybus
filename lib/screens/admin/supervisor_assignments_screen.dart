@@ -1111,10 +1111,16 @@ class _SupervisorAssignmentsScreenState extends State<SupervisorAssignmentsScree
               const SizedBox(height: 16),
               _buildDetailRow('المشرف', assignment.supervisorName),
               _buildDetailRow('الباص', assignment.busPlateNumber),
-              _buildDetailRow('خط السير', assignment.busRoute.isNotEmpty ? assignment.busRoute : 'غير محدد'),
+              FutureBuilder<BusModel?>(
+                future: _databaseService.getBusById(assignment.busId),
+                builder: (context, snapshot) {
+                  final bus = snapshot.data;
+                  return _buildDetailRow('خط السير', _getBusRoute(assignment, bus));
+                },
+              ),
               _buildDetailRow('الاتجاه', _getDirectionText(assignment.direction)),
               _buildDetailRow('تاريخ التعيين', _formatDate(assignment.assignedAt)),
-              _buildDetailRow('تم التعيين بواسطة', assignment.assignedBy),
+              _buildDetailRow('تم التعيين بواسطة', _getAssignedByName(assignment)),
               if (assignment.notes?.isNotEmpty == true)
                 _buildDetailRow('ملاحظات', assignment.notes!),
               _buildDetailRow('نوع التعيين', assignment.isEmergencyAssignment ? 'طوارئ' : 'عادي'),
