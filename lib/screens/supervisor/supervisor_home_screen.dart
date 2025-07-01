@@ -113,10 +113,10 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
                 builder: (context, busSnapshot) {
                   if (busSnapshot.hasData && busSnapshot.data != null) {
                     final bus = busSnapshot.data!;
-                    return Text('خط السير: ${bus.route} - ${assignment.busPlateNumber}');
+                    return Text('خط السير: ${bus.route}');
                   }
                   // في حالة عدم توفر بيانات الباص، عرض رقم الخط كما هو
-                  return Text('خط السير: ${assignment.busRoute} - ${assignment.busPlateNumber}');
+                  return Text('خط السير: ${assignment.busRoute}');
                 },
               );
             }
@@ -1476,22 +1476,22 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
               ),
               const SizedBox(height: 16),
               Expanded(
-                child: StreamBuilder<List<StudentModel>>(
-                  stream: _databaseService.getAllStudents(),
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
+                child: FutureBuilder<List<SupervisorAssignmentModel>>(
+                  future: _databaseService.getSupervisorAssignments(_authService.currentUser?.uid ?? '').first,
+                  builder: (context, assignmentSnapshot) {
+                    if (assignmentSnapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
                     }
 
-                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    if (!assignmentSnapshot.hasData || assignmentSnapshot.data!.isEmpty) {
                       return const Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.school_outlined, size: 64, color: Colors.grey),
+                            Icon(Icons.assignment_outlined, size: 64, color: Colors.orange),
                             SizedBox(height: 16),
                             Text(
-                              'لا يوجد طلاب',
+                              'لم يتم تعيينك لأي باص',
                               style: TextStyle(fontSize: 16),
                             ),
                           ],
@@ -1499,7 +1499,31 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
                       );
                     }
 
-                    final students = snapshot.data!;
+                    final assignment = assignmentSnapshot.data!.first;
+                    return StreamBuilder<List<StudentModel>>(
+                      stream: _databaseService.getStudentsByRoute(assignment.busRoute),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
+
+                        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                          return const Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.school_outlined, size: 64, color: Colors.grey),
+                                SizedBox(height: 16),
+                                Text(
+                                  'لا يوجد طلاب في هذا الخط',
+                                  style: TextStyle(fontSize: 16),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+
+                        final students = snapshot.data!;
                     return ListView.builder(
                       itemCount: students.length,
                       itemBuilder: (context, index) {
@@ -1609,6 +1633,8 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
                             ),
                           ),
                         );
+                      },
+                    );
                       },
                     );
                   },
