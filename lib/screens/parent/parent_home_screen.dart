@@ -1618,6 +1618,19 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
     );
   }
 
+  String _getCurrentPeriod() {
+    final currentTime = DateTime.now();
+    final currentHour = currentTime.hour;
+
+    if (currentHour >= 6 && currentHour <= 10) {
+      return 'فترة الذهاب';
+    } else if (currentHour >= 12 && currentHour <= 18) {
+      return 'فترة العودة';
+    } else {
+      return 'خارج أوقات العمل';
+    }
+  }
+
   Future<Map<String, String>> _getSupervisorInfo() async {
     try {
       // Get current user's students
@@ -1708,64 +1721,163 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
               // Supervisor contacts
               const SizedBox(height: 16),
               const Divider(),
-              const Text(
-                'معلومات المشرفة',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              Row(
+                children: [
+                  const Icon(Icons.supervisor_account, color: Colors.purple, size: 20),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'معلومات المشرف الحالي',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
+                  const Spacer(),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.blue[50],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.blue[200]!),
+                    ),
+                    child: Text(
+                      _getCurrentPeriod(),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.blue[700],
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
 
               // Supervisor info - will be loaded from database
               FutureBuilder<Map<String, String>>(
                 future: _getSupervisorInfo(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
+                    return Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[50],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.grey[200]!),
+                      ),
+                      child: const Row(
+                        children: [
+                          SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                          SizedBox(width: 12),
+                          Text('جاري تحميل معلومات المشرف...'),
+                        ],
+                      ),
+                    );
                   }
 
                   final supervisorInfo = snapshot.data ?? {};
 
-                  if (supervisorInfo.isEmpty) {
-                    return const Row(
-                      children: [
-                        Icon(Icons.info, color: Colors.grey, size: 20),
-                        SizedBox(width: 12),
-                        Text('لم يتم تعيين مشرفة للباص بعد'),
-                      ],
-                    );
-                  }
-
-                  return Column(
-                    children: [
-                      // Supervisor name and phone
-                      Row(
+                  if (supervisorInfo.isEmpty || supervisorInfo['name'] == 'غير محدد') {
+                    return Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.orange[50],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.orange[200]!),
+                      ),
+                      child: Row(
                         children: [
-                          const Icon(Icons.person, color: Colors.purple, size: 20),
+                          Icon(Icons.info_outline, color: Colors.orange[600], size: 20),
                           const SizedBox(width: 12),
-                          Expanded(
+                          const Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                Text('المشرفة: ${supervisorInfo['name'] ?? 'غير محدد'}'),
-                                if (supervisorInfo['phone'] != null && supervisorInfo['phone']!.isNotEmpty)
-                                  Text(
-                                    supervisorInfo['phone']!,
-                                    style: const TextStyle(
-                                      color: Colors.blue,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
+                                Text(
+                                  'لم يتم تعيين مشرف للفترة الحالية',
+                                  style: TextStyle(fontWeight: FontWeight.w600),
+                                ),
+                                SizedBox(height: 4),
+                                Text(
+                                  'يرجى التواصل مع الإدارة',
+                                  style: TextStyle(fontSize: 12, color: Colors.grey),
+                                ),
                               ],
                             ),
                           ),
-                          if (supervisorInfo['phone'] != null && supervisorInfo['phone']!.isNotEmpty)
-                            IconButton(
-                              icon: const Icon(Icons.phone, color: Colors.green),
-                              onPressed: () => _makePhoneCall(supervisorInfo['phone']!),
-                            ),
                         ],
                       ),
+                    );
+                  }
 
-                      // Trip type info
+                  return Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.green[50],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.green[200]!),
+                    ),
+                    child: Column(
+                      children: [
+                        // Supervisor name and phone
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: Colors.green[100],
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Icon(Icons.person, color: Colors.green[700], size: 20),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    supervisorInfo['name'] ?? 'غير محدد',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 16,
+                                    ),
+                                  ),
+                                  if (supervisorInfo['direction']?.isNotEmpty == true)
+                                    Text(
+                                      supervisorInfo['direction']!,
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                  if (supervisorInfo['phone']?.isNotEmpty == true)
+                                    Text(
+                                      supervisorInfo['phone']!,
+                                      style: const TextStyle(
+                                        color: Colors.blue,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            if (supervisorInfo['phone']?.isNotEmpty == true)
+                              Container(
+                                decoration: BoxDecoration(
+                                  color: Colors.green[600],
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: IconButton(
+                                  icon: const Icon(Icons.phone, color: Colors.white, size: 20),
+                                  onPressed: () => _makePhoneCall(supervisorInfo['phone']!),
+                                  tooltip: 'اتصال بالمشرف',
+                                ),
+                              ),
+                          ],
+                        ),
+
+                        // Additional info
                       const SizedBox(height: 8),
                       Row(
                         children: [

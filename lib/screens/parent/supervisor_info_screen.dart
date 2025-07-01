@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../models/student_model.dart';
 import '../../models/supervisor_assignment_model.dart';
 import '../../models/user_model.dart';
@@ -261,29 +262,203 @@ class _SupervisorInfoScreenState extends State<SupervisorInfoScreen> {
             
             const SizedBox(height: 20),
             
-            // Supervisor Info
-            FutureBuilder<SupervisorAssignmentModel?>(
-              future: _databaseService.getActiveSupervisorForRoute(child.busRoute),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-                
-                if (snapshot.hasError) {
-                  return _buildErrorCard('خطأ في تحميل بيانات المشرف');
-                }
-                
-                final assignment = snapshot.data;
-                if (assignment == null) {
-                  return _buildNoSupervisorCard();
-                }
-                
-                return _buildSupervisorInfoCard(assignment);
-              },
+            // Supervisors Info for both directions
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Pickup Supervisor (To School)
+                _buildDirectionSupervisorSection(
+                  child: child,
+                  direction: TripDirection.toSchool,
+                  title: 'مشرف رحلة الذهاب',
+                  subtitle: 'من المنزل إلى المدرسة',
+                  icon: Icons.school,
+                  color: Colors.blue,
+                ),
+
+                const SizedBox(height: 16),
+
+                // Dropoff Supervisor (From School)
+                _buildDirectionSupervisorSection(
+                  child: child,
+                  direction: TripDirection.fromSchool,
+                  title: 'مشرف رحلة العودة',
+                  subtitle: 'من المدرسة إلى المنزل',
+                  icon: Icons.home,
+                  color: Colors.green,
+                ),
+              ],
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildDirectionSupervisorSection({
+    required StudentModel child,
+    required TripDirection direction,
+    required String title,
+    required String subtitle,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withAlpha(25),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withAlpha(76)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withAlpha(51),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(icon, color: color, size: 20),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: color,
+                      ),
+                    ),
+                    Text(
+                      subtitle,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+
+          FutureBuilder<SupervisorAssignmentModel?>(
+            future: _databaseService.getActiveSupervisorForRoute(child.busRoute, direction: direction),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return Row(
+                  children: [
+                    SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(color),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    const Text('جاري التحميل...'),
+                  ],
+                );
+              }
+
+              if (snapshot.hasError) {
+                return Row(
+                  children: [
+                    Icon(Icons.error_outline, color: Colors.red[600], size: 16),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'خطأ في التحميل',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                  ],
+                );
+              }
+
+              final assignment = snapshot.data;
+
+              if (assignment == null) {
+                return Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.orange[600], size: 16),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'لم يتم تعيين مشرف لهذه الفترة',
+                      style: TextStyle(color: Colors.orange),
+                    ),
+                  ],
+                );
+              }
+
+              return _buildCompactSupervisorInfo(assignment, color);
+            },
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCompactSupervisorInfo(SupervisorAssignmentModel assignment, Color color) {
+    return FutureBuilder<UserModel?>(
+      future: _databaseService.getUserById(assignment.supervisorId),
+      builder: (context, userSnapshot) {
+        final supervisor = userSnapshot.data;
+        final supervisorName = supervisor?.name ?? assignment.supervisorName;
+        final supervisorPhone = supervisor?.phone ?? 'غير متوفر';
+
+        return Column(
+          children: [
+            Row(
+              children: [
+                Icon(Icons.person, color: color, size: 16),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    supervisorName,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            if (supervisorPhone != 'غير متوفر') ...[
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Icon(Icons.phone, color: color, size: 16),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      supervisorPhone,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.blue[700],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: Icon(Icons.call, color: Colors.green[600], size: 18),
+                    onPressed: () => _makePhoneCall(supervisorPhone),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        );
+      },
     );
   }
 
@@ -484,6 +659,33 @@ class _SupervisorInfoScreenState extends State<SupervisorInfoScreen> {
         return 'عودة من المدرسة';
       case TripDirection.both:
         return 'ذهاب وعودة';
+    }
+  }
+
+  void _makePhoneCall(String phoneNumber) async {
+    try {
+      final Uri phoneUri = Uri(scheme: 'tel', path: phoneNumber);
+      if (await canLaunchUrl(phoneUri)) {
+        await launchUrl(phoneUri);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('لا يمكن إجراء المكالمة'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ في إجراء المكالمة: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 }

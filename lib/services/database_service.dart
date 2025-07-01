@@ -2997,22 +2997,45 @@ class DatabaseService {
         });
   }
 
-  /// Get active supervisor for a specific bus route
-  Future<SupervisorAssignmentModel?> getActiveSupervisorForRoute(String busRoute) async {
+  /// Get active supervisor for a specific bus route and direction
+  Future<SupervisorAssignmentModel?> getActiveSupervisorForRoute(
+    String busRoute, {
+    TripDirection? direction,
+  }) async {
     try {
+      debugPrint('🔍 Looking for supervisor for route: $busRoute, direction: $direction');
+
       // First try to find by busRoute
-      var querySnapshot = await _firestore
+      var query = _firestore
           .collection('supervisor_assignments')
           .where('busRoute', isEqualTo: busRoute)
-          .where('status', isEqualTo: 'active')
-          .limit(1)
-          .get();
+          .where('status', isEqualTo: 'active');
 
-      if (querySnapshot.docs.isNotEmpty) {
-        return SupervisorAssignmentModel.fromMap(querySnapshot.docs.first.data());
+      // If direction is specified, filter by direction
+      if (direction != null) {
+        // Look for supervisors assigned to this specific direction or both directions
+        var querySnapshot = await query
+            .where('direction', whereIn: [direction.name, TripDirection.both.name])
+            .limit(1)
+            .get();
+
+        if (querySnapshot.docs.isNotEmpty) {
+          final assignment = SupervisorAssignmentModel.fromMap(querySnapshot.docs.first.data());
+          debugPrint('✅ Found supervisor by route and direction: ${assignment.supervisorName}');
+          return assignment;
+        }
+      } else {
+        // If no direction specified, get any active supervisor
+        var querySnapshot = await query.limit(1).get();
+        if (querySnapshot.docs.isNotEmpty) {
+          final assignment = SupervisorAssignmentModel.fromMap(querySnapshot.docs.first.data());
+          debugPrint('✅ Found supervisor by route: ${assignment.supervisorName}');
+          return assignment;
+        }
       }
 
-      // If not found, try to find by busId (get bus first, then find assignment)
+      // If not found by busRoute, try to find by busId
+      // First get the bus with this route
       final buses = await _firestore
           .collection('buses')
           .where('route', isEqualTo: busRoute)
@@ -3021,21 +3044,71 @@ class DatabaseService {
 
       if (buses.docs.isNotEmpty) {
         final busId = buses.docs.first.id;
-        querySnapshot = await _firestore
+        debugPrint('🚌 Found bus ID: $busId for route: $busRoute');
+
+        // Now find supervisor assignment for this bus
+        var busQuery = _firestore
             .collection('supervisor_assignments')
             .where('busId', isEqualTo: busId)
-            .where('status', isEqualTo: 'active')
-            .limit(1)
-            .get();
+            .where('status', isEqualTo: 'active');
 
-        if (querySnapshot.docs.isNotEmpty) {
-          return SupervisorAssignmentModel.fromMap(querySnapshot.docs.first.data());
+        if (direction != null) {
+          var querySnapshot = await busQuery
+              .where('direction', whereIn: [direction.name, TripDirection.both.name])
+              .limit(1)
+              .get();
+
+          if (querySnapshot.docs.isNotEmpty) {
+            final assignment = SupervisorAssignmentModel.fromMap(querySnapshot.docs.first.data());
+            debugPrint('✅ Found supervisor by bus and direction: ${assignment.supervisorName}');
+            return assignment;
+          }
+        } else {
+          var querySnapshot = await busQuery.limit(1).get();
+          if (querySnapshot.docs.isNotEmpty) {
+            final assignment = SupervisorAssignmentModel.fromMap(querySnapshot.docs.first.data());
+            debugPrint('✅ Found supervisor by bus: ${assignment.supervisorName}');
+            return assignment;
+          }
         }
       }
 
+      debugPrint('⚠️ No active supervisor found for route: $busRoute, direction: $direction');
       return null;
     } catch (e) {
       debugPrint('❌ Error getting active supervisor for route: $e');
+      return null;
+    }
+  }
+
+  /// Get supervisor for parent's student route and direction
+  Future<SupervisorAssignmentModel?> getSupervisorForParentStudent(
+    String parentId, {
+    TripDirection? direction,
+  }) async {
+    try {
+      debugPrint('🔍 Looking for supervisor for parent: $parentId, direction: $direction');
+
+      // Get parent's students
+      final studentsSnapshot = await _firestore
+          .collection('students')
+          .where('parentId', isEqualTo: parentId)
+          .where('isActive', isEqualTo: true)
+          .limit(1)
+          .get();
+
+      if (studentsSnapshot.docs.isEmpty) {
+        debugPrint('⚠️ No active students found for parent: $parentId');
+        return null;
+      }
+
+      final student = StudentModel.fromMap(studentsSnapshot.docs.first.data());
+      debugPrint('👨‍👩‍👧‍👦 Found student: ${student.name}, route: ${student.busRoute}');
+
+      // Get supervisor for student's route and direction
+      return await getActiveSupervisorForRoute(student.busRoute, direction: direction);
+    } catch (e) {
+      debugPrint('❌ Error getting supervisor for parent student: $e');
       return null;
     }
   }
