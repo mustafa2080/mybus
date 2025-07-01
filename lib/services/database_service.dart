@@ -3131,6 +3131,85 @@ class DatabaseService {
         });
   }
 
+  /// Get students for supervisor based on their assignments
+  Stream<List<StudentModel>> getStudentsForSupervisor(String supervisorId) {
+    return _firestore
+        .collection('supervisor_assignments')
+        .where('supervisorId', isEqualTo: supervisorId)
+        .where('status', isEqualTo: 'active')
+        .snapshots()
+        .asyncMap((assignmentSnapshot) async {
+          if (assignmentSnapshot.docs.isEmpty) {
+            return <StudentModel>[];
+          }
+
+          // Get all bus routes and bus IDs for this supervisor
+          final busRoutes = <String>{};
+          final busIds = <String>{};
+
+          for (final doc in assignmentSnapshot.docs) {
+            final data = doc.data();
+            final busRoute = data['busRoute'] as String? ?? '';
+            final busId = data['busId'] as String? ?? '';
+
+            if (busRoute.isNotEmpty) busRoutes.add(busRoute);
+            if (busId.isNotEmpty) busIds.add(busId);
+          }
+
+          if (busRoutes.isEmpty && busIds.isEmpty) {
+            return <StudentModel>[];
+          }
+
+          // Query students by busRoute or busId
+          final List<StudentModel> allStudents = [];
+
+          // Get students by busRoute
+          if (busRoutes.isNotEmpty) {
+            for (final route in busRoutes) {
+              final routeSnapshot = await _firestore
+                  .collection('students')
+                  .where('busRoute', isEqualTo: route)
+                  .where('isActive', isEqualTo: true)
+                  .get();
+
+              final routeStudents = routeSnapshot.docs
+                  .map((doc) => StudentModel.fromMap(doc.data()))
+                  .toList();
+
+              allStudents.addAll(routeStudents);
+            }
+          }
+
+          // Get students by busId
+          if (busIds.isNotEmpty) {
+            for (final busId in busIds) {
+              final busSnapshot = await _firestore
+                  .collection('students')
+                  .where('busId', isEqualTo: busId)
+                  .where('isActive', isEqualTo: true)
+                  .get();
+
+              final busStudents = busSnapshot.docs
+                  .map((doc) => StudentModel.fromMap(doc.data()))
+                  .toList();
+
+              allStudents.addAll(busStudents);
+            }
+          }
+
+          // Remove duplicates based on student ID
+          final uniqueStudents = <String, StudentModel>{};
+          for (final student in allStudents) {
+            uniqueStudents[student.id] = student;
+          }
+
+          final students = uniqueStudents.values.toList();
+          students.sort((a, b) => a.name.compareTo(b.name));
+
+          return students;
+        });
+  }
+
   /// Get absences in date range for supervisor
   Future<List<AbsenceModel>> getAbsencesInDateRange(
     String supervisorId,

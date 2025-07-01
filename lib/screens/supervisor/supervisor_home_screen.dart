@@ -64,7 +64,10 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
   void _initializeStreams() {
     final supervisorId = _authService.currentUser?.uid ?? '';
     debugPrint('🔄 Initializing streams for supervisor: $supervisorId');
-    _studentsOnBusStream = _databaseService.getStudentsOnBusForSupervisor(supervisorId);
+
+    // الحصول على جميع طلاب المشرف بناءً على تعييناته
+    _studentsOnBusStream = _databaseService.getStudentsForSupervisor(supervisorId);
+
     _checkSupervisorAssignments();
   }
 
@@ -939,9 +942,9 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return _buildStatCard(
-                  'الطلاب في الباص',
+                  'طلاب الخط',
                   '...',
-                  Icons.directions_bus,
+                  Icons.people,
                   Colors.grey,
                 );
               }
@@ -950,7 +953,7 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
               final count = students.length;
 
               return GestureDetector(
-                onTap: () => _showStudentsOnBusDialog(students),
+                onTap: () => _showRouteStudentsDialog(students),
                 child: Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
@@ -963,9 +966,9 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
                     ],
                   ),
                   child: _buildStatCard(
-                    'الطلاب في الباص',
+                    'طلاب الخط',
                     count.toString(),
-                    Icons.directions_bus,
+                    Icons.people,
                     count > 0 ? Colors.green : Colors.blue,
                   ),
                 ),
@@ -1476,54 +1479,31 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
               ),
               const SizedBox(height: 16),
               Expanded(
-                child: FutureBuilder<List<SupervisorAssignmentModel>>(
-                  future: _databaseService.getSupervisorAssignments(_authService.currentUser?.uid ?? '').first,
-                  builder: (context, assignmentSnapshot) {
-                    if (assignmentSnapshot.connectionState == ConnectionState.waiting) {
+                child: StreamBuilder<List<StudentModel>>(
+                  stream: _databaseService.getStudentsForSupervisor(_authService.currentUser?.uid ?? ''),
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
                     }
 
-                    if (!assignmentSnapshot.hasData || assignmentSnapshot.data!.isEmpty) {
+                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
                       return const Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.assignment_outlined, size: 64, color: Colors.orange),
+                            Icon(Icons.school_outlined, size: 64, color: Colors.grey),
                             SizedBox(height: 16),
                             Text(
-                              'لم يتم تعيينك لأي باص',
+                              'لا يوجد طلاب مسجلين في خطوط المسار المعينة لك',
                               style: TextStyle(fontSize: 16),
+                              textAlign: TextAlign.center,
                             ),
                           ],
                         ),
                       );
                     }
 
-                    final assignment = assignmentSnapshot.data!.first;
-                    return StreamBuilder<List<StudentModel>>(
-                      stream: _databaseService.getStudentsByRoute(assignment.busRoute),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return const Center(child: CircularProgressIndicator());
-                        }
-
-                        if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                          return const Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(Icons.school_outlined, size: 64, color: Colors.grey),
-                                SizedBox(height: 16),
-                                Text(
-                                  'لا يوجد طلاب في هذا الخط',
-                                  style: TextStyle(fontSize: 16),
-                                ),
-                              ],
-                            ),
-                          );
-                        }
-
-                        final students = snapshot.data!;
+                    final students = snapshot.data!;
                     return ListView.builder(
                       itemCount: students.length,
                       itemBuilder: (context, index) {
@@ -2688,8 +2668,8 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
     );
   }
 
-  // Show students currently on bus dialog
-  void _showStudentsOnBusDialog(List<StudentModel> students) {
+  // Show students in route dialog
+  void _showRouteStudentsDialog(List<StudentModel> students) {
     showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -2717,7 +2697,7 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: const Icon(
-                      Icons.directions_bus,
+                      Icons.people,
                       color: Colors.white,
                       size: 20,
                     ),
@@ -2728,7 +2708,7 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'الطلاب في الباص المعين لك',
+                          'طلاب خط المسار',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -2736,7 +2716,7 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
                           ),
                         ),
                         Text(
-                          '${students.length} ${students.length == 1 ? 'طالب' : 'طلاب'} في الباصات المعينة لك',
+                          '${students.length} ${students.length == 1 ? 'طالب' : 'طلاب'} في خط المسار المعين لك',
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey[600],
