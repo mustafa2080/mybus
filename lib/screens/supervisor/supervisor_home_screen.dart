@@ -115,6 +115,8 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
                     final bus = busSnapshot.data!;
                     return Text('خط السير: ${bus.route} - ${assignment.busPlateNumber}');
                   }
+                  // في حالة عدم توفر بيانات الباص، عرض رقم الخط كما هو
+                  return Text('خط السير: ${assignment.busRoute} - ${assignment.busPlateNumber}');
                 },
               );
             }
