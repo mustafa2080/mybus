@@ -1631,7 +1631,7 @@ class DatabaseService {
         });
   }
 
-  // Get pending absences for specific supervisor
+  // Get pending absences for specific supervisor (index-safe approach)
   Stream<List<AbsenceModel>> getPendingAbsencesForSupervisor(String supervisorId) {
     return _firestore
         .collection('supervisor_assignments')
@@ -1639,45 +1639,89 @@ class DatabaseService {
         .where('status', isEqualTo: 'active')
         .snapshots()
         .asyncMap((assignmentSnapshot) async {
+          debugPrint('🔍 Getting pending absences for supervisor: $supervisorId');
+
           if (assignmentSnapshot.docs.isEmpty) {
+            debugPrint('⚠️ No assignments found for supervisor');
             return <AbsenceModel>[];
           }
 
-          // Get bus IDs for this supervisor
-          final busIds = assignmentSnapshot.docs
-              .map((doc) => doc.data()['busId'] as String)
-              .toSet()
-              .toList();
+          // Get bus routes for this supervisor (with fallback to busId)
+          final List<String> busRoutes = [];
 
-          if (busIds.isEmpty) {
+          for (final doc in assignmentSnapshot.docs) {
+            final data = doc.data();
+            var busRoute = data['busRoute'] as String? ?? '';
+
+            // إذا كان busRoute فارغ، احصل عليه من بيانات الباص
+            if (busRoute.isEmpty) {
+              final busId = data['busId'] as String? ?? '';
+              if (busId.isNotEmpty) {
+                try {
+                  final bus = await getBusById(busId);
+                  if (bus != null) {
+                    busRoute = bus.route;
+                    debugPrint('✅ Got busRoute from bus $busId: "$busRoute"');
+                  }
+                } catch (e) {
+                  debugPrint('❌ Error getting bus data for $busId: $e');
+                }
+              }
+            }
+
+            if (busRoute.isNotEmpty) {
+              busRoutes.add(busRoute);
+            }
+          }
+
+          if (busRoutes.isEmpty) {
+            debugPrint('⚠️ No bus routes found for supervisor');
             return <AbsenceModel>[];
           }
 
-          // Get students on these buses
-          final studentsSnapshot = await _firestore
-              .collection('students')
-              .where('isActive', isEqualTo: true)
-              .where('busId', whereIn: busIds)
-              .get();
+          debugPrint('🚌 Supervisor routes: $busRoutes');
 
-          final studentIds = studentsSnapshot.docs
-              .map((doc) => doc.id)
-              .toList();
+          // Get students on these routes (avoid whereIn with multiple conditions)
+          final List<String> allStudentIds = [];
 
-          if (studentIds.isEmpty) {
+          for (final route in busRoutes) {
+            try {
+              final studentsSnapshot = await _firestore
+                  .collection('students')
+                  .where('isActive', isEqualTo: true)
+                  .where('busRoute', isEqualTo: route)
+                  .get();
+
+              final routeStudentIds = studentsSnapshot.docs.map((doc) => doc.id).toList();
+              allStudentIds.addAll(routeStudentIds);
+              debugPrint('📍 Route $route: Found ${routeStudentIds.length} students');
+            } catch (e) {
+              debugPrint('❌ Error getting students for route $route: $e');
+            }
+          }
+
+          if (allStudentIds.isEmpty) {
+            debugPrint('⚠️ No students found for supervisor routes');
             return <AbsenceModel>[];
           }
 
-          // Get pending absences for these students
+          // Get pending absences with simple query
           final absencesSnapshot = await _firestore
               .collection('absences')
               .where('status', isEqualTo: 'pending')
-              .where('studentId', whereIn: studentIds)
               .get();
 
-          return absencesSnapshot.docs
+          debugPrint('📊 Found ${absencesSnapshot.docs.length} total pending absences');
+
+          // Filter by student IDs locally
+          final absences = absencesSnapshot.docs
               .map((doc) => AbsenceModel.fromMap(doc.data()))
+              .where((absence) => allStudentIds.contains(absence.studentId))
               .toList();
+
+          debugPrint('📊 Found ${absences.length} pending absences for supervisor students');
+          debugPrint('👥 Student IDs: $allStudentIds');
+          return absences;
         });
   }
 
@@ -1760,6 +1804,7 @@ class DatabaseService {
           }
 
           // Get today's absences with simple queries
+          debugPrint('📅 Searching for absences between ${today.toIso8601String()} and ${tomorrow.toIso8601String()}');
           final absencesSnapshot = await _firestore
               .collection('absences')
               .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(today))
@@ -1767,13 +1812,16 @@ class DatabaseService {
               .where('status', isEqualTo: 'approved')
               .get();
 
+          debugPrint('📊 Found ${absencesSnapshot.docs.length} total today absences');
+
           // Filter by student IDs locally
           final absences = absencesSnapshot.docs
               .map((doc) => AbsenceModel.fromMap(doc.data()))
               .where((absence) => allStudentIds.contains(absence.studentId))
               .toList();
 
-          debugPrint('📊 Found ${absences.length} today absences for supervisor');
+          debugPrint('📊 Found ${absences.length} today absences for supervisor students');
+          debugPrint('👥 Student IDs: $allStudentIds');
 
           // Sort locally
           absences.sort((a, b) => b.createdAt.compareTo(a.createdAt));
