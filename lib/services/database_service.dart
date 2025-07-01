@@ -1700,12 +1700,33 @@ class DatabaseService {
             return <AbsenceModel>[];
           }
 
-          // Get bus routes for this supervisor (using busRoute instead of busId)
-          final busRoutes = assignmentSnapshot.docs
-              .map((doc) => doc.data()['busRoute'] as String? ?? '')
-              .where((route) => route.isNotEmpty)
-              .toSet()
-              .toList();
+          // Get bus routes for this supervisor (with fallback to busId)
+          final List<String> busRoutes = [];
+
+          for (final doc in assignmentSnapshot.docs) {
+            final data = doc.data();
+            var busRoute = data['busRoute'] as String? ?? '';
+
+            // إذا كان busRoute فارغ، احصل عليه من بيانات الباص
+            if (busRoute.isEmpty) {
+              final busId = data['busId'] as String? ?? '';
+              if (busId.isNotEmpty) {
+                try {
+                  final bus = await getBusById(busId);
+                  if (bus != null) {
+                    busRoute = bus.route;
+                    debugPrint('✅ Got busRoute from bus $busId: "$busRoute"');
+                  }
+                } catch (e) {
+                  debugPrint('❌ Error getting bus data for $busId: $e');
+                }
+              }
+            }
+
+            if (busRoute.isNotEmpty) {
+              busRoutes.add(busRoute);
+            }
+          }
 
           if (busRoutes.isEmpty) {
             debugPrint('⚠️ No bus routes found for supervisor');

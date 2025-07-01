@@ -65,7 +65,7 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
     final supervisorId = _authService.currentUser?.uid ?? '';
     debugPrint('🔄 Initializing streams for supervisor: $supervisorId');
 
-    // استخدام الطريقة البسيطة والمباشرة
+    // استخدام الطريقة البسيطة والمباشرة مع إصلاح busRoute
     _studentsOnBusStream = _databaseService.getSupervisorAssignments(supervisorId)
         .asyncMap((assignments) async {
       debugPrint('📋 Found ${assignments.length} assignments for supervisor');
@@ -76,8 +76,30 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
       }
 
       final assignment = assignments.first;
-      final busRoute = assignment.busRoute;
-      debugPrint('🚌 Supervisor route: $busRoute');
+      var busRoute = assignment.busRoute;
+      debugPrint('🚌 Assignment busRoute: "$busRoute"');
+      debugPrint('🚌 Assignment busId: "${assignment.busId}"');
+
+      // إذا كان busRoute فارغ، احصل عليه من بيانات الباص
+      if (busRoute.isEmpty) {
+        debugPrint('⚠️ busRoute is empty, fetching from bus data...');
+        try {
+          final bus = await _databaseService.getBusById(assignment.busId);
+          if (bus != null) {
+            busRoute = bus.route;
+            debugPrint('✅ Got busRoute from bus: "$busRoute"');
+          } else {
+            debugPrint('❌ Bus not found for ID: ${assignment.busId}');
+          }
+        } catch (e) {
+          debugPrint('❌ Error getting bus data: $e');
+        }
+      }
+
+      if (busRoute.isEmpty) {
+        debugPrint('❌ Still no busRoute available');
+        return <StudentModel>[];
+      }
 
       // جلب الطلاب مباشرة
       try {
