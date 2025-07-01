@@ -1615,8 +1615,6 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
                         );
                       },
                     );
-                      },
-                    );
                   },
                 ),
               ),
