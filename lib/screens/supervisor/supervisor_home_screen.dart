@@ -1482,8 +1482,30 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
                 child: StreamBuilder<List<StudentModel>>(
                   stream: _databaseService.getStudentsForSupervisor(_authService.currentUser?.uid ?? ''),
                   builder: (context, snapshot) {
+                    debugPrint('📱 StreamBuilder state: ${snapshot.connectionState}');
+                    debugPrint('📱 Has data: ${snapshot.hasData}');
+                    debugPrint('📱 Data length: ${snapshot.data?.length ?? 0}');
+
                     if (snapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
+                    }
+
+                    if (snapshot.hasError) {
+                      debugPrint('❌ StreamBuilder error: ${snapshot.error}');
+                      return Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.error_outline, size: 64, color: Colors.red),
+                            SizedBox(height: 16),
+                            Text(
+                              'خطأ في تحميل البيانات: ${snapshot.error}',
+                              style: TextStyle(fontSize: 16),
+                              textAlign: TextAlign.center,
+                            ),
+                          ],
+                        ),
+                      );
                     }
 
                     if (!snapshot.hasData || snapshot.data!.isEmpty) {
@@ -1504,6 +1526,7 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
                     }
 
                     final students = snapshot.data!;
+                    debugPrint('📱 Displaying ${students.length} students in ListView');
                     return ListView.builder(
                       itemCount: students.length,
                       itemBuilder: (context, index) {

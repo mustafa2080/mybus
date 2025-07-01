@@ -3131,79 +3131,60 @@ class DatabaseService {
         });
   }
 
-  /// Get students for supervisor based on their assignments
+  /// Get students for supervisor based on their assignments (simplified approach)
   Stream<List<StudentModel>> getStudentsForSupervisor(String supervisorId) {
+    debugPrint('🔍 Getting students for supervisor: $supervisorId');
+
     return _firestore
         .collection('supervisor_assignments')
         .where('supervisorId', isEqualTo: supervisorId)
         .where('status', isEqualTo: 'active')
         .snapshots()
         .asyncMap((assignmentSnapshot) async {
+          debugPrint('📋 Found ${assignmentSnapshot.docs.length} assignments for supervisor $supervisorId');
+
           if (assignmentSnapshot.docs.isEmpty) {
+            debugPrint('⚠️ No assignments found for supervisor $supervisorId');
             return <StudentModel>[];
           }
 
-          // Get all bus routes and bus IDs for this supervisor
-          final busRoutes = <String>{};
-          final busIds = <String>{};
+          // Get bus routes for this supervisor (using same logic as working function)
+          final busRoutes = assignmentSnapshot.docs
+              .map((doc) {
+                final data = doc.data();
+                final busRoute = data['busRoute'] as String? ?? '';
+                final busPlateNumber = data['busPlateNumber'] as String? ?? '';
+                debugPrint('🚌 Supervisor assigned to route: $busRoute (Bus: $busPlateNumber)');
+                return busRoute;
+              })
+              .where((route) => route.isNotEmpty)
+              .toSet()
+              .toList();
 
-          for (final doc in assignmentSnapshot.docs) {
-            final data = doc.data();
-            final busRoute = data['busRoute'] as String? ?? '';
-            final busId = data['busId'] as String? ?? '';
-
-            if (busRoute.isNotEmpty) busRoutes.add(busRoute);
-            if (busId.isNotEmpty) busIds.add(busId);
-          }
-
-          if (busRoutes.isEmpty && busIds.isEmpty) {
+          if (busRoutes.isEmpty) {
+            debugPrint('⚠️ No bus routes found for supervisor $supervisorId');
             return <StudentModel>[];
           }
 
-          // Query students by busRoute or busId
-          final List<StudentModel> allStudents = [];
+          debugPrint('🔍 Looking for students on routes: $busRoutes');
 
-          // Get students by busRoute
-          if (busRoutes.isNotEmpty) {
-            for (final route in busRoutes) {
-              final routeSnapshot = await _firestore
-                  .collection('students')
-                  .where('busRoute', isEqualTo: route)
-                  .where('isActive', isEqualTo: true)
-                  .get();
+          // Get ALL students on these routes (not just those on bus)
+          final studentsSnapshot = await _firestore
+              .collection('students')
+              .where('isActive', isEqualTo: true)
+              .where('busRoute', whereIn: busRoutes)
+              .get();
 
-              final routeStudents = routeSnapshot.docs
-                  .map((doc) => StudentModel.fromMap(doc.data()))
-                  .toList();
+          final students = studentsSnapshot.docs
+              .map((doc) => StudentModel.fromMap(doc.data()))
+              .toList();
 
-              allStudents.addAll(routeStudents);
-            }
+          debugPrint('👥 Found ${students.length} students on supervisor routes');
+          for (final student in students) {
+            debugPrint('   - ${student.name} (Route: ${student.busRoute}, Status: ${student.currentStatus})');
           }
 
-          // Get students by busId
-          if (busIds.isNotEmpty) {
-            for (final busId in busIds) {
-              final busSnapshot = await _firestore
-                  .collection('students')
-                  .where('busId', isEqualTo: busId)
-                  .where('isActive', isEqualTo: true)
-                  .get();
-
-              final busStudents = busSnapshot.docs
-                  .map((doc) => StudentModel.fromMap(doc.data()))
-                  .toList();
-
-              allStudents.addAll(busStudents);
-            }
-          }
-
-          // Remove duplicates based on student ID
-          final uniqueStudents = <String, StudentModel>{};
-          for (final student in allStudents) {
-            uniqueStudents[student.id] = student;
-          }
-
-          final students = uniqueStudents.values.toList();
+          // Sort by name for consistent display
           students.sort((a, b) => a.name.compareTo(b.name));
 
           return students;
