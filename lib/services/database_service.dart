@@ -3131,7 +3131,7 @@ class DatabaseService {
         });
   }
 
-  /// Get students for supervisor based on their assignments (simplified approach)
+  /// Get students for supervisor based on their assignments (index-safe approach)
   Stream<List<StudentModel>> getStudentsForSupervisor(String supervisorId) {
     debugPrint('🔍 Getting students for supervisor: $supervisorId');
 
@@ -3148,7 +3148,7 @@ class DatabaseService {
             return <StudentModel>[];
           }
 
-          // Get bus routes for this supervisor (using same logic as working function)
+          // Get bus routes for this supervisor
           final busRoutes = assignmentSnapshot.docs
               .map((doc) {
                 final data = doc.data();
@@ -3168,24 +3168,41 @@ class DatabaseService {
 
           debugPrint('🔍 Looking for students on routes: $busRoutes');
 
-          // Get ALL students on these routes (not just those on bus)
-          final studentsSnapshot = await _firestore
-              .collection('students')
-              .where('isActive', isEqualTo: true)
-              .where('busRoute', whereIn: busRoutes)
-              .get();
+          // Get students for each route separately to avoid index requirements
+          final List<StudentModel> allStudents = [];
 
-          final students = studentsSnapshot.docs
-              .map((doc) => StudentModel.fromMap(doc.data()))
-              .toList();
+          for (final route in busRoutes) {
+            try {
+              final routeStudentsSnapshot = await _firestore
+                  .collection('students')
+                  .where('isActive', isEqualTo: true)
+                  .where('busRoute', isEqualTo: route)
+                  .get();
 
-          debugPrint('👥 Found ${students.length} students on supervisor routes');
+              final routeStudents = routeStudentsSnapshot.docs
+                  .map((doc) => StudentModel.fromMap(doc.data()))
+                  .toList();
+
+              debugPrint('📍 Route $route: Found ${routeStudents.length} students');
+              allStudents.addAll(routeStudents);
+            } catch (e) {
+              debugPrint('❌ Error getting students for route $route: $e');
+            }
+          }
+
+          // Remove duplicates based on student ID
+          final uniqueStudents = <String, StudentModel>{};
+          for (final student in allStudents) {
+            uniqueStudents[student.id] = student;
+          }
+
+          final students = uniqueStudents.values.toList();
+          students.sort((a, b) => a.name.compareTo(b.name));
+
+          debugPrint('👥 Found ${students.length} unique students on supervisor routes');
           for (final student in students) {
             debugPrint('   - ${student.name} (Route: ${student.busRoute}, Status: ${student.currentStatus})');
           }
-
-          // Sort by name for consistent display
-          students.sort((a, b) => a.name.compareTo(b.name));
 
           return students;
         });
