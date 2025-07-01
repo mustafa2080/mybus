@@ -65,18 +65,29 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
     final supervisorId = _authService.currentUser?.uid ?? '';
     debugPrint('🔄 Initializing streams for supervisor: $supervisorId');
 
-    // استخدام نفس الطريقة التي تعمل في الصفحات الأخرى
+    // استخدام الطريقة البسيطة والمباشرة
     _studentsOnBusStream = _databaseService.getSupervisorAssignments(supervisorId)
         .asyncMap((assignments) async {
+      debugPrint('📋 Found ${assignments.length} assignments for supervisor');
+
       if (assignments.isEmpty) {
         debugPrint('⚠️ No assignments found for supervisor $supervisorId');
         return <StudentModel>[];
       }
 
-      final busRoute = assignments.first.busRoute;
+      final assignment = assignments.first;
+      final busRoute = assignment.busRoute;
       debugPrint('🚌 Supervisor route: $busRoute');
 
-      return _databaseService.getStudentsByRoute(busRoute).first;
+      // جلب الطلاب مباشرة
+      try {
+        final students = await _databaseService.getStudentsByRoute(busRoute).first;
+        debugPrint('👥 Found ${students.length} students in route $busRoute');
+        return students;
+      } catch (e) {
+        debugPrint('❌ Error getting students for route $busRoute: $e');
+        return <StudentModel>[];
+      }
     }).asBroadcastStream();
 
     _checkSupervisorAssignments();

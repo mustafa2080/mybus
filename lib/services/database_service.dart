@@ -1681,7 +1681,7 @@ class DatabaseService {
         });
   }
 
-  // Get today's absences for specific supervisor
+  // Get today's absences for specific supervisor (index-safe approach)
   Stream<List<AbsenceModel>> getTodayAbsencesForSupervisor(String supervisorId) {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
@@ -1693,47 +1693,66 @@ class DatabaseService {
         .where('status', isEqualTo: 'active')
         .snapshots()
         .asyncMap((assignmentSnapshot) async {
+          debugPrint('🔍 Getting today absences for supervisor: $supervisorId');
+
           if (assignmentSnapshot.docs.isEmpty) {
+            debugPrint('⚠️ No assignments found for supervisor');
             return <AbsenceModel>[];
           }
 
-          // Get bus IDs for this supervisor
-          final busIds = assignmentSnapshot.docs
-              .map((doc) => doc.data()['busId'] as String)
+          // Get bus routes for this supervisor (using busRoute instead of busId)
+          final busRoutes = assignmentSnapshot.docs
+              .map((doc) => doc.data()['busRoute'] as String? ?? '')
+              .where((route) => route.isNotEmpty)
               .toSet()
               .toList();
 
-          if (busIds.isEmpty) {
+          if (busRoutes.isEmpty) {
+            debugPrint('⚠️ No bus routes found for supervisor');
             return <AbsenceModel>[];
           }
 
-          // Get students on these buses
-          final studentsSnapshot = await _firestore
-              .collection('students')
-              .where('isActive', isEqualTo: true)
-              .where('busId', whereIn: busIds)
-              .get();
+          debugPrint('🚌 Supervisor routes: $busRoutes');
 
-          final studentIds = studentsSnapshot.docs
-              .map((doc) => doc.id)
-              .toList();
+          // Get students on these routes (avoid whereIn with multiple conditions)
+          final List<String> allStudentIds = [];
 
-          if (studentIds.isEmpty) {
+          for (final route in busRoutes) {
+            try {
+              final studentsSnapshot = await _firestore
+                  .collection('students')
+                  .where('isActive', isEqualTo: true)
+                  .where('busRoute', isEqualTo: route)
+                  .get();
+
+              final routeStudentIds = studentsSnapshot.docs.map((doc) => doc.id).toList();
+              allStudentIds.addAll(routeStudentIds);
+              debugPrint('📍 Route $route: Found ${routeStudentIds.length} students');
+            } catch (e) {
+              debugPrint('❌ Error getting students for route $route: $e');
+            }
+          }
+
+          if (allStudentIds.isEmpty) {
+            debugPrint('⚠️ No students found for supervisor routes');
             return <AbsenceModel>[];
           }
 
-          // Get today's approved absences for these students
+          // Get today's absences with simple queries
           final absencesSnapshot = await _firestore
               .collection('absences')
               .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(today))
               .where('date', isLessThan: Timestamp.fromDate(tomorrow))
               .where('status', isEqualTo: 'approved')
-              .where('studentId', whereIn: studentIds)
               .get();
 
+          // Filter by student IDs locally
           final absences = absencesSnapshot.docs
               .map((doc) => AbsenceModel.fromMap(doc.data()))
+              .where((absence) => allStudentIds.contains(absence.studentId))
               .toList();
+
+          debugPrint('📊 Found ${absences.length} today absences for supervisor');
 
           // Sort locally
           absences.sort((a, b) => b.createdAt.compareTo(a.createdAt));
@@ -3208,23 +3227,33 @@ class DatabaseService {
         });
   }
 
-  /// Get absences in date range for supervisor
+  /// Get absences in date range for supervisor (index-safe approach)
   Future<List<AbsenceModel>> getAbsencesInDateRange(
     String supervisorId,
     DateTime startDate,
     DateTime endDate,
   ) async {
     try {
+      debugPrint('🔍 Getting absences for supervisor $supervisorId from ${startDate.toIso8601String()} to ${endDate.toIso8601String()}');
+
+      // First get all absences for this supervisor (simple query)
       final querySnapshot = await _firestore
           .collection('absences')
           .where('supervisorId', isEqualTo: supervisorId)
-          .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
-          .where('date', isLessThanOrEqualTo: Timestamp.fromDate(endDate))
           .get();
 
-      return querySnapshot.docs
+      // Filter by date range locally to avoid compound index requirement
+      final absences = querySnapshot.docs
           .map((doc) => AbsenceModel.fromMap(doc.data()))
+          .where((absence) {
+            final absenceDate = absence.date;
+            return absenceDate.isAfter(startDate.subtract(const Duration(days: 1))) &&
+                   absenceDate.isBefore(endDate.add(const Duration(days: 1)));
+          })
           .toList();
+
+      debugPrint('📊 Found ${absences.length} absences in date range');
+      return absences;
     } catch (e) {
       debugPrint('❌ Error getting absences in date range: $e');
       return [];
