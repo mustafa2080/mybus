@@ -1563,21 +1563,22 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
 
                         final students = snapshot.data!;
                         debugPrint('📱 Displaying ${students.length} students in ListView');
-                    return ListView.builder(
-                      itemCount: students.length,
-                      itemBuilder: (context, index) {
-                        final student = students[index];
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 6),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(color: Colors.grey.withAlpha(51)),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(10),
-                            child: Row(
-                              children: [
+
+                        return ListView.builder(
+                          itemCount: students.length,
+                          itemBuilder: (context, index) {
+                            final student = students[index];
+                            return Container(
+                              margin: const EdgeInsets.only(bottom: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(color: Colors.grey.withAlpha(51)),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(10),
+                                child: Row(
+                                  children: [
                                 // صورة الطالب - أصغر
                                 Container(
                                   width: 35,
@@ -1671,6 +1672,8 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
                               ],
                             ),
                           ),
+                            );
+                          },
                         );
                       },
                     );
