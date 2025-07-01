@@ -1547,10 +1547,17 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
                     }
 
                     final assignment = assignmentSnapshot.data!.first;
-                    debugPrint('🚌 Using assignment route: ${assignment.busRoute}');
+                    debugPrint('🚌 Dialog assignment route: "${assignment.busRoute}"');
+                    debugPrint('🚌 Dialog assignment busId: "${assignment.busId}"');
+
+                    // إذا كان busRoute فارغ، استخدم _studentsOnBusStream بدلاً من ذلك
+                    final useMainStream = assignment.busRoute.isEmpty;
+                    debugPrint('📱 Using main stream: $useMainStream');
 
                     return StreamBuilder<List<StudentModel>>(
-                      stream: _databaseService.getStudentsByRoute(assignment.busRoute),
+                      stream: useMainStream
+                          ? _studentsOnBusStream
+                          : _databaseService.getStudentsByRoute(assignment.busRoute),
                       builder: (context, snapshot) {
                         debugPrint('📱 Students StreamBuilder state: ${snapshot.connectionState}');
                         debugPrint('📱 Students has data: ${snapshot.hasData}');
