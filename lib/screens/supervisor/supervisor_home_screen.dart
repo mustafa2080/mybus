@@ -65,8 +65,19 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
     final supervisorId = _authService.currentUser?.uid ?? '';
     debugPrint('🔄 Initializing streams for supervisor: $supervisorId');
 
-    // الحصول على جميع طلاب المشرف بناءً على تعييناته
-    _studentsOnBusStream = _databaseService.getStudentsForSupervisor(supervisorId);
+    // استخدام نفس الطريقة التي تعمل في الصفحات الأخرى
+    _studentsOnBusStream = _databaseService.getSupervisorAssignments(supervisorId)
+        .asyncMap((assignments) async {
+      if (assignments.isEmpty) {
+        debugPrint('⚠️ No assignments found for supervisor $supervisorId');
+        return <StudentModel>[];
+      }
+
+      final busRoute = assignments.first.busRoute;
+      debugPrint('🚌 Supervisor route: $busRoute');
+
+      return _databaseService.getStudentsByRoute(busRoute).first;
+    }).asBroadcastStream();
 
     _checkSupervisorAssignments();
   }
@@ -1479,54 +1490,79 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
               ),
               const SizedBox(height: 16),
               Expanded(
-                child: StreamBuilder<List<StudentModel>>(
-                  stream: _databaseService.getStudentsForSupervisor(_authService.currentUser?.uid ?? ''),
-                  builder: (context, snapshot) {
-                    debugPrint('📱 StreamBuilder state: ${snapshot.connectionState}');
-                    debugPrint('📱 Has data: ${snapshot.hasData}');
-                    debugPrint('📱 Data length: ${snapshot.data?.length ?? 0}');
-
-                    if (snapshot.connectionState == ConnectionState.waiting) {
+                child: FutureBuilder<List<SupervisorAssignmentModel>>(
+                  future: _databaseService.getSupervisorAssignments(_authService.currentUser?.uid ?? '').first,
+                  builder: (context, assignmentSnapshot) {
+                    if (assignmentSnapshot.connectionState == ConnectionState.waiting) {
                       return const Center(child: CircularProgressIndicator());
                     }
 
-                    if (snapshot.hasError) {
-                      debugPrint('❌ StreamBuilder error: ${snapshot.error}');
-                      return Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(Icons.error_outline, size: 64, color: Colors.red),
-                            SizedBox(height: 16),
-                            Text(
-                              'خطأ في تحميل البيانات: ${snapshot.error}',
-                              style: TextStyle(fontSize: 16),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      );
-                    }
-
-                    if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    if (!assignmentSnapshot.hasData || assignmentSnapshot.data!.isEmpty) {
                       return const Center(
                         child: Column(
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
-                            Icon(Icons.school_outlined, size: 64, color: Colors.grey),
+                            Icon(Icons.assignment_outlined, size: 64, color: Colors.orange),
                             SizedBox(height: 16),
                             Text(
-                              'لا يوجد طلاب مسجلين في خطوط المسار المعينة لك',
+                              'لم يتم تعيينك لأي باص',
                               style: TextStyle(fontSize: 16),
-                              textAlign: TextAlign.center,
                             ),
                           ],
                         ),
                       );
                     }
 
-                    final students = snapshot.data!;
-                    debugPrint('📱 Displaying ${students.length} students in ListView');
+                    final assignment = assignmentSnapshot.data!.first;
+                    debugPrint('🚌 Using assignment route: ${assignment.busRoute}');
+
+                    return StreamBuilder<List<StudentModel>>(
+                      stream: _databaseService.getStudentsByRoute(assignment.busRoute),
+                      builder: (context, snapshot) {
+                        debugPrint('📱 Students StreamBuilder state: ${snapshot.connectionState}');
+                        debugPrint('📱 Students has data: ${snapshot.hasData}');
+                        debugPrint('📱 Students data length: ${snapshot.data?.length ?? 0}');
+
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(child: CircularProgressIndicator());
+                        }
+
+                        if (snapshot.hasError) {
+                          debugPrint('❌ Students StreamBuilder error: ${snapshot.error}');
+                          return Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.error_outline, size: 64, color: Colors.red),
+                                SizedBox(height: 16),
+                                Text(
+                                  'خطأ في تحميل البيانات: ${snapshot.error}',
+                                  style: TextStyle(fontSize: 16),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+
+                        if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                          return const Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.school_outlined, size: 64, color: Colors.grey),
+                                SizedBox(height: 16),
+                                Text(
+                                  'لا يوجد طلاب في هذا الخط',
+                                  style: TextStyle(fontSize: 16),
+                                ),
+                              ],
+                            ),
+                          );
+                        }
+
+                        final students = snapshot.data!;
+                        debugPrint('📱 Displaying ${students.length} students in ListView');
                     return ListView.builder(
                       itemCount: students.length,
                       itemBuilder: (context, index) {
