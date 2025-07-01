@@ -1878,15 +1878,16 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
                         ),
 
                         // Additional info
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          const Icon(Icons.schedule, color: Colors.orange, size: 20),
-                          const SizedBox(width: 12),
-                          Text('متاحة للذهاب والعودة'),
-                        ],
-                      ),
-                    ],
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            const Icon(Icons.schedule, color: Colors.orange, size: 20),
+                            const SizedBox(width: 12),
+                            Text('متاحة للذهاب والعودة'),
+                          ],
+                        ),
+                      ],
+                    ),
                   );
                 },
               ),
