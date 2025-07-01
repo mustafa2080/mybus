@@ -21,19 +21,44 @@ class SupervisorHomeScreen extends StatefulWidget {
   State<SupervisorHomeScreen> createState() => _SupervisorHomeScreenState();
 }
 
-class _SupervisorHomeScreenState extends State<SupervisorHomeScreen> {
+class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
+    with TickerProviderStateMixin {
   final AuthService _authService = AuthService();
   final DatabaseService _databaseService = DatabaseService();
   final NotificationService _notificationService = NotificationService();
 
   final bool _isLoading = false;
   late Stream<List<StudentModel>> _studentsOnBusStream;
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
 
   @override
   void initState() {
     super.initState();
     _initializeStreams();
     _listenToSystemUpdates();
+
+    // تهيئة animation للنبضة
+    _pulseController = AnimationController(
+      duration: const Duration(seconds: 1),
+      vsync: this,
+    );
+    _pulseAnimation = Tween<double>(
+      begin: 1.0,
+      end: 1.2,
+    ).animate(CurvedAnimation(
+      parent: _pulseController,
+      curve: Curves.easeInOut,
+    ));
+
+    // تكرار النبضة
+    _pulseController.repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
   }
 
   void _initializeStreams() {
@@ -90,8 +115,6 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen> {
                     final bus = busSnapshot.data!;
                     return Text('خط السير: ${bus.route} - ${assignment.busPlateNumber}');
                   }
-                  // في حالة عدم توفر بيانات الباص، عرض رقم الخط كما هو
-                  return Text('خط السير: ${assignment.busRoute} - ${assignment.busPlateNumber}');
                 },
               );
             }
@@ -119,42 +142,66 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen> {
                   children: [
                     IconButton(
                       icon: Icon(
-                        hasNotifications ? Icons.notifications_active : Icons.notifications,
-                        color: hasNotifications ? Colors.yellow : Colors.white,
+                        hasNotifications ? Icons.notifications_active : Icons.notifications_outlined,
+                        color: hasNotifications ? Colors.amber : Colors.white,
+                        size: 26,
                       ),
                       onPressed: () => context.push('/supervisor/notifications'),
                       tooltip: hasNotifications
                           ? '$notificationCount إشعار جديد'
                           : 'الإشعارات',
                       style: IconButton.styleFrom(
-                        backgroundColor: Colors.white.withOpacity(0.1),
+                        backgroundColor: hasNotifications
+                            ? Colors.white.withOpacity(0.2)
+                            : Colors.white.withOpacity(0.1),
                         foregroundColor: Colors.white,
+                        padding: const EdgeInsets.all(8),
                       ),
                     ),
                     if (hasNotifications)
                       Positioned(
-                        right: 6,
-                        top: 6,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: Colors.white, width: 1),
-                          ),
-                          constraints: const BoxConstraints(
-                            minWidth: 18,
-                            minHeight: 18,
-                          ),
-                          child: Text(
-                            notificationCount > 99 ? '99+' : notificationCount.toString(),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
+                        right: 4,
+                        top: 4,
+                        child: AnimatedBuilder(
+                          animation: _pulseAnimation,
+                          builder: (context, child) {
+                            return Transform.scale(
+                              scale: _pulseAnimation.value,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.red,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(color: Colors.white, width: 2),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.red.withOpacity(0.4),
+                                      blurRadius: 6,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                    BoxShadow(
+                                      color: Colors.red.withOpacity(0.2),
+                                      blurRadius: 12,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                constraints: const BoxConstraints(
+                                  minWidth: 20,
+                                  minHeight: 20,
+                                ),
+                                child: Text(
+                                  notificationCount > 99 ? '99+' : notificationCount.toString(),
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            );
+                          },
                         ),
                       ),
                   ],
