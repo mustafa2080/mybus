@@ -6,6 +6,7 @@ import '../../services/auth_service.dart';
 import '../../services/database_service.dart';
 import '../../services/notification_service.dart';
 import '../../models/absence_model.dart';
+import '../../models/bus_model.dart';
 import '../../models/student_model.dart';
 import '../../models/supervisor_assignment_model.dart';
 import '../../widgets/curved_app_bar.dart';
@@ -81,7 +82,18 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen> {
           builder: (context, snapshot) {
             if (snapshot.hasData && snapshot.data!.isNotEmpty) {
               final assignment = snapshot.data!.first;
-              return Text('خط السير: ${assignment.busRoute} - ${assignment.busPlateNumber}');
+              // الحصول على اسم المنطقة من الباص
+              return FutureBuilder<BusModel?>(
+                future: _databaseService.getBus(assignment.busId),
+                builder: (context, busSnapshot) {
+                  if (busSnapshot.hasData && busSnapshot.data != null) {
+                    final bus = busSnapshot.data!;
+                    return Text('خط السير: ${bus.route} - ${assignment.busPlateNumber}');
+                  }
+                  // في حالة عدم توفر بيانات الباص، عرض رقم الخط كما هو
+                  return Text('خط السير: ${assignment.busRoute} - ${assignment.busPlateNumber}');
+                },
+              );
             }
             return const Text('إدارة رحلات الطلاب');
           },
