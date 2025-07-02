@@ -628,9 +628,9 @@ class _SupervisorProfileScreenState extends State<SupervisorProfileScreen> {
             '${assignment.assignedAt.day}/${assignment.assignedAt.month}/${assignment.assignedAt.year}'
           ),
 
-          if (assignment.notes.isNotEmpty) ...[
+          if (assignment.notes?.isNotEmpty == true) ...[
             const SizedBox(height: 8),
-            _buildInfoRow(Icons.note, 'ملاحظات', assignment.notes),
+            _buildInfoRow(Icons.note, 'ملاحظات', assignment.notes!),
           ],
         ],
       ),
