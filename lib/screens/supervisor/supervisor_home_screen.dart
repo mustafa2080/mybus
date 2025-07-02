@@ -328,6 +328,10 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
             _buildSecondaryActions(),
             const SizedBox(height: 20),
 
+            // Students List Section
+            _buildStudentsListSection(),
+            const SizedBox(height: 20),
+
             // تنبيه إشعارات الغياب الجديدة
             StreamBuilder<List<AbsenceModel>>(
               stream: _databaseService.getRecentAbsenceNotifications(),
@@ -3063,6 +3067,236 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
     } catch (e) {
       debugPrint('Error getting bus plate number: $e');
       return busId;
+    }
+  }
+
+  // Build Students List Section
+  Widget _buildStudentsListSection() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withAlpha(25),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFF1976D2),
+                  const Color(0xFF1565C0),
+                ],
+              ),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withAlpha(51),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.people,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Text(
+                  'طلاب الخط',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Students List
+          Container(
+            height: 300, // Fixed height for the list
+            child: StreamBuilder<List<StudentModel>>(
+              stream: _studentsOnBusStream,
+              builder: (context, snapshot) {
+                debugPrint('🎯 Students List Section - Connection: ${snapshot.connectionState}');
+                debugPrint('🎯 Students List Section - Has Data: ${snapshot.hasData}');
+                debugPrint('🎯 Students List Section - Data Length: ${snapshot.data?.length ?? 0}');
+
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(32),
+                      child: CircularProgressIndicator(),
+                    ),
+                  );
+                }
+
+                if (snapshot.hasError) {
+                  debugPrint('❌ Students List Section Error: ${snapshot.error}');
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.all(32),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                          const SizedBox(height: 16),
+                          Text(
+                            'خطأ في تحميل الطلاب: ${snapshot.error}',
+                            style: const TextStyle(fontSize: 14),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
+                if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                  return const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(32),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.school_outlined, size: 48, color: Colors.grey),
+                          SizedBox(height: 16),
+                          Text(
+                            'لا يوجد طلاب في هذا الخط',
+                            style: TextStyle(fontSize: 16, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                }
+
+                final students = snapshot.data!;
+                debugPrint('🎯 Displaying ${students.length} students in main list');
+
+                return ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: students.length,
+                  itemBuilder: (context, index) {
+                    final student = students[index];
+                    return _buildStudentListItem(student);
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Build Student List Item (similar to admin style)
+  Widget _buildStudentListItem(StudentModel student) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      decoration: BoxDecoration(
+        color: Colors.grey.shade50,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.grey.withAlpha(51)),
+      ),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: Container(
+          width: 40,
+          height: 40,
+          decoration: BoxDecoration(
+            color: const Color(0xFF1976D2).withAlpha(25),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: const Icon(
+            Icons.person,
+            color: Color(0xFF1976D2),
+            size: 20,
+          ),
+        ),
+        title: Text(
+          student.name,
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            fontSize: 16,
+          ),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${student.schoolName} - ${student.grade}',
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 13,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'ولي الأمر: ${student.parentName}',
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 12,
+              ),
+            ),
+          ],
+        ),
+        trailing: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          decoration: BoxDecoration(
+            color: _getStatusColor(student.currentStatus).withAlpha(25),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            _getStatusText(student.currentStatus),
+            style: TextStyle(
+              color: _getStatusColor(student.currentStatus),
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Helper methods for student status
+  Color _getStatusColor(StudentStatus status) {
+    switch (status) {
+      case StudentStatus.home:
+        return Colors.green;
+      case StudentStatus.onBus:
+        return Colors.orange;
+      case StudentStatus.atSchool:
+        return Colors.blue;
+    }
+  }
+
+  String _getStatusText(StudentStatus status) {
+    switch (status) {
+      case StudentStatus.home:
+        return 'في المنزل';
+      case StudentStatus.onBus:
+        return 'في الباص';
+      case StudentStatus.atSchool:
+        return 'في المدرسة';
     }
   }
 }
