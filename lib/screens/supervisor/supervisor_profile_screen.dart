@@ -44,6 +44,15 @@ class _SupervisorProfileScreenState extends State<SupervisorProfileScreen> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // إعادة تحميل البيانات عند العودة للصفحة
+    if (mounted) {
+      _loadSupervisorAssignments();
+    }
+  }
+
+  @override
   void dispose() {
     _fullNameController.dispose();
     _addressController.dispose();
@@ -154,10 +163,7 @@ class _SupervisorProfileScreenState extends State<SupervisorProfileScreen> {
             ? assignment.busRoute
             : 'باص غير محدد';
 
-    final direction = assignment.direction == 'pickup' ? 'الذهاب' : 'العودة';
-    final status = assignment.status == 'active' ? 'نشط' : 'غير نشط';
-
-    return '$busInfo\nالاتجاه: $direction\nالحالة: $status';
+    return '$busInfo\nالاتجاه: ${assignment.directionDisplayName}\nالحالة: ${assignment.statusDisplayName}';
   }
 
   void _fillFormFields() {
@@ -269,6 +275,23 @@ class _SupervisorProfileScreenState extends State<SupervisorProfileScreen> {
         backgroundColor: const Color(0xFF1E88E5),
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () async {
+              await _loadSupervisorAssignments();
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('تم تحديث بيانات التسكين'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+              }
+            },
+            tooltip: 'تحديث بيانات التسكين',
+          ),
+        ],
         actions: [
           if (!_isEditing && !_isLoading)
             IconButton(
@@ -550,8 +573,8 @@ class _SupervisorProfileScreenState extends State<SupervisorProfileScreen> {
   }
 
   Widget _buildAssignmentCard(SupervisorAssignmentModel assignment) {
-    final isActive = assignment.status == 'active';
-    final direction = assignment.direction == 'pickup' ? 'الذهاب' : 'العودة';
+    final isActive = assignment.status == AssignmentStatus.active;
+    final direction = assignment.directionDisplayName;
 
     return Container(
       width: double.infinity,
@@ -577,7 +600,7 @@ class _SupervisorProfileScreenState extends State<SupervisorProfileScreen> {
               ),
               const SizedBox(width: 8),
               Text(
-                isActive ? 'تسكين نشط' : 'تسكين غير نشط',
+                'تسكين ${assignment.statusDisplayName}',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   color: isActive ? Colors.green[700] : Colors.grey[700],
