@@ -46,7 +46,8 @@ class _StudentsListScreenState extends State<StudentsListScreen> {
       final supervisorId = _authService.currentUser?.uid ?? '';
       debugPrint('🔍 Loading students for supervisor: $supervisorId');
 
-      final assignments = await _databaseService.getSupervisorAssignments(supervisorId).first;
+      // استخدم طريقة مباشرة لتجنب مشكلة الفهرس
+      final assignments = await _databaseService.getSupervisorAssignmentsSimple(supervisorId);
       debugPrint('📋 Found ${assignments.length} assignments for supervisor');
 
       if (assignments.isNotEmpty) {
@@ -73,32 +74,9 @@ class _StudentsListScreenState extends State<StudentsListScreen> {
         if (_supervisorRoute.isNotEmpty) {
           // احصل على الطلاب في خط السير الخاص بالمشرف فقط
           debugPrint('🔍 Getting students for route: $_supervisorRoute');
-          _databaseService.getStudentsByRoute(_supervisorRoute).listen(
-            (students) {
-              debugPrint('👥 Received ${students.length} students for route $_supervisorRoute');
-              for (final student in students) {
-                debugPrint('   - ${student.name} (Route: ${student.busRoute}, Status: ${student.currentStatus})');
-              }
 
-              if (mounted) {
-                setState(() {
-                  _students = students;
-                  _filteredStudents = students;
-                  _isLoading = false;
-                });
-              }
-            },
-            onError: (error) {
-              debugPrint('❌ Error in students stream: $error');
-              if (mounted) {
-                setState(() {
-                  _students = [];
-                  _filteredStudents = [];
-                  _isLoading = false;
-                });
-              }
-            },
-          );
+          // استخدم طريقة مباشرة لتجنب مشاكل الفهارس
+          _loadStudentsForRoute(_supervisorRoute);
         } else {
           debugPrint('❌ No valid route found for supervisor');
           setState(() {
@@ -121,6 +99,37 @@ class _StudentsListScreenState extends State<StudentsListScreen> {
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _loadStudentsForRoute(String route) async {
+    try {
+      debugPrint('🔍 Loading students for route: $route');
+
+      // استخدم طريقة مباشرة لتجنب مشاكل الفهارس
+      final students = await _databaseService.getStudentsByRouteSimple(route);
+
+      debugPrint('👥 Received ${students.length} students for route $route');
+      for (final student in students) {
+        debugPrint('   - ${student.name} (Route: ${student.busRoute}, Status: ${student.currentStatus})');
+      }
+
+      if (mounted) {
+        setState(() {
+          _students = students;
+          _filteredStudents = students;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('❌ Error loading students for route: $e');
+      if (mounted) {
+        setState(() {
+          _students = [];
+          _filteredStudents = [];
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -439,7 +448,16 @@ class _StudentsListScreenState extends State<StudentsListScreen> {
               ),
               const SizedBox(height: 16),
               ElevatedButton.icon(
-                onPressed: _loadStudents,
+                onPressed: () {
+                  if (_supervisorRoute.isNotEmpty) {
+                    setState(() {
+                      _isLoading = true;
+                    });
+                    _loadStudentsForRoute(_supervisorRoute);
+                  } else {
+                    _loadStudents();
+                  }
+                },
                 icon: const Icon(Icons.refresh),
                 label: const Text('إعادة تحميل'),
                 style: ElevatedButton.styleFrom(

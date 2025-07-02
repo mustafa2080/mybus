@@ -3054,6 +3054,32 @@ class DatabaseService {
             .toList());
   }
 
+  /// Get assignments for specific supervisor (simple version without orderBy to avoid index issues)
+  Future<List<SupervisorAssignmentModel>> getSupervisorAssignmentsSimple(String supervisorId) async {
+    try {
+      debugPrint('🔍 Getting simple assignments for supervisor: $supervisorId');
+
+      final snapshot = await _firestore
+          .collection('supervisor_assignments')
+          .where('supervisorId', isEqualTo: supervisorId)
+          .where('status', isEqualTo: 'active')
+          .get();
+
+      final assignments = snapshot.docs
+          .map((doc) => SupervisorAssignmentModel.fromMap(doc.data()))
+          .toList();
+
+      // Sort manually to avoid index requirement
+      assignments.sort((a, b) => b.assignedAt.compareTo(a.assignedAt));
+
+      debugPrint('📋 Found ${assignments.length} assignments for supervisor $supervisorId');
+      return assignments;
+    } catch (e) {
+      debugPrint('❌ Error getting supervisor assignments: $e');
+      return [];
+    }
+  }
+
   /// Get assignments for specific bus
   Stream<List<SupervisorAssignmentModel>> getBusAssignments(String busId) {
     return _firestore
@@ -3217,6 +3243,32 @@ class DatabaseService {
           students.sort((a, b) => a.name.compareTo(b.name));
           return students;
         });
+  }
+
+  /// Get students by bus route (simple version to avoid index issues)
+  Future<List<StudentModel>> getStudentsByRouteSimple(String busRoute) async {
+    try {
+      debugPrint('🔍 Getting students for route: $busRoute');
+
+      final snapshot = await _firestore
+          .collection('students')
+          .where('busRoute', isEqualTo: busRoute)
+          .where('isActive', isEqualTo: true)
+          .get();
+
+      final students = snapshot.docs
+          .map((doc) => StudentModel.fromMap(doc.data()))
+          .toList();
+
+      // Sort manually by name
+      students.sort((a, b) => a.name.compareTo(b.name));
+
+      debugPrint('👥 Found ${students.length} students for route $busRoute');
+      return students;
+    } catch (e) {
+      debugPrint('❌ Error getting students for route: $e');
+      return [];
+    }
   }
 
   /// Get students for supervisor based on their assignments (index-safe approach)
