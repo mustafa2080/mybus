@@ -44,23 +44,72 @@ class _StudentsListScreenState extends State<StudentsListScreen> {
     try {
       // أولاً، احصل على خط السير الخاص بالمشرف
       final supervisorId = _authService.currentUser?.uid ?? '';
+      debugPrint('🔍 Loading students for supervisor: $supervisorId');
+
       final assignments = await _databaseService.getSupervisorAssignments(supervisorId).first;
+      debugPrint('📋 Found ${assignments.length} assignments for supervisor');
 
       if (assignments.isNotEmpty) {
-        _supervisorRoute = assignments.first.busRoute;
+        final assignment = assignments.first;
+        _supervisorRoute = assignment.busRoute;
 
-        // احصل على الطلاب في خط السير الخاص بالمشرف فقط
-        _databaseService.getStudentsByRoute(_supervisorRoute).listen((students) {
-          if (mounted) {
-            setState(() {
-              _students = students;
-              _filteredStudents = students;
-              _isLoading = false;
-            });
+        debugPrint('🚌 Supervisor route: $_supervisorRoute');
+        debugPrint('🚌 Bus ID: ${assignment.busId}');
+        debugPrint('🚌 Bus plate: ${assignment.busPlateNumber}');
+
+        if (_supervisorRoute.isEmpty) {
+          debugPrint('⚠️ Bus route is empty, trying to get from bus data...');
+          try {
+            final bus = await _databaseService.getBusById(assignment.busId);
+            if (bus != null) {
+              _supervisorRoute = bus.route;
+              debugPrint('✅ Got route from bus: $_supervisorRoute');
+            }
+          } catch (e) {
+            debugPrint('❌ Error getting bus data: $e');
           }
-        });
+        }
+
+        if (_supervisorRoute.isNotEmpty) {
+          // احصل على الطلاب في خط السير الخاص بالمشرف فقط
+          debugPrint('🔍 Getting students for route: $_supervisorRoute');
+          _databaseService.getStudentsByRoute(_supervisorRoute).listen(
+            (students) {
+              debugPrint('👥 Received ${students.length} students for route $_supervisorRoute');
+              for (final student in students) {
+                debugPrint('   - ${student.name} (Route: ${student.busRoute}, Status: ${student.currentStatus})');
+              }
+
+              if (mounted) {
+                setState(() {
+                  _students = students;
+                  _filteredStudents = students;
+                  _isLoading = false;
+                });
+              }
+            },
+            onError: (error) {
+              debugPrint('❌ Error in students stream: $error');
+              if (mounted) {
+                setState(() {
+                  _students = [];
+                  _filteredStudents = [];
+                  _isLoading = false;
+                });
+              }
+            },
+          );
+        } else {
+          debugPrint('❌ No valid route found for supervisor');
+          setState(() {
+            _students = [];
+            _filteredStudents = [];
+            _isLoading = false;
+          });
+        }
       } else {
         // إذا لم يكن للمشرف تعيينات، اعرض قائمة فارغة
+        debugPrint('⚠️ No assignments found for supervisor $supervisorId');
         setState(() {
           _students = [];
           _filteredStudents = [];
@@ -375,6 +424,27 @@ class _StudentsListScreenState extends State<StudentsListScreen> {
                 'جرب البحث بكلمات مختلفة',
                 style: TextStyle(
                   color: Colors.grey[500],
+                ),
+              ),
+            ] else ...[
+              const SizedBox(height: 8),
+              Text(
+                _supervisorRoute.isNotEmpty
+                    ? 'لا يوجد طلاب في خط السير: $_supervisorRoute'
+                    : 'لم يتم تعيين خط سير لهذا المشرف',
+                style: TextStyle(
+                  color: Colors.grey[500],
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton.icon(
+                onPressed: _loadStudents,
+                icon: const Icon(Icons.refresh),
+                label: const Text('إعادة تحميل'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1E88E5),
+                  foregroundColor: Colors.white,
                 ),
               ),
             ],
