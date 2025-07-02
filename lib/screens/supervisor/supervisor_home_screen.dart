@@ -65,9 +65,20 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
     final supervisorId = _authService.currentUser?.uid ?? '';
     debugPrint('🔄 Initializing streams for supervisor: $supervisorId');
 
-    // استخدام الطريقة البسيطة والمباشرة مع إصلاح busRoute
-    _studentsOnBusStream = _databaseService.getSupervisorAssignments(supervisorId)
-        .asyncMap((assignments) async {
+    // استخدام الطريقة البسيطة لتجنب مشاكل الفهارس
+    _studentsOnBusStream = Stream.periodic(const Duration(seconds: 5))
+        .asyncMap((_) => _loadSupervisorStudents(supervisorId))
+        .asBroadcastStream();
+
+    _checkSupervisorAssignments();
+  }
+
+  Future<List<StudentModel>> _loadSupervisorStudents(String supervisorId) async {
+    try {
+      debugPrint('🔄 Loading supervisor students for: $supervisorId');
+
+      // استخدام الطريقة البسيطة
+      final assignments = await _databaseService.getSupervisorAssignmentsSimple(supervisorId);
       debugPrint('📋 Found ${assignments.length} assignments for supervisor');
 
       if (assignments.isEmpty) {
@@ -101,18 +112,14 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
         return <StudentModel>[];
       }
 
-      // جلب الطلاب مباشرة
-      try {
-        final students = await _databaseService.getStudentsByRoute(busRoute).first;
-        debugPrint('👥 Found ${students.length} students in route $busRoute');
-        return students;
-      } catch (e) {
-        debugPrint('❌ Error getting students for route $busRoute: $e');
-        return <StudentModel>[];
-      }
-    }).asBroadcastStream();
-
-    _checkSupervisorAssignments();
+      // جلب الطلاب باستخدام الطريقة البسيطة
+      final students = await _databaseService.getStudentsByRouteSimple(busRoute);
+      debugPrint('👥 Found ${students.length} students in route $busRoute');
+      return students;
+    } catch (e) {
+      debugPrint('❌ Error loading supervisor students: $e');
+      return <StudentModel>[];
+    }
   }
 
   void _checkSupervisorAssignments() async {
@@ -150,13 +157,13 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
       appBar: EnhancedCurvedAppBar(
         title: 'باصي - المشرف',
         subtitle: FutureBuilder<List<SupervisorAssignmentModel>>(
-          future: _databaseService.getSupervisorAssignments(_authService.currentUser?.uid ?? '').first,
+          future: _databaseService.getSupervisorAssignmentsSimple(_authService.currentUser?.uid ?? ''),
           builder: (context, snapshot) {
             if (snapshot.hasData && snapshot.data!.isNotEmpty) {
               final assignment = snapshot.data!.first;
               // الحصول على اسم المنطقة من الباص
               return FutureBuilder<BusModel?>(
-                future: _databaseService.getBus(assignment.busId),
+                future: _databaseService.getBusById(assignment.busId),
                 builder: (context, busSnapshot) {
                   if (busSnapshot.hasData && busSnapshot.data != null) {
                     final bus = busSnapshot.data!;
@@ -1561,7 +1568,8 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
                     return StreamBuilder<List<StudentModel>>(
                       stream: useMainStream
                           ? _studentsOnBusStream
-                          : _databaseService.getStudentsByRoute(assignment.busRoute),
+                          : Stream.periodic(const Duration(seconds: 3))
+                              .asyncMap((_) => _databaseService.getStudentsByRouteSimple(assignment.busRoute)),
                       builder: (context, snapshot) {
                         debugPrint('📱 Students StreamBuilder state: ${snapshot.connectionState}');
                         debugPrint('📱 Students has data: ${snapshot.hasData}');
