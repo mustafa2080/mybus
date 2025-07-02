@@ -32,37 +32,85 @@ class _RouteStatisticsScreenState extends State<RouteStatisticsScreen> {
   Future<void> _loadData() async {
     try {
       setState(() => _isLoading = true);
-      
+
       final supervisorId = _authService.currentUser?.uid ?? '';
-      final assignments = await _databaseService.getSupervisorAssignments(supervisorId).first;
-      
+      debugPrint('📊 Loading route statistics for supervisor: $supervisorId');
+
+      // استخدام الطريقة البسيطة
+      final assignments = await _databaseService.getSupervisorAssignmentsSimple(supervisorId);
+
       if (assignments.isNotEmpty) {
         _assignment = assignments.first;
-        
-        // تحميل الطلاب
-        final students = await _databaseService.getStudentsByRoute(_assignment!.busRoute).first;
-        
-        // تحميل غيابات اليوم
-        final todayAbsences = await _databaseService.getTodayAbsencesForSupervisor(supervisorId).first;
-        
-        // تحميل غيابات الأسبوع
-        final weekStart = DateTime.now().subtract(Duration(days: DateTime.now().weekday - 1));
-        final weekAbsences = await _databaseService.getAbsencesInDateRange(
-          supervisorId,
-          weekStart,
-          DateTime.now(),
-        );
-        
-        setState(() {
-          _students = students;
-          _todayAbsences = todayAbsences;
-          _weekAbsences = weekAbsences;
-          _isLoading = false;
-        });
+        var busRoute = _assignment!.busRoute;
+
+        debugPrint('🚌 Assignment busRoute: "$busRoute"');
+        debugPrint('🚌 Assignment busId: "${_assignment!.busId}"');
+
+        // إذا كان busRoute فارغ، احصل عليه من بيانات الباص
+        if (busRoute.isEmpty) {
+          debugPrint('⚠️ busRoute is empty, fetching from bus data...');
+          try {
+            final bus = await _databaseService.getBusById(_assignment!.busId);
+            if (bus != null) {
+              busRoute = bus.route;
+              // تحديث الـ assignment مع الـ busRoute الصحيح
+              _assignment = SupervisorAssignmentModel(
+                id: _assignment!.id,
+                supervisorId: _assignment!.supervisorId,
+                supervisorName: _assignment!.supervisorName,
+                busId: _assignment!.busId,
+                busPlateNumber: _assignment!.busPlateNumber,
+                busRoute: busRoute,
+                direction: _assignment!.direction,
+                status: _assignment!.status,
+                assignedAt: _assignment!.assignedAt,
+                assignedBy: _assignment!.assignedBy,
+                assignedByName: _assignment!.assignedByName,
+                notes: _assignment!.notes,
+                isEmergencyAssignment: _assignment!.isEmergencyAssignment,
+                originalSupervisorId: _assignment!.originalSupervisorId,
+              );
+              debugPrint('✅ Got busRoute from bus: "$busRoute"');
+            }
+          } catch (e) {
+            debugPrint('❌ Error getting bus data: $e');
+          }
+        }
+
+        if (busRoute.isNotEmpty) {
+          // تحميل الطلاب باستخدام الطريقة البسيطة
+          final students = await _databaseService.getStudentsByRouteSimple(busRoute);
+          debugPrint('👥 Loaded ${students.length} students for route $busRoute');
+
+          // تحميل غيابات اليوم
+          final todayAbsences = await _databaseService.getTodayAbsencesForSupervisorSimple(supervisorId);
+          debugPrint('📅 Loaded ${todayAbsences.length} today absences');
+
+          // تحميل غيابات الأسبوع
+          final weekStart = DateTime.now().subtract(Duration(days: DateTime.now().weekday - 1));
+          final weekAbsences = await _databaseService.getAbsencesInDateRangeSimple(
+            supervisorId,
+            weekStart,
+            DateTime.now(),
+          );
+          debugPrint('📅 Loaded ${weekAbsences.length} week absences');
+
+          setState(() {
+            _students = students;
+            _todayAbsences = todayAbsences;
+            _weekAbsences = weekAbsences;
+            _isLoading = false;
+          });
+        } else {
+          debugPrint('❌ No valid busRoute found');
+          setState(() => _isLoading = false);
+        }
       } else {
+        debugPrint('⚠️ No assignments found for supervisor');
         setState(() => _isLoading = false);
       }
     } catch (e) {
+      debugPrint('❌ Error loading route statistics: $e');
       setState(() => _isLoading = false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

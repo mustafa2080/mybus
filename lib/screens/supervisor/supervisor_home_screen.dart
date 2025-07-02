@@ -1086,35 +1086,70 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
 
         // الصف الثاني - إحصائيات خط السير
         FutureBuilder<List<SupervisorAssignmentModel>>(
-          future: _databaseService.getSupervisorAssignments(_authService.currentUser?.uid ?? '').first,
+          future: _databaseService.getSupervisorAssignmentsSimple(_authService.currentUser?.uid ?? ''),
           builder: (context, assignmentSnapshot) {
             if (assignmentSnapshot.hasData && assignmentSnapshot.data!.isNotEmpty) {
               final assignment = assignmentSnapshot.data!.first;
-              return StreamBuilder<List<StudentModel>>(
-                stream: _databaseService.getStudentsByRoute(assignment.busRoute),
-                builder: (context, studentsSnapshot) {
-                  if (studentsSnapshot.connectionState == ConnectionState.waiting) {
-                    return _buildRouteStatsCard('...', '...', assignment.busRoute);
-                  }
+              var busRoute = assignment.busRoute;
 
-                  final allStudents = studentsSnapshot.data ?? [];
-                  final activeStudents = allStudents.where((s) => s.isActive).length;
+              // إذا كان busRoute فارغ، احصل عليه من بيانات الباص
+              if (busRoute.isEmpty) {
+                return FutureBuilder<BusModel?>(
+                  future: _databaseService.getBusById(assignment.busId),
+                  builder: (context, busSnapshot) {
+                    if (busSnapshot.connectionState == ConnectionState.waiting) {
+                      return _buildRouteStatsCard('...', '...', 'جاري التحميل...');
+                    }
 
-                  return GestureDetector(
-                    onTap: () => context.push('/supervisor/route-statistics'),
-                    child: _buildRouteStatsCard(
-                      allStudents.length.toString(),
-                      activeStudents.toString(),
-                      assignment.busRoute,
-                    ),
-                  );
-                },
-              );
+                    if (busSnapshot.hasData && busSnapshot.data != null) {
+                      busRoute = busSnapshot.data!.route;
+                    }
+
+                    return _buildRouteStatsWithData(busRoute);
+                  },
+                );
+              }
+
+              return _buildRouteStatsWithData(busRoute);
             }
             return const SizedBox.shrink();
           },
         ),
       ],
+    );
+  }
+
+  Widget _buildRouteStatsWithData(String busRoute) {
+    if (busRoute.isEmpty) {
+      return _buildRouteStatsCard('0', '0', 'لا يوجد خط سير');
+    }
+
+    return FutureBuilder<List<StudentModel>>(
+      future: _databaseService.getStudentsByRouteSimple(busRoute),
+      builder: (context, studentsSnapshot) {
+        if (studentsSnapshot.connectionState == ConnectionState.waiting) {
+          return _buildRouteStatsCard('...', '...', busRoute);
+        }
+
+        if (studentsSnapshot.hasError) {
+          debugPrint('❌ Error loading route stats: ${studentsSnapshot.error}');
+          return _buildRouteStatsCard('خطأ', 'خطأ', busRoute);
+        }
+
+        final allStudents = studentsSnapshot.data ?? [];
+        final activeStudents = allStudents.where((s) => s.isActive).length;
+
+        debugPrint('📊 Route stats - Total: ${allStudents.length}, Active: $activeStudents, Route: $busRoute');
+
+        return GestureDetector(
+          onTap: () => context.push('/supervisor/route-statistics'),
+          child: _buildRouteStatsCard(
+            allStudents.length.toString(),
+            activeStudents.toString(),
+            busRoute,
+          ),
+        );
+      },
     );
   }
 

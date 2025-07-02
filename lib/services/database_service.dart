@@ -3271,6 +3271,127 @@ class DatabaseService {
     }
   }
 
+  /// Get today absences for supervisor (simple version)
+  Future<List<AbsenceModel>> getTodayAbsencesForSupervisorSimple(String supervisorId) async {
+    try {
+      debugPrint('📅 Getting today absences for supervisor: $supervisorId');
+
+      // Get supervisor assignments first
+      final assignments = await getSupervisorAssignmentsSimple(supervisorId);
+      if (assignments.isEmpty) {
+        debugPrint('⚠️ No assignments found for supervisor');
+        return [];
+      }
+
+      final assignment = assignments.first;
+      var busRoute = assignment.busRoute;
+
+      // Get busRoute from bus if empty
+      if (busRoute.isEmpty) {
+        final bus = await getBusById(assignment.busId);
+        if (bus != null) {
+          busRoute = bus.route;
+        }
+      }
+
+      if (busRoute.isEmpty) {
+        debugPrint('❌ No valid busRoute found');
+        return [];
+      }
+
+      // Get students for this route
+      final students = await getStudentsByRouteSimple(busRoute);
+      final studentIds = students.map((s) => s.id).toList();
+
+      if (studentIds.isEmpty) {
+        return [];
+      }
+
+      // Get today's date range
+      final now = DateTime.now();
+      final startOfDay = DateTime(now.year, now.month, now.day);
+      final endOfDay = startOfDay.add(const Duration(days: 1));
+
+      // Get absences for today
+      final snapshot = await _firestore
+          .collection('absences')
+          .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+          .where('createdAt', isLessThan: Timestamp.fromDate(endOfDay))
+          .get();
+
+      final absences = snapshot.docs
+          .map((doc) => AbsenceModel.fromMap(doc.data()))
+          .where((absence) => studentIds.contains(absence.studentId))
+          .toList();
+
+      debugPrint('📅 Found ${absences.length} today absences');
+      return absences;
+    } catch (e) {
+      debugPrint('❌ Error getting today absences: $e');
+      return [];
+    }
+  }
+
+  /// Get absences in date range for supervisor (simple version)
+  Future<List<AbsenceModel>> getAbsencesInDateRangeSimple(
+    String supervisorId,
+    DateTime startDate,
+    DateTime endDate,
+  ) async {
+    try {
+      debugPrint('📅 Getting absences for supervisor $supervisorId from ${startDate.toIso8601String()} to ${endDate.toIso8601String()}');
+
+      // Get supervisor assignments first
+      final assignments = await getSupervisorAssignmentsSimple(supervisorId);
+      if (assignments.isEmpty) {
+        debugPrint('⚠️ No assignments found for supervisor');
+        return [];
+      }
+
+      final assignment = assignments.first;
+      var busRoute = assignment.busRoute;
+
+      // Get busRoute from bus if empty
+      if (busRoute.isEmpty) {
+        final bus = await getBusById(assignment.busId);
+        if (bus != null) {
+          busRoute = bus.route;
+        }
+      }
+
+      if (busRoute.isEmpty) {
+        debugPrint('❌ No valid busRoute found');
+        return [];
+      }
+
+      // Get students for this route
+      final students = await getStudentsByRouteSimple(busRoute);
+      final studentIds = students.map((s) => s.id).toList();
+
+      if (studentIds.isEmpty) {
+        return [];
+      }
+
+      // Get absences in date range
+      final snapshot = await _firestore
+          .collection('absences')
+          .where('createdAt', isGreaterThanOrEqualTo: Timestamp.fromDate(startDate))
+          .where('createdAt', isLessThanOrEqualTo: Timestamp.fromDate(endDate))
+          .get();
+
+      final absences = snapshot.docs
+          .map((doc) => AbsenceModel.fromMap(doc.data()))
+          .where((absence) => studentIds.contains(absence.studentId))
+          .toList();
+
+      debugPrint('📅 Found ${absences.length} absences in date range');
+      return absences;
+    } catch (e) {
+      debugPrint('❌ Error getting absences in date range: $e');
+      return [];
+    }
+  }
+
   /// Get students for supervisor based on their assignments (index-safe approach)
   Stream<List<StudentModel>> getStudentsForSupervisor(String supervisorId) {
     debugPrint('🔍 Getting students for supervisor: $supervisorId');
