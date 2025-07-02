@@ -291,8 +291,6 @@ class _SupervisorProfileScreenState extends State<SupervisorProfileScreen> {
             },
             tooltip: 'تحديث بيانات التسكين',
           ),
-        ],
-        actions: [
           if (!_isEditing && !_isLoading)
             IconButton(
               icon: const Icon(Icons.edit),
