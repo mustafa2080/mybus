@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/auth_service.dart';
+import '../../services/database_service.dart';
 import '../../models/supervisor_profile_model.dart';
 import '../../models/user_model.dart';
+import '../../models/supervisor_assignment_model.dart';
+import '../../models/bus_model.dart';
 
 class SupervisorProfileScreen extends StatefulWidget {
   const SupervisorProfileScreen({super.key});
@@ -13,6 +16,7 @@ class SupervisorProfileScreen extends StatefulWidget {
 
 class _SupervisorProfileScreenState extends State<SupervisorProfileScreen> {
   final AuthService _authService = AuthService();
+  final DatabaseService _databaseService = DatabaseService();
   final _formKey = GlobalKey<FormState>();
   
   // Controllers
@@ -30,6 +34,8 @@ class _SupervisorProfileScreenState extends State<SupervisorProfileScreen> {
   String _busAssignment = '';
   SupervisorProfileModel? _profile;
   UserModel? _currentUser;
+  List<SupervisorAssignmentModel> _assignments = [];
+  BusModel? _assignedBus;
 
   @override
   void initState() {
@@ -90,6 +96,9 @@ class _SupervisorProfileScreenState extends State<SupervisorProfileScreen> {
         );
       }
 
+      // Load supervisor assignments
+      await _loadSupervisorAssignments();
+
       setState(() {
         _isLoading = false;
       });
@@ -99,6 +108,56 @@ class _SupervisorProfileScreenState extends State<SupervisorProfileScreen> {
         _isLoading = false;
       });
     }
+  }
+
+  Future<void> _loadSupervisorAssignments() async {
+    try {
+      final currentUser = _authService.currentUser;
+      if (currentUser == null) return;
+
+      debugPrint('🔄 Loading supervisor assignments for: ${currentUser.uid}');
+
+      // جلب تسكينات المشرف
+      final assignments = await _databaseService.getSupervisorAssignmentsSimple(currentUser.uid);
+
+      if (assignments.isNotEmpty) {
+        _assignments = assignments;
+        final assignment = assignments.first;
+
+        debugPrint('✅ Found assignment: ${assignment.busRoute}');
+
+        // جلب بيانات الباص
+        if (assignment.busId.isNotEmpty) {
+          final bus = await _databaseService.getBusById(assignment.busId);
+          if (bus != null) {
+            _assignedBus = bus;
+            debugPrint('✅ Found bus: ${bus.plateNumber} - ${bus.route}');
+          }
+        }
+
+        // تحديث نص التسكين
+        _busAssignment = _buildAssignmentText(assignment);
+      } else {
+        debugPrint('⚠️ No assignments found');
+        _busAssignment = 'لم يتم التعيين بعد';
+      }
+    } catch (e) {
+      debugPrint('❌ Error loading supervisor assignments: $e');
+      _busAssignment = 'خطأ في تحميل البيانات';
+    }
+  }
+
+  String _buildAssignmentText(SupervisorAssignmentModel assignment) {
+    final busInfo = _assignedBus != null
+        ? '${_assignedBus!.plateNumber} - ${_assignedBus!.route}'
+        : assignment.busRoute.isNotEmpty
+            ? assignment.busRoute
+            : 'باص غير محدد';
+
+    final direction = assignment.direction == 'pickup' ? 'الذهاب' : 'العودة';
+    final status = assignment.status == 'active' ? 'نشط' : 'غير نشط';
+
+    return '$busInfo\nالاتجاه: $direction\nالحالة: $status';
   }
 
   void _fillFormFields() {
@@ -439,48 +498,165 @@ class _SupervisorProfileScreenState extends State<SupervisorProfileScreen> {
       title: 'تسكين الباص',
       icon: Icons.directions_bus,
       children: [
-        Container(
-          width: double.infinity,
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.orange.withAlpha(25),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.orange.withAlpha(76)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.info, color: Colors.orange, size: 20),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'حالة التسكين',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF2D3748),
+        if (_assignments.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.orange.withAlpha(25),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.orange.withAlpha(76)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Icon(Icons.info, color: Colors.orange, size: 20),
+                    const SizedBox(width: 8),
+                    const Text(
+                      'حالة التسكين',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF2D3748),
+                      ),
                     ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'لم يتم التعيين بعد',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Color(0xFF2D3748),
                   ),
-                ],
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'سيتم تحديد تسكين الباص من قبل الإدارة',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey,
+                    fontStyle: FontStyle.italic,
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          ..._assignments.map((assignment) => _buildAssignmentCard(assignment)).toList(),
+      ],
+    );
+  }
+
+  Widget _buildAssignmentCard(SupervisorAssignmentModel assignment) {
+    final isActive = assignment.status == 'active';
+    final direction = assignment.direction == 'pickup' ? 'الذهاب' : 'العودة';
+
+    return Container(
+      width: double.infinity,
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isActive ? Colors.green.withAlpha(25) : Colors.grey.withAlpha(25),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isActive ? Colors.green.withAlpha(76) : Colors.grey.withAlpha(76),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header with status
+          Row(
+            children: [
+              Icon(
+                isActive ? Icons.check_circle : Icons.pause_circle,
+                color: isActive ? Colors.green : Colors.grey,
+                size: 20,
               ),
-              const SizedBox(height: 8),
+              const SizedBox(width: 8),
               Text(
-                _busAssignment.isNotEmpty ? _busAssignment : 'لم يتم التعيين بعد',
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: Color(0xFF2D3748),
+                isActive ? 'تسكين نشط' : 'تسكين غير نشط',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: isActive ? Colors.green[700] : Colors.grey[700],
                 ),
               ),
-              const SizedBox(height: 8),
-              const Text(
-                'سيتم تحديد تسكين الباص من قبل الإدارة',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey,
-                  fontStyle: FontStyle.italic,
+              const Spacer(),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: isActive ? Colors.green.withAlpha(51) : Colors.grey.withAlpha(51),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  direction,
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                    color: isActive ? Colors.green[700] : Colors.grey[700],
+                  ),
                 ),
               ),
             ],
+          ),
+          const SizedBox(height: 12),
+
+          // Bus information
+          if (_assignedBus != null) ...[
+            _buildInfoRow(Icons.directions_bus, 'رقم الباص', _assignedBus!.plateNumber),
+            const SizedBox(height: 8),
+            _buildInfoRow(Icons.route, 'خط السير', _assignedBus!.route),
+            const SizedBox(height: 8),
+            _buildInfoRow(Icons.airline_seat_recline_normal, 'عدد المقاعد', '${_assignedBus!.capacity}'),
+          ] else if (assignment.busRoute.isNotEmpty) ...[
+            _buildInfoRow(Icons.route, 'خط السير', assignment.busRoute),
+          ],
+
+          const SizedBox(height: 8),
+
+          // Assignment details
+          if (assignment.assignedByName.isNotEmpty) ...[
+            _buildInfoRow(Icons.person, 'تم التعيين بواسطة', assignment.assignedByName),
+            const SizedBox(height: 8),
+          ],
+
+          _buildInfoRow(
+            Icons.access_time,
+            'تاريخ التعيين',
+            '${assignment.assignedAt.day}/${assignment.assignedAt.month}/${assignment.assignedAt.year}'
+          ),
+
+          if (assignment.notes.isNotEmpty) ...[
+            const SizedBox(height: 8),
+            _buildInfoRow(Icons.note, 'ملاحظات', assignment.notes),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String label, String value) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: Colors.grey[600]),
+        const SizedBox(width: 8),
+        Text(
+          '$label: ',
+          style: TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            color: Colors.grey[700],
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(
+              fontSize: 14,
+              color: Color(0xFF2D3748),
+            ),
           ),
         ),
       ],
