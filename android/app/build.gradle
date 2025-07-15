@@ -11,10 +11,14 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // إضافة خيارات لقمع تحذيرات Java
+        compilerArgs += ["-Xlint:-options", "-Xlint:-deprecation"]
     }
 
     kotlinOptions {
         jvmTarget = "17"
+        // إضافة خيارات Kotlin لتجنب التحذيرات
+        freeCompilerArgs += ["-Xjvm-default=all"]
     }
 
     // Build speed optimizations (updated for modern AGP)
@@ -46,15 +50,19 @@ android {
             shrinkResources = false
             debuggable = true
             applicationIdSuffix = ".debug"
+            // إعدادات إضافية للـ debug
+            jniDebuggable = false
+            renderscriptDebuggable = false
         }
         release {
             signingConfig = signingConfigs.debug
-            minifyEnabled = true
-            shrinkResources = true
+            // تعطيل التحسينات مؤقتاً لتجنب JVM crash
+            minifyEnabled = false
+            shrinkResources = false
             debuggable = false
 
-            // إعدادات ProGuard محسنة
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            // إعدادات ProGuard بسيطة
+            // proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
 }
