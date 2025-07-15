@@ -2,7 +2,6 @@ plugins {
     id "com.android.application"
     id "kotlin-android"
     id "dev.flutter.flutter-gradle-plugin"
-    id "com.google.gms.google-services"
 }
 
 android {
@@ -50,12 +49,12 @@ android {
         }
         release {
             signingConfig = signingConfigs.debug
-            // تعطيل التحسينات مؤقتاً لحل مشكلة الذاكرة
-            minifyEnabled = false
-            shrinkResources = false
-            // يمكن تفعيلها لاحقاً عند حل مشكلة الذاكرة
-            // minifyEnabled = true
-            // shrinkResources = true
+            minifyEnabled = true
+            shrinkResources = true
+            debuggable = false
+
+            // إعدادات ProGuard محسنة
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
 }
@@ -67,3 +66,6 @@ flutter {
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
 }
+
+// تطبيق Google Services plugin في النهاية لتجنب مشاكل البحث عن الملف
+apply plugin: 'com.google.gms.google-services'

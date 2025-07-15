@@ -71,18 +71,51 @@ Dart_DetectNullSafety crash
    - أغلق جميع البرامج الأخرى
    - تأكد من وجود 8GB ذاكرة على الأقل
 
+### 4. مشاكل Firebase (google-services.json مفقود)
+
+#### المشكلة:
+```
+File google-services.json is missing.
+The Google Services Plugin cannot function without it.
+```
+
+#### الحل السريع:
+1. **استخدم Debug mode فقط:**
+   ```cmd
+   build_debug_only.bat
+   ```
+
+2. **أو البناء اليدوي:**
+   ```cmd
+   flutter build apk --debug
+   ```
+
+#### الحل الشامل:
+- راجع `FIREBASE_FIX_GUIDE.md` للحل التفصيلي
+- تأكد من وجود `android/app/google-services.json`
+- تحقق من إعدادات Firebase Console
+
 ## 🛠️ خيارات البناء المتاحة
 
-### 1. البناء الآمن للذاكرة (موصى به لحل مشكلة Out of Memory)
+### 1. البناء Debug فقط (موصى به لتجنب مشاكل Firebase)
+```cmd
+build_debug_only.bat
+```
+- يتجنب مشاكل Firebase و Release mode
+- حل مشكلة google-services.json
+- إعدادات ذاكرة محسنة
+- مناسب للتطوير والاختبار
+
+### 2. البناء الآمن للذاكرة (لحل مشكلة Out of Memory)
 ```cmd
 build_memory_safe.bat
 ```
 - حل مشكلة نفاد الذاكرة
-- إعدادات ذاكرة محسنة
+- يحاول Debug ثم Profile ثم Release
 - تنظيف شامل قبل البناء
 - مراقبة استهلاك الذاكرة
 
-### 2. البناء الآمن العادي
+### 3. البناء الآمن العادي
 ```cmd
 build_safe.bat
 ```
