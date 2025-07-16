@@ -1,10 +1,10 @@
-# أوامر تحسين بناء Flutter للسرعة القصوى
+# أوامر تحسين بناء Flutter للسرعة القصوى - Gradle 8.9 + JDK 21
 
 ## 1. تنظيف المشروع أولاً
 flutter clean
 flutter pub get
 
-## 2. بناء APK محسن للسرعة (Debug)
+## 2. بناء APK محسن للسرعة (Debug) - JDK 21 Optimized
 flutter build apk --debug --target-platform android-arm64 --no-tree-shake-icons
 
 ## 3. بناء APK للجهاز المحدد فقط (أسرع)
@@ -16,14 +16,23 @@ flutter run --debug --hot --target-platform android-arm64
 ## 5. بناء Bundle بدلاً من APK (أصغر حجماً)
 flutter build appbundle --debug
 
-## 6. تحسينات إضافية للتطوير
+## 6. تحسينات إضافية للتطوير مع JDK 21
 flutter run --debug --enable-software-rendering
 flutter run --debug --disable-service-auth-codes
+flutter run --debug --enable-impeller
 
 ## 7. فحص حجم التطبيق
 flutter build apk --debug --analyze-size
 
-## ملاحظات مهمة:
+## 8. أوامر Gradle مباشرة (للمشاكل المتقدمة)
+cd android && ./gradlew assembleDebug --parallel --build-cache
+cd android && ./gradlew assembleDebug --configuration-cache
+
+## ملاحظات مهمة لـ Gradle 8.9 + JDK 21:
+# - تم تحسين الإعدادات لـ ZGC (أسرع من G1GC مع JDK 21)
+# - تم إضافة --add-opens flags للتوافق مع JDK 21
+# - تم تعطيل configuration-on-demand (deprecated في Gradle 8.9)
+# - تم تفعيل configuration-cache بدلاً من unsafe.configuration-cache
 # - استخدم --target-platform android-arm64 للأجهزة الحديثة
 # - استخدم --split-per-abi لتقليل حجم APK
 # - استخدم flutter run بدلاً من build apk للتطوير السريع

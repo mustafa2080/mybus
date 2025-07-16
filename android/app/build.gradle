@@ -9,18 +9,19 @@ android {
     compileSdk = 35
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
         // تحسين عملية الترجمة
         incremental = true
     }
 
     kotlinOptions {
-        jvmTarget = "17"
-        // تحسينات Kotlin للسرعة
+        jvmTarget = "21"
+        // تحسينات Kotlin للسرعة مع JDK 21
         freeCompilerArgs += [
             "-opt-in=kotlin.RequiresOptIn",
-            "-Xjvm-default=all"
+            "-Xjvm-default=all",
+            "-Xjdk-release=21"
         ]
     }
 
