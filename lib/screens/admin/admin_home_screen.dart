@@ -6,6 +6,7 @@ import '../../models/absence_model.dart';
 import '../../widgets/admin_bottom_navigation.dart';
 import '../../widgets/admin_app_bar.dart';
 import '../../widgets/animated_background.dart';
+import '../../widgets/notification_badge.dart';
 import '../../utils/background_utils.dart';
 import 'system_settings_screen.dart';
 
@@ -25,11 +26,11 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
       appBar: AdminAppBar(
         title: 'لوحة تحكم الإدارة',
         actions: [
-          IconButton(
-            icon: const Icon(Icons.notifications),
+          NotificationIcon(
             onPressed: () {
               context.push('/admin/notifications');
             },
+            iconColor: Colors.white,
             tooltip: 'الإشعارات',
           ),
         ],

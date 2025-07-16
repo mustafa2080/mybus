@@ -889,41 +889,78 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
   }
 
   Future<void> _sendCustomNotification(StudentModel student, TripAction action) async {
-    String title = '';
-    String body = '';
+    final currentUser = _authService.currentUser;
+    final supervisorName = currentUser?.displayName ??
+                         currentUser?.email?.split('@').first ??
+                         'مشرف النقل';
+    final timestamp = DateTime.now();
 
-    switch (action) {
-      case TripAction.boardBusToSchool:
-        title = 'ركب ${student.name} الباص';
-        body = 'ركب ${student.name} الباص متوجهاً إلى المدرسة في ${_formatTime(DateTime.now())}';
-        break;
-      case TripAction.arriveAtSchool:
-        title = 'وصل ${student.name} إلى المدرسة';
-        body = 'وصل ${student.name} إلى المدرسة بأمان في ${_formatTime(DateTime.now())}';
-        break;
-      case TripAction.boardBusToHome:
-        title = 'ركب ${student.name} الباص';
-        body = 'ركب ${student.name} الباص متوجهاً إلى المنزل في ${_formatTime(DateTime.now())}';
-        break;
-      case TripAction.arriveAtHome:
-        title = 'وصل ${student.name} إلى المنزل';
-        body = 'وصل ${student.name} إلى المنزل بأمان في ${_formatTime(DateTime.now())}';
-        break;
-      default:
-        title = 'تحديث حالة ${student.name}';
-        body = 'تم تحديث حالة ${student.name}';
+    try {
+      switch (action) {
+        case TripAction.boardBusToSchool:
+          await _notificationService.sendStudentBoardedNotification(
+            student: student,
+            supervisorName: supervisorName,
+            timestamp: timestamp,
+          );
+          // إشعار إضافي أن الطالب في الباص متوجه للمدرسة
+          await _notificationService.sendStudentOnBusNotification(
+            student: student,
+            supervisorName: supervisorName,
+            timestamp: timestamp,
+            busRoute: student.busRoute,
+          );
+          break;
+
+        case TripAction.arriveAtSchool:
+          await _notificationService.sendStudentArrivedAtSchoolNotification(
+            student: student,
+            supervisorName: supervisorName,
+            timestamp: timestamp,
+          );
+          break;
+
+        case TripAction.boardBusToHome:
+          await _notificationService.sendStudentBoardedNotification(
+            student: student,
+            supervisorName: supervisorName,
+            timestamp: timestamp,
+          );
+          // إشعار إضافي أن الطالب في الباص متوجه للمنزل
+          await _notificationService.sendStudentOnBusNotification(
+            student: student,
+            supervisorName: supervisorName,
+            timestamp: timestamp,
+            busRoute: student.busRoute,
+          );
+          break;
+
+        case TripAction.arriveAtHome:
+          await _notificationService.sendStudentArrivedAtHomeNotification(
+            student: student,
+            supervisorName: supervisorName,
+            timestamp: timestamp,
+          );
+          break;
+
+        default:
+          // إشعار عام للحالات الأخرى
+          await _notificationService.sendGeneralNotification(
+            title: 'تحديث حالة ${student.name}',
+            body: 'تم تحديث حالة ${student.name} بواسطة $supervisorName في ${_formatTime(timestamp)}',
+            recipientId: student.parentId,
+            data: {
+              'studentId': student.id,
+              'action': action.toString().split('.').last,
+              'timestamp': timestamp.toIso8601String(),
+            },
+          );
+      }
+
+      debugPrint('✅ Notification sent for action: $action');
+    } catch (e) {
+      debugPrint('❌ Error sending notification: $e');
     }
-
-    await _notificationService.sendGeneralNotification(
-      title: title,
-      body: body,
-      recipientId: student.parentId,
-      data: {
-        'studentId': student.id,
-        'action': action.toString().split('.').last,
-        'timestamp': DateTime.now().toIso8601String(),
-      },
-    );
   }
 
   String _formatTime(DateTime dateTime) {
