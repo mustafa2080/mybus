@@ -428,23 +428,41 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 20),
                         decoration: BoxDecoration(
                           gradient: LinearGradient(
-                            colors: [
-                              Colors.white.withOpacity(0.2),
-                              Colors.white.withOpacity(0.1),
+                            colors: hasNotifications ? [
+                              const Color(0xFFFF6B6B).withOpacity(0.9),
+                              const Color(0xFFFF8E53).withOpacity(0.8),
+                            ] : [
+                              Colors.white.withOpacity(0.25),
+                              Colors.white.withOpacity(0.15),
                             ],
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
                           ),
-                          borderRadius: BorderRadius.circular(16),
+                          borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: Colors.white.withOpacity(0.3),
-                            width: 1.5,
+                            color: hasNotifications
+                                ? Colors.white.withOpacity(0.6)
+                                : Colors.white.withOpacity(0.4),
+                            width: 2,
                           ),
-                          boxShadow: [
+                          boxShadow: hasNotifications ? [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
+                              color: const Color(0xFFFF6B6B).withOpacity(0.4),
+                              blurRadius: 12,
+                              offset: const Offset(0, 6),
+                              spreadRadius: 1,
+                            ),
+                            BoxShadow(
+                              color: Colors.white.withOpacity(0.3),
                               blurRadius: 8,
+                              offset: const Offset(0, -2),
+                            ),
+                          ] : [
+                            BoxShadow(
+                              color: Colors.black.withOpacity(0.15),
+                              blurRadius: 10,
                               offset: const Offset(0, 4),
+                              spreadRadius: 1,
                             ),
                           ],
                         ),
@@ -452,32 +470,39 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Icon(
-                              hasNotifications ? Icons.notifications_active : Icons.notifications,
-                              color: hasNotifications ? Colors.yellow : Colors.white,
-                              size: 18,
+                              hasNotifications ? Icons.notifications_active : Icons.notifications_outlined,
+                              color: hasNotifications ? Colors.white : Colors.white.withOpacity(0.9),
+                              size: 20,
                             ),
-                            const SizedBox(width: 6),
+                            const SizedBox(width: 8),
                             Text(
                               'الإشعارات',
                               style: TextStyle(
-                                color: Colors.white.withOpacity(0.95),
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
+                                color: hasNotifications ? Colors.white : Colors.white.withOpacity(0.95),
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                             if (hasNotifications) ...[
-                              const SizedBox(width: 4),
+                              const SizedBox(width: 6),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                 decoration: BoxDecoration(
-                                  color: Colors.red,
-                                  borderRadius: BorderRadius.circular(8),
+                                  color: Colors.white,
+                                  borderRadius: BorderRadius.circular(10),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.2),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
                                 ),
                                 child: Text(
                                   notificationCount > 99 ? '99+' : notificationCount.toString(),
                                   style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 9,
+                                    color: Color(0xFFFF6B6B),
+                                    fontSize: 10,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -530,9 +555,9 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
             children: [
               Expanded(
                 child: _buildQuickActionButton(
-                  icon: Icons.feedback,
+                  icon: Icons.feedback_outlined,
                   label: 'الشكاوى والاقتراحات',
-                  color: const Color(0xFFE53E3E),
+                  color: const Color(0xFFFF6B6B), // أحمر أكثر إشراقاً
                   onTap: () {
                     context.push('/parent/complaints');
                   },
@@ -541,9 +566,9 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: _buildQuickActionButton(
-                  icon: Icons.info_outline,
+                  icon: Icons.directions_bus_filled,
                   label: 'معلومات الباص',
-                  color: Colors.teal,
+                  color: const Color(0xFF20B2AA), // تيل أكثر إشراقاً
                   onTap: () {
                     _showBusInfoDialog();
                   },
@@ -556,9 +581,9 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
             children: [
               Expanded(
                 child: _buildQuickActionButton(
-                  icon: Icons.supervisor_account,
+                  icon: Icons.supervisor_account_outlined,
                   label: 'معلومات المشرفين',
-                  color: const Color(0xFF1E88E5),
+                  color: const Color(0xFF4A90E2), // أزرق أكثر إشراقاً
                   onTap: () {
                     context.push('/parent/supervisor-info');
                   },
@@ -1109,9 +1134,9 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
             children: [
               Expanded(
                 child: _buildQuickActionButton(
-                  icon: Icons.person_off,
+                  icon: Icons.person_off_outlined,
                   label: 'إبلاغ غياب',
-                  color: Colors.orange,
+                  color: const Color(0xFFFF8C00), // برتقالي أكثر إشراقاً
                   onTap: () {
                     _showAbsenceDialog();
                   },
@@ -1120,9 +1145,9 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: _buildQuickActionButton(
-                  icon: Icons.person_add,
+                  icon: Icons.person_add_alt_1_outlined,
                   label: 'إضافة طالب',
-                  color: Colors.blue,
+                  color: const Color(0xFF007AFF), // أزرق iOS أكثر إشراقاً
                   onTap: () {
                     _navigateToAddStudent();
                   },
@@ -1161,9 +1186,9 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
             children: [
               Expanded(
                 child: _buildQuickActionButton(
-                  icon: Icons.history,
+                  icon: Icons.history_outlined,
                   label: 'سجل الرحلات',
-                  color: Colors.purple,
+                  color: const Color(0xFF9C27B0), // بنفسجي أكثر إشراقاً
                   onTap: () {
                     _showTripHistoryDialog();
                   },
@@ -1172,9 +1197,9 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: _buildQuickActionButton(
-                  icon: Icons.poll,
+                  icon: Icons.poll_outlined,
                   label: 'الاستبيانات',
-                  color: Colors.indigo,
+                  color: const Color(0xFF3F51B5), // نيلي أكثر إشراقاً
                   onTap: () {
                     context.push('/parent/surveys');
                   },
@@ -1199,7 +1224,7 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(16),
+      borderRadius: BorderRadius.circular(20),
       child: Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
@@ -1207,45 +1232,73 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              buttonColor.withOpacity(0.1),
-              buttonColor.withOpacity(0.05),
+              buttonColor.withOpacity(0.25),
+              buttonColor.withOpacity(0.15),
             ],
           ),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(20),
           border: Border.all(
-            color: buttonColor.withOpacity(0.2),
-            width: 1.5,
+            color: buttonColor.withOpacity(0.4),
+            width: 2,
           ),
           boxShadow: [
             BoxShadow(
-              color: buttonColor.withOpacity(0.1),
+              color: buttonColor.withOpacity(0.25),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+              spreadRadius: 1,
+            ),
+            BoxShadow(
+              color: Colors.white.withOpacity(0.8),
               blurRadius: 8,
-              offset: const Offset(0, 4),
+              offset: const Offset(0, -2),
+              spreadRadius: 0,
             ),
           ],
         ),
         child: Column(
           children: [
             Container(
-              padding: const EdgeInsets.all(12),
+              padding: const EdgeInsets.all(14),
               decoration: BoxDecoration(
-                color: buttonColor.withOpacity(0.15),
-                borderRadius: BorderRadius.circular(12),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    buttonColor.withOpacity(0.9),
+                    buttonColor.withOpacity(0.7),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: buttonColor.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Icon(
                 icon,
-                size: 28,
-                color: buttonColor,
+                size: 32,
+                color: Colors.white,
               ),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             Text(
               label,
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 13,
-                fontWeight: FontWeight.w600,
-                color: isDark ? Colors.white : Colors.grey[800],
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: buttonColor.withOpacity(0.9),
+                shadows: [
+                  Shadow(
+                    color: Colors.white.withOpacity(0.8),
+                    offset: const Offset(0, 1),
+                    blurRadius: 2,
+                  ),
+                ],
               ),
             ),
           ],
