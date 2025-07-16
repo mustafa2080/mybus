@@ -11,14 +11,10 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
-        // إضافة خيارات لقمع تحذيرات Java
-        compilerArgs += ["-Xlint:-options", "-Xlint:-deprecation"]
     }
 
     kotlinOptions {
         jvmTarget = "17"
-        // إضافة خيارات Kotlin لتجنب التحذيرات
-        freeCompilerArgs += ["-Xjvm-default=all"]
     }
 
     // Build speed optimizations (updated for modern AGP)
