@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/user_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/email_service.dart';
+import '../../widgets/admin_app_bar.dart';
 
 class ParentsManagementScreen extends StatefulWidget {
   const ParentsManagementScreen({super.key});
@@ -20,6 +21,9 @@ class _ParentsManagementScreenState extends State<ParentsManagementScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      appBar: const AdminAppBar(
+        title: 'إدارة أولياء الأمور',
+      ),
       body: Column(
         children: [
           // Header Stats
@@ -609,6 +613,9 @@ class _ParentsManagementScreenState extends State<ParentsManagementScreen> {
       });
 
       if (mounted) {
+        // تحديث الواجهة
+        setState(() {});
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('تم تحديث بيانات ولي الأمر بنجاح'),
@@ -878,9 +885,13 @@ class _ParentsManagementScreenState extends State<ParentsManagementScreen> {
 
   Future<void> _deleteParent(String id) async {
     try {
+      // حذف ولي الأمر من قاعدة البيانات
       await _firestore.collection('users').doc(id).delete();
 
       if (mounted) {
+        // تحديث الواجهة
+        setState(() {});
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('تم حذف ولي الأمر بنجاح'),
