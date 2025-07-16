@@ -10,6 +10,20 @@ import '../../widgets/custom_button.dart';
 import '../../widgets/base64_image_widget.dart';
 import '../../widgets/admin_bottom_navigation.dart';
 
+// فئة لتجميع الطلاب حسب ولي الأمر
+class ParentGroup {
+  final String parentId;
+  final String parentName;
+  final String parentPhone;
+  final List<StudentModel> students;
+
+  ParentGroup({
+    required this.parentId,
+    required this.parentName,
+    required this.parentPhone,
+    required this.students,
+  });
+}
 
 class StudentManagementScreen extends StatefulWidget {
   const StudentManagementScreen({super.key});
@@ -25,6 +39,7 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
   StudentStatus? _selectedStatus;
   String? _selectedGrade;
   bool _isFABExpanded = false;
+  bool _groupByParent = true; // العرض المجمع افتراضياً
 
   @override
   void dispose() {
@@ -359,6 +374,29 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
             ),
           ),
           const SizedBox(width: 8),
+          // Group Toggle Button
+          Container(
+            height: 45,
+            width: 45,
+            decoration: BoxDecoration(
+              color: _groupByParent ? const Color(0xFF1E88E5) : Colors.grey[100],
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: IconButton(
+              onPressed: () {
+                setState(() {
+                  _groupByParent = !_groupByParent;
+                });
+              },
+              icon: Icon(
+                _groupByParent ? Icons.group : Icons.list,
+                size: 18,
+                color: _groupByParent ? Colors.white : Colors.grey[600],
+              ),
+              tooltip: _groupByParent ? 'عرض قائمة' : 'تجميع حسب ولي الأمر',
+            ),
+          ),
+          const SizedBox(width: 8),
           // Clear Filters Button
           Container(
             height: 45,
@@ -464,25 +502,186 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
           );
         }
 
-        return ListView.builder(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          itemCount: filteredStudents.length,
-          itemBuilder: (context, index) {
-            final student = filteredStudents[index];
-            return _buildStudentCard(student);
-          },
-        );
+        if (_groupByParent) {
+          // العرض المجمع حسب ولي الأمر
+          final groupedStudents = _groupStudentsByParent(filteredStudents);
+
+          return ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: groupedStudents.length,
+            itemBuilder: (context, index) {
+              final parentGroup = groupedStudents[index];
+              return _buildParentGroup(parentGroup);
+            },
+          );
+        } else {
+          // العرض العادي كقائمة
+          return ListView.builder(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: filteredStudents.length,
+            itemBuilder: (context, index) {
+              final student = filteredStudents[index];
+              return _buildStudentCard(student, isInGroup: false);
+            },
+          );
+        }
       },
     );
   }
 
-  Widget _buildStudentCard(StudentModel student) {
+  // تجميع الطلاب حسب ولي الأمر
+  List<ParentGroup> _groupStudentsByParent(List<StudentModel> students) {
+    final Map<String, List<StudentModel>> groupedMap = {};
+
+    for (final student in students) {
+      final parentKey = '${student.parentId}_${student.parentName}';
+      if (!groupedMap.containsKey(parentKey)) {
+        groupedMap[parentKey] = [];
+      }
+      groupedMap[parentKey]!.add(student);
+    }
+
+    // تحويل إلى قائمة مرتبة
+    final groups = groupedMap.entries.map((entry) {
+      final students = entry.value;
+      return ParentGroup(
+        parentId: students.first.parentId,
+        parentName: students.first.parentName,
+        parentPhone: students.first.parentPhone,
+        students: students,
+      );
+    }).toList();
+
+    // ترتيب المجموعات حسب اسم ولي الأمر
+    groups.sort((a, b) => a.parentName.compareTo(b.parentName));
+
+    return groups;
+  }
+
+  Widget _buildParentGroup(ParentGroup parentGroup) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 8),
+      margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withAlpha(30),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+        border: Border.all(
+          color: const Color(0xFF1E88E5).withOpacity(0.1),
+          width: 1.5,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Parent Header
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  const Color(0xFF1E88E5).withOpacity(0.1),
+                  const Color(0xFF1E88E5).withOpacity(0.05),
+                ],
+              ),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E88E5).withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Icon(
+                    Icons.family_restroom,
+                    color: Color(0xFF1E88E5),
+                    size: 20,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        parentGroup.parentName.isNotEmpty
+                            ? parentGroup.parentName
+                            : 'ولي أمر غير محدد',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1E88E5),
+                        ),
+                      ),
+                      if (parentGroup.parentPhone.isNotEmpty) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          parentGroup.parentPhone,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey[600],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF4CAF50).withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '${parentGroup.students.length} طالب',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF4CAF50),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // Students List
+          ...parentGroup.students.asMap().entries.map((entry) {
+            final index = entry.key;
+            final student = entry.value;
+            final isLast = index == parentGroup.students.length - 1;
+
+            return Container(
+              margin: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                bottom: isLast ? 16 : 8,
+              ),
+              child: _buildStudentCard(student, isInGroup: true),
+            );
+          }).toList(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStudentCard(StudentModel student, {bool isInGroup = false}) {
+    return Container(
+      margin: EdgeInsets.only(bottom: isInGroup ? 0 : 8),
+      decoration: BoxDecoration(
+        color: isInGroup ? Colors.grey[50] : Colors.white,
+        borderRadius: BorderRadius.circular(isInGroup ? 8 : 12),
+        boxShadow: isInGroup ? [] : [
           BoxShadow(
             color: Colors.grey.withAlpha(20),
             blurRadius: 6,
@@ -490,7 +689,9 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
           ),
         ],
         border: Border.all(
-          color: Colors.grey.withAlpha(25),
+          color: isInGroup
+              ? const Color(0xFF1E88E5).withOpacity(0.1)
+              : Colors.grey.withAlpha(25),
           width: 1,
         ),
       ),
