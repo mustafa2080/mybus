@@ -11,17 +11,39 @@ android {
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
+        // تحسين عملية الترجمة
+        incremental = true
     }
 
     kotlinOptions {
         jvmTarget = "17"
+        // تحسينات Kotlin للسرعة
+        freeCompilerArgs += [
+            "-opt-in=kotlin.RequiresOptIn",
+            "-Xjvm-default=all"
+        ]
     }
 
     // Build speed optimizations (updated for modern AGP)
     packaging {
         resources {
             pickFirsts += ['**/libc++_shared.so', '**/libjsc.so']
+            excludes += [
+                '/META-INF/{AL2.0,LGPL2.1}',
+                '/META-INF/DEPENDENCIES',
+                '/META-INF/LICENSE',
+                '/META-INF/LICENSE.txt',
+                '/META-INF/NOTICE',
+                '/META-INF/NOTICE.txt'
+            ]
         }
+    }
+
+    // تحسينات إضافية للسرعة
+    buildFeatures {
+        buildConfig = true
+        viewBinding = false
+        dataBinding = false
     }
 
     defaultConfig {
@@ -32,12 +54,16 @@ android {
         versionName = "1.0"
         multiDexEnabled = true
 
-        // تحسينات لتقليل حجم التطبيق
+        // تحسينات لتقليل حجم التطبيق والسرعة
         ndk {
             abiFilters 'arm64-v8a', 'armeabi-v7a'
         }
 
+        // تحسينات إضافية للسرعة
+        vectorDrawables.useSupportLibrary = true
 
+        // تحسين عملية البناء
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
     buildTypes {
@@ -46,12 +72,19 @@ android {
             shrinkResources = false
             debuggable = true
             applicationIdSuffix = ".debug"
+            // تحسينات للسرعة في وضع التطوير
+            crunchPngs = false
+            zipAlignEnabled = false
+            // تسريع عملية البناء
+            renderscriptOptimLevel = 0
         }
         release {
             signingConfig = signingConfigs.debug
             minifyEnabled = false
             shrinkResources = false
             debuggable = false
+            crunchPngs = true
+            zipAlignEnabled = true
         }
     }
 }
