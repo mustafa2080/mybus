@@ -46,19 +46,12 @@ android {
             shrinkResources = false
             debuggable = true
             applicationIdSuffix = ".debug"
-            // إعدادات إضافية للـ debug
-            jniDebuggable = false
-            renderscriptDebuggable = false
         }
         release {
             signingConfig = signingConfigs.debug
-            // تعطيل التحسينات مؤقتاً لتجنب JVM crash
             minifyEnabled = false
             shrinkResources = false
             debuggable = false
-
-            // إعدادات ProGuard بسيطة
-            // proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
     }
 }
