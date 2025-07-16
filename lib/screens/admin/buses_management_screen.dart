@@ -281,8 +281,8 @@ class _BusesManagementScreenState extends State<BusesManagementScreen> {
               ),
               Expanded(
                 child: _buildDetailItem(
-                  icon: Icons.description,
-                  label: 'الوصف',
+                  icon: Icons.directions_bus,
+                  label: 'نوع الباص',
                   value: bus.description.isNotEmpty ? bus.description : 'لا يوجد',
                 ),
               ),
@@ -452,8 +452,8 @@ class _BusesManagementScreenState extends State<BusesManagementScreen> {
                   TextField(
                     controller: descriptionController,
                     decoration: const InputDecoration(
-                      labelText: 'وصف السيارة (اختياري)',
-                      prefixIcon: Icon(Icons.description),
+                      labelText: 'نوع الباص (اختياري)',
+                      prefixIcon: Icon(Icons.directions_bus),
                       border: OutlineInputBorder(),
                     ),
                     maxLines: 2,

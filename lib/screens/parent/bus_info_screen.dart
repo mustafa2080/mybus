@@ -98,7 +98,26 @@ class _BusInfoScreenState extends State<BusInfoScreen> {
             )
           : _bus == null
               ? _buildNoBusAssigned()
-              : _buildBusInfo(),
+              : StreamBuilder<BusModel?>(
+                  stream: _databaseService.getBusStream(_bus!.id),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasError) {
+                      return Center(
+                        child: Text('خطأ في تحميل البيانات: ${snapshot.error}'),
+                      );
+                    }
+
+                    final updatedBus = snapshot.data;
+                    if (updatedBus == null) {
+                      return _buildNoBusAssigned();
+                    }
+
+                    // تحديث البيانات المحلية
+                    _bus = updatedBus;
+
+                    return _buildBusInfo();
+                  },
+                ),
     );
   }
 
@@ -245,15 +264,15 @@ class _BusInfoScreenState extends State<BusInfoScreen> {
                   const SizedBox(height: 16),
                   _buildInfoRow(
                     icon: Icons.directions_bus,
-                    label: 'وصف الباص',
+                    label: 'نوع الباص',
                     value: _bus?.description ?? 'غير محدد',
                     color: Colors.blue,
                   ),
                   const SizedBox(height: 12),
                   _buildInfoRow(
-                    icon: Icons.description,
-                    label: 'وصف السيارة',
-                    value: _bus?.description ?? '',
+                    icon: Icons.confirmation_number,
+                    label: 'رقم اللوحة',
+                    value: _bus?.plateNumber ?? 'غير محدد',
                     color: Colors.green,
                   ),
                   const SizedBox(height: 12),

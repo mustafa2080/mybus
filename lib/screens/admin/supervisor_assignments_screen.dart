@@ -546,7 +546,7 @@ class _SupervisorAssignmentsScreenState extends State<SupervisorAssignmentsScree
                               children: [
                                 _buildModernInfoRow(
                                   icon: Icons.directions_bus,
-                                  label: 'الحافلة',
+                                  label: 'نوع الباص',
                                   value: bus?.description ?? 'غير محدد',
                                 ),
                                 _buildModernInfoRow(

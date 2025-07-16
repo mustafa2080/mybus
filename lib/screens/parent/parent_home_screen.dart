@@ -1007,7 +1007,7 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
               ),
               const SizedBox(height: 8),
               if (busData != null) ...[
-                _buildBusInfoRow('وصف الباص', busData['description'] ?? 'غير محدد'),
+                _buildBusInfoRow('نوع الباص', busData['description'] ?? 'غير محدد'),
                 _buildBusInfoRow('خط السير', student.busRoute.isNotEmpty ? student.busRoute : 'غير محدد'),
                 // Show supervisor info based on current time and assignment
                 FutureBuilder<Map<String, String>>(

@@ -3781,6 +3781,25 @@ class DatabaseService {
     }
   }
 
+  // Get bus stream for real-time updates
+  Stream<BusModel?> getBusStream(String busId) {
+    return _firestore
+        .collection('buses')
+        .doc(busId)
+        .snapshots()
+        .map((doc) {
+          if (doc.exists) {
+            try {
+              return BusModel.fromMap(doc.data()!);
+            } catch (e) {
+              debugPrint('❌ Error parsing bus data: $e');
+              return null;
+            }
+          }
+          return null;
+        });
+  }
+
   // Get user by ID
   Future<UserModel?> getUserById(String userId) async {
     try {
