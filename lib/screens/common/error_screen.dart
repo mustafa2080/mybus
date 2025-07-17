@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import '../../utils/constants.dart';
 
 /// شاشة الخطأ
 class ErrorScreen extends StatelessWidget {
@@ -11,7 +10,7 @@ class ErrorScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text('خطأ'),
-        backgroundColor: AppConstants.primaryColor,
+        backgroundColor: const Color(0xFF1E88E5),
         foregroundColor: Colors.white,
       ),
       body: Center(
@@ -38,7 +37,7 @@ class ErrorScreen extends StatelessWidget {
             ElevatedButton(
               onPressed: () => context.go('/'),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppConstants.primaryColor,
+                backgroundColor: const Color(0xFF1E88E5),
                 foregroundColor: Colors.white,
               ),
               child: const Text('العودة للرئيسية'),

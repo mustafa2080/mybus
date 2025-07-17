@@ -85,7 +85,7 @@ class MyApp extends StatelessWidget {
             themeMode: themeService.themeMode,
 
             // نظام التوجيه
-            routerConfig: AppRoutes.router,
+            routerConfig: AppRoutes.goRouter,
           );
         },
       ),

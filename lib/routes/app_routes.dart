@@ -372,12 +372,6 @@ class AppRoutes {
           ),
         ],
       ),
-    ],
-    
-    // Error handling
-    errorBuilder: (context, state) => const ErrorScreen(),
-    routes: [
-
       // Test Routes
       GoRoute(
         path: testResponsive,
@@ -396,6 +390,9 @@ class AppRoutes {
         name: 'notifications',
         builder: (context, state) => const common_notifications.NotificationsScreen(),
       ),
-    ),
+    ],
+
+    // Error handling
+    errorBuilder: (context, state) => const ErrorScreen(),
   );
 }
