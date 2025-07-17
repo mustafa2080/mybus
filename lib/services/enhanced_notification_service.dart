@@ -10,6 +10,13 @@ import '../models/notification_model.dart';
 import '../models/student_model.dart';
 import '../models/user_model.dart';
 
+// تعريف UserRole للتوافق مع الكود
+enum UserRole {
+  parent,
+  supervisor,
+  admin,
+}
+
 /// خدمة الإشعارات المحسنة مع الصوت والإشعارات المحلية
 class EnhancedNotificationService {
   static final EnhancedNotificationService _instance = EnhancedNotificationService._internal();
@@ -265,13 +272,12 @@ class EnhancedNotificationService {
       // حفظ الإشعار في قاعدة البيانات
       final notification = NotificationModel(
         id: _uuid.v4(),
-        userId: userId,
         title: title,
-        message: body,
-        type: type,
-        isRead: false,
-        createdAt: DateTime.now(),
-        data: data,
+        body: body,
+        recipientId: userId,
+        type: NotificationType.general,
+        timestamp: DateTime.now(),
+        data: data ?? {},
       );
 
       await _firestore

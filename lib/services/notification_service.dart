@@ -1426,8 +1426,8 @@ class NotificationService {
             .toList());
   }
 
-  /// تحديد الإشعار كمقروء
-  Future<void> markNotificationAsRead(String notificationId) async {
+  /// تحديد الإشعار كمقروء (دالة محسنة)
+  Future<void> markNotificationAsReadEnhanced(String notificationId) async {
     try {
       await _firestore
           .collection('notifications')

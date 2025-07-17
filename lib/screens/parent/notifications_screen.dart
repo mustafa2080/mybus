@@ -316,7 +316,48 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         icon = Icons.stop;
         color = Colors.red;
         break;
+      case NotificationType.studentAssigned:
+        icon = Icons.person_add;
+        color = Colors.green;
+        break;
+      case NotificationType.studentUnassigned:
+        icon = Icons.person_remove;
+        color = Colors.orange;
+        break;
+      case NotificationType.absenceRequested:
+        icon = Icons.event_busy;
+        color = Colors.orange;
+        break;
+      case NotificationType.absenceApproved:
+        icon = Icons.check_circle;
+        color = Colors.green;
+        break;
+      case NotificationType.absenceRejected:
+        icon = Icons.cancel;
+        color = Colors.red;
+        break;
+      case NotificationType.complaintSubmitted:
+        icon = Icons.feedback;
+        color = Colors.purple;
+        break;
+      case NotificationType.complaintResponded:
+        icon = Icons.reply;
+        color = Colors.blue;
+        break;
+      case NotificationType.emergency:
+        icon = Icons.emergency;
+        color = Colors.red;
+        break;
+      case NotificationType.systemUpdate:
+        icon = Icons.system_update;
+        color = Colors.grey;
+        break;
+      case NotificationType.tripDelayed:
+        icon = Icons.schedule;
+        color = Colors.orange;
+        break;
       case NotificationType.general:
+      default:
         icon = Icons.info;
         color = Colors.grey;
         break;

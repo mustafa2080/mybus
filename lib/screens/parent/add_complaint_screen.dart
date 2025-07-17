@@ -570,15 +570,15 @@ class _AddComplaintScreenState extends State<AddComplaintScreen> {
       );
 
       // Save to database
-      final savedComplaint = await _databaseService.addComplaint(complaint);
+      await _databaseService.addComplaint(complaint);
 
       // إرسال إشعار للإدارة مع الصوت
       await NotificationService().notifyNewComplaintWithSound(
-        complaintId: savedComplaint.id,
+        complaintId: complaint.id,
         parentId: currentUser.uid,
         parentName: parentData['name'] ?? 'ولي أمر',
         subject: _titleController.text.trim(),
-        category: _selectedType,
+        category: _selectedType.toString().split('.').last,
       );
 
       if (mounted) {

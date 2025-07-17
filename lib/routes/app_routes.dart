@@ -9,7 +9,7 @@ import '../screens/admin/admin_home_screen.dart';
 import '../screens/supervisor/supervisor_home_screen.dart';
 import '../screens/test_responsive_screen.dart';
 import '../screens/test_notifications_screen.dart';
-import '../screens/common/notifications_screen.dart';
+import '../screens/common/notifications_screen.dart' as common_notifications;
 import '../screens/parent/student_activity_screen.dart';
 import '../screens/parent/bus_info_screen.dart';
 import '../screens/parent/complaints_screen.dart';
@@ -424,7 +424,7 @@ class AppRoutes {
       GoRoute(
         path: notifications,
         name: 'notifications',
-        builder: (context, state) => const NotificationsScreen(),
+        builder: (context, state) => const common_notifications.NotificationsScreen(),
       ),
     ),
   );

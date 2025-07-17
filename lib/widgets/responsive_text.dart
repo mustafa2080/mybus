@@ -142,6 +142,7 @@ class ResponsiveBodyText extends StatelessWidget {
   final int? maxLines;
   final TextOverflow? overflow;
   final bool? softWrap;
+  final FontWeight? fontWeight;
 
   const ResponsiveBodyText(
     this.text, {
@@ -152,13 +153,14 @@ class ResponsiveBodyText extends StatelessWidget {
     this.maxLines,
     this.overflow,
     this.softWrap,
+    this.fontWeight,
   });
 
   @override
   Widget build(BuildContext context) {
     return ResponsiveText(
       text,
-      style: style,
+      style: style?.copyWith(fontWeight: fontWeight) ?? TextStyle(fontWeight: fontWeight),
       mobileFontSize: 14.0,
       tabletFontSize: 15.0,
       desktopFontSize: 16.0,

@@ -225,4 +225,76 @@ class NotificationModel {
 
   @override
   int get hashCode => id.hashCode;
+
+  // خصائص إضافية للواجهة
+  String get relativeTime {
+    final now = DateTime.now();
+    final difference = now.difference(timestamp);
+
+    if (difference.inMinutes < 1) {
+      return 'الآن';
+    } else if (difference.inMinutes < 60) {
+      return 'منذ ${difference.inMinutes} دقيقة';
+    } else if (difference.inHours < 24) {
+      return 'منذ ${difference.inHours} ساعة';
+    } else if (difference.inDays < 7) {
+      return 'منذ ${difference.inDays} يوم';
+    } else {
+      return '${timestamp.day}/${timestamp.month}/${timestamp.year}';
+    }
+  }
+
+  bool get requiresAction {
+    return type == NotificationType.absenceRequested ||
+           type == NotificationType.complaintSubmitted ||
+           type == NotificationType.emergency;
+  }
+
+  String? get actionText {
+    switch (type) {
+      case NotificationType.absenceRequested:
+        return 'مراجعة الطلب';
+      case NotificationType.complaintSubmitted:
+        return 'الرد على الشكوى';
+      case NotificationType.emergency:
+        return 'اتخاذ إجراء';
+      default:
+        return null;
+    }
+  }
+
+  String get typeDescription {
+    switch (type) {
+      case NotificationType.studentBoarded:
+        return 'ركوب طالب';
+      case NotificationType.studentLeft:
+        return 'نزول طالب';
+      case NotificationType.tripStarted:
+        return 'بداية رحلة';
+      case NotificationType.tripEnded:
+        return 'نهاية رحلة';
+      case NotificationType.absenceRequested:
+        return 'طلب غياب';
+      case NotificationType.absenceApproved:
+        return 'موافقة على غياب';
+      case NotificationType.absenceRejected:
+        return 'رفض غياب';
+      case NotificationType.complaintSubmitted:
+        return 'شكوى جديدة';
+      case NotificationType.complaintResponded:
+        return 'رد على شكوى';
+      case NotificationType.emergency:
+        return 'حالة طوارئ';
+      case NotificationType.systemUpdate:
+        return 'تحديث النظام';
+      case NotificationType.studentAssigned:
+        return 'تسكين طالب';
+      case NotificationType.studentUnassigned:
+        return 'إلغاء تسكين طالب';
+      case NotificationType.tripDelayed:
+        return 'تأخير رحلة';
+      default:
+        return 'إشعار عام';
+    }
+  }
 }

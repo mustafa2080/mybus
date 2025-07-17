@@ -1,6 +1,5 @@
 // ملف تصدير جميع الـ widgets المتجاوبة
 
-export 'responsive_grid_view.dart';
 export 'responsive_text.dart';
 export 'responsive_card.dart';
 export 'responsive_list.dart';

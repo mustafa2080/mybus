@@ -797,7 +797,28 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
         return Icons.play_arrow;
       case NotificationType.tripEnded:
         return Icons.stop;
+      case NotificationType.studentAssigned:
+        return Icons.person_add;
+      case NotificationType.studentUnassigned:
+        return Icons.person_remove;
+      case NotificationType.absenceRequested:
+        return Icons.event_busy;
+      case NotificationType.absenceApproved:
+        return Icons.check_circle;
+      case NotificationType.absenceRejected:
+        return Icons.cancel;
+      case NotificationType.complaintSubmitted:
+        return Icons.feedback;
+      case NotificationType.complaintResponded:
+        return Icons.reply;
+      case NotificationType.emergency:
+        return Icons.emergency;
+      case NotificationType.systemUpdate:
+        return Icons.system_update;
+      case NotificationType.tripDelayed:
+        return Icons.schedule;
       case NotificationType.general:
+      default:
         return Icons.info;
     }
   }
@@ -812,7 +833,28 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
         return Colors.orange;
       case NotificationType.tripEnded:
         return Colors.red;
+      case NotificationType.studentAssigned:
+        return Colors.green;
+      case NotificationType.studentUnassigned:
+        return Colors.orange;
+      case NotificationType.absenceRequested:
+        return Colors.orange;
+      case NotificationType.absenceApproved:
+        return Colors.green;
+      case NotificationType.absenceRejected:
+        return Colors.red;
+      case NotificationType.complaintSubmitted:
+        return Colors.purple;
+      case NotificationType.complaintResponded:
+        return Colors.blue;
+      case NotificationType.emergency:
+        return Colors.red;
+      case NotificationType.systemUpdate:
+        return Colors.grey;
+      case NotificationType.tripDelayed:
+        return Colors.orange;
       case NotificationType.general:
+      default:
         return Colors.grey;
     }
   }
