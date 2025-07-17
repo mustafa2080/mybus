@@ -18,6 +18,7 @@ import '../models/supervisor_evaluation_model.dart';
 import '../models/parent_student_link_model.dart';
 import 'rate_limit_service.dart';
 import 'cache_service.dart';
+import 'notification_service.dart';
 
 
 class DatabaseService {
@@ -450,15 +451,19 @@ class DatabaseService {
       debugPrint('✅ Student status updated successfully: $studentId');
 
       // إرسال إشعار تغيير الحالة
-      final currentUser = await getCurrentUser();
-      if (currentUser != null) {
+      final currentUserId = _getCurrentUserId();
+      if (currentUserId.isNotEmpty) {
+        final currentUserDoc = await _firestore.collection('users').doc(currentUserId).get();
+        final supervisorName = currentUserDoc.exists ?
+          (currentUserDoc.data()?['name'] ?? 'مشرف') : 'مشرف';
+
         await NotificationService().sendStudentStatusChangeNotification(
           studentId: studentId,
           studentName: studentData['name'] ?? 'طالب',
           parentId: studentData['parentId'] ?? '',
           oldStatus: oldStatus,
           newStatus: newStatus,
-          supervisorName: currentUser.name,
+          supervisorName: supervisorName,
         );
       }
 
@@ -939,15 +944,19 @@ class DatabaseService {
       });
 
       // إرسال إشعار تسكين الطالب
-      final currentUser = await getCurrentUser();
-      if (currentUser != null) {
+      final currentUserId = _getCurrentUserId();
+      if (currentUserId.isNotEmpty) {
+        final currentUserDoc = await _firestore.collection('users').doc(currentUserId).get();
+        final adminName = currentUserDoc.exists ?
+          (currentUserDoc.data()?['name'] ?? 'إدمن') : 'إدمن';
+
         await NotificationService().sendStudentBusAssignmentNotification(
           studentId: studentId,
           studentName: studentData['name'] ?? 'طالب',
           parentId: studentData['parentId'] ?? '',
           busPlateNumber: busData['plateNumber'] ?? 'غير محدد',
           supervisorName: busData['supervisorName'] ?? 'غير محدد',
-          adminName: currentUser.name,
+          adminName: adminName,
         );
       }
 
@@ -4381,14 +4390,18 @@ class DatabaseService {
       await batch.commit();
 
       // إرسال إشعار تسكين المشرف
-      final currentUser = await getCurrentUser();
-      if (currentUser != null) {
+      final currentUserId = _getCurrentUserId();
+      if (currentUserId.isNotEmpty) {
+        final currentUserDoc = await _firestore.collection('users').doc(currentUserId).get();
+        final adminName = currentUserDoc.exists ?
+          (currentUserDoc.data()?['name'] ?? 'إدمن') : 'إدمن';
+
         await NotificationService().sendSupervisorAssignmentNotification(
           supervisorId: supervisorId,
           supervisorName: supervisorData['name'] ?? 'مشرف',
           busId: busId,
           busPlateNumber: busData['plateNumber'] ?? 'غير محدد',
-          adminName: currentUser.name,
+          adminName: adminName,
         );
       }
 
