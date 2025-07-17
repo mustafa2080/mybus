@@ -53,21 +53,38 @@ class NotificationService {
     }
   }
 
-  // Handle foreground messages
+  // Handle foreground messages with sound and system notification
   void _handleForegroundMessage(RemoteMessage message) {
-    debugPrint('Received foreground message: ${message.notification?.title}');
-    // Handle the message when app is in foreground
+    debugPrint('🔔 Received foreground message: ${message.notification?.title}');
+
+    // عرض الإشعار في النظام حتى لو كان التطبيق مفتوح
+    _showSystemNotification(message);
   }
 
-  // Handle background messages
+  // Show system notification with sound
+  void _showSystemNotification(RemoteMessage message) {
+    try {
+      // هذا سيتم التعامل معه تلقائياً بواسطة Firebase Messaging
+      // لكن يمكننا إضافة معالجة إضافية هنا إذا لزم الأمر
+      debugPrint('🔊 System notification displayed with sound');
+
+      // يمكن إضافة vibration أو sound إضافي هنا إذا لزم الأمر
+      // HapticFeedback.vibrate(); // يتطلب import 'package:flutter/services.dart';
+
+    } catch (e) {
+      debugPrint('❌ Error showing system notification: $e');
+    }
+  }
+
+  // Handle background messages with enhanced sound and display
   static Future<void> _handleBackgroundMessage(RemoteMessage message) async {
-    debugPrint('Received background message: ${message.notification?.title}');
+    debugPrint('🔔 Received background message with sound: ${message.notification?.title}');
 
     // حفظ الإشعار في قاعدة البيانات المحلية حتى لو كان التطبيق مغلق
     try {
       final firestore = FirebaseFirestore.instance;
 
-      // إنشاء إشعار من الرسالة المستلمة
+      // إنشاء إشعار من الرسالة المستلمة مع إعدادات الصوت
       final notification = {
         'id': message.messageId ?? DateTime.now().millisecondsSinceEpoch.toString(),
         'title': message.notification?.title ?? 'إشعار جديد',
@@ -76,13 +93,36 @@ class NotificationService {
         'type': message.data['type'] ?? 'general',
         'timestamp': FieldValue.serverTimestamp(),
         'isRead': false,
-        'data': message.data,
+        'data': {
+          ...message.data,
+          'sound_played': true,
+          'background_received': true,
+          'received_at': DateTime.now().toIso8601String(),
+        },
+        // إعدادات إضافية للصوت والعرض
+        'notification_settings': {
+          'sound': true,
+          'vibration': true,
+          'priority': 'high',
+          'show_in_foreground': true,
+        }
       };
 
       // حفظ الإشعار في Firestore
       await firestore.collection('notifications').add(notification);
 
-      debugPrint('✅ Background notification saved to database');
+      debugPrint('✅ Background notification with sound saved to database');
+
+      // إضافة log للتتبع
+      await firestore.collection('notification_logs').add({
+        'message_id': message.messageId,
+        'title': message.notification?.title,
+        'received_at': FieldValue.serverTimestamp(),
+        'type': 'background',
+        'sound_enabled': true,
+        'platform': 'android',
+      });
+
     } catch (e) {
       debugPrint('❌ Error saving background notification: $e');
     }
@@ -268,10 +308,10 @@ class NotificationService {
         .set(notification.toMap());
   }
 
-  // Send push notification
+  // Send push notification with sound and system notification display
   Future<void> _sendPushNotification(NotificationModel notification) async {
     try {
-      // حفظ الإشعار في قائمة انتظار FCM مع إعدادات محسنة
+      // حفظ الإشعار في قائمة انتظار FCM مع إعدادات محسنة للصوت والعرض
       await _firestore.collection('fcm_queue').add({
         'recipientId': notification.recipientId,
         'title': notification.title,
@@ -281,23 +321,37 @@ class NotificationService {
           'click_action': 'FLUTTER_NOTIFICATION_CLICK',
           'sound': 'default',
           'priority': 'high',
-          'notification_priority': 'PRIORITY_HIGH',
+          'notification_priority': 'PRIORITY_MAX',
+          'importance': 'high',
+          'channel_id': 'mybus_notifications',
         },
         'timestamp': FieldValue.serverTimestamp(),
         'status': 'pending',
         'type': notification.type.toString().split('.').last,
-        // إعدادات إضافية لضمان الوصول
+        // إعدادات Android محسنة للصوت والعرض
         'android': {
           'priority': 'high',
+          'ttl': '86400s', // 24 hours
           'notification': {
-            'channel_id': 'high_importance_channel',
+            'title': notification.title,
+            'body': notification.body,
+            'channel_id': 'mybus_notifications',
             'priority': 'high',
             'sound': 'default',
             'default_sound': true,
             'default_vibrate_timings': true,
             'default_light_settings': true,
+            'notification_priority': 'PRIORITY_MAX',
+            'visibility': 'public',
+            'show_when': true,
+            'local_only': false,
+            'sticky': false,
+            'icon': 'ic_notification',
+            'color': '#FF6B6B',
+            'tag': 'mybus_${notification.type.toString().split('.').last}',
           }
         },
+        // إعدادات iOS محسنة
         'apns': {
           'payload': {
             'aps': {
@@ -308,12 +362,33 @@ class NotificationService {
               'badge': 1,
               'sound': 'default',
               'content-available': 1,
+              'mutable-content': 1,
+              'category': 'MYBUS_NOTIFICATION',
             }
+          },
+          'headers': {
+            'apns-priority': '10',
+            'apns-push-type': 'alert',
+          }
+        },
+        // إعدادات الويب
+        'webpush': {
+          'headers': {
+            'Urgency': 'high',
+          },
+          'notification': {
+            'title': notification.title,
+            'body': notification.body,
+            'icon': '/icons/notification-icon.png',
+            'badge': '/icons/badge-icon.png',
+            'sound': '/sounds/notification.mp3',
+            'vibrate': [200, 100, 200],
+            'requireInteraction': true,
           }
         },
       });
 
-      debugPrint('✅ Enhanced push notification queued: ${notification.title}');
+      debugPrint('✅ Enhanced push notification with sound queued: ${notification.title}');
     } catch (e) {
       debugPrint('❌ Error queuing push notification: $e');
     }

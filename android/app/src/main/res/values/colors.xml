@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Notification color -->
+    <color name="notification_color">#FF6B6B</color>
+    
+    <!-- App primary colors -->
+    <color name="primary_color">#FF6B6B</color>
+    <color name="primary_dark">#E55555</color>
+    <color name="accent_color">#4ECDC4</color>
+    
+    <!-- Status colors -->
+    <color name="success_color">#4CAF50</color>
+    <color name="warning_color">#FF9800</color>
+    <color name="error_color">#F44336</color>
+    
+    <!-- Background colors -->
+    <color name="background_light">#FFFFFF</color>
+    <color name="background_dark">#121212</color>
+</resources>
