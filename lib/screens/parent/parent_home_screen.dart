@@ -1164,15 +1164,14 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
               const SizedBox(height: 8),
               _buildStudentInfoRow('الاسم الكامل', studentData.name),
               _buildStudentInfoRow('الصف الدراسي', studentData.grade),
-              _buildStudentInfoRow('رقم الهوية', studentData.studentId.isNotEmpty ? studentData.studentId : 'غير محدد'),
-              _buildStudentInfoRow('تاريخ الميلاد', studentData.dateOfBirth?.isNotEmpty == true ? studentData.dateOfBirth! : 'غير محدد'),
+              _buildStudentInfoRow('رقم الهوية', studentData.qrCode.isNotEmpty ? studentData.qrCode : 'غير محدد'),
+              _buildStudentInfoRow('المدرسة', studentData.schoolName.isNotEmpty ? studentData.schoolName : 'غير محدد'),
               _buildStudentInfoRow('العنوان', studentData.address.isNotEmpty ? studentData.address : 'غير محدد'),
               _buildStudentInfoRow('خط السير', studentData.busRoute.isNotEmpty ? studentData.busRoute : 'غير محدد'),
-              _buildStudentInfoRow('الحالة الحالية', _getStatusDisplayText(studentData.currentStatus)),
-              if (studentData.emergencyContact.isNotEmpty)
-                _buildStudentInfoRow('جهة اتصال طوارئ', studentData.emergencyContact, isPhone: true),
-              if (studentData.medicalInfo.isNotEmpty)
-                _buildStudentInfoRow('معلومات طبية', studentData.medicalInfo),
+              _buildStudentInfoRow('الحالة الحالية', _getStatusDisplayText(studentData.currentStatus.toString().split('.').last)),
+              _buildStudentInfoRow('هاتف ولي الأمر', studentData.parentPhone, isPhone: true),
+              if (studentData.notes.isNotEmpty)
+                _buildStudentInfoRow('ملاحظات', studentData.notes),
             ],
           ),
         );
@@ -1226,6 +1225,8 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
         return 'في الباص';
       case 'atSchool':
         return 'في المدرسة';
+      case 'home':
+        return 'في المنزل';
       case 'leftSchool':
         return 'غادر المدرسة';
       case 'onWayHome':
@@ -1235,7 +1236,7 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
       case 'absent':
         return 'غائب';
       default:
-        return 'غير محدد';
+        return 'في المنزل';
     }
   }
 

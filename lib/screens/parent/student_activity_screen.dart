@@ -486,8 +486,8 @@ class _StudentActivityScreenState extends State<StudentActivityScreen> {
             ),
           ),
           Expanded(
-            child: StreamBuilder<List<TripModel>>(
-              stream: _databaseService.getStudentTrips(widget.studentId, _selectedDate),
+            child: FutureBuilder<List<TripModel>>(
+              future: _databaseService.getStudentTrips(widget.studentId, _selectedDate),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Center(
