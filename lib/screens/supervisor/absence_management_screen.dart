@@ -598,17 +598,13 @@ class _SupervisorAbsenceManagementScreenState extends State<SupervisorAbsenceMan
         );
       }
 
-      // Send notification to parent
-      await _notificationService.sendGeneralNotification(
-        title: 'تسجيل غياب',
-        body: 'تم تسجيل غياب ${student.name} من قبل المشرف',
-        recipientId: student.parentId,
-        data: {
-          'type': 'absence_registered',
-          'studentId': student.id,
-          'studentName': student.name,
-          'date': now.toIso8601String(),
-        },
+      // Send notification to parent with sound
+      await _notificationService.notifyAbsenceApprovedWithSound(
+        studentId: student.id,
+        studentName: student.name,
+        parentId: student.parentId,
+        absenceDate: now,
+        approvedBy: 'المشرف',
       );
     } catch (e) {
       // Close loading dialog

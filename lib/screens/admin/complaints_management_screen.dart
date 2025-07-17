@@ -2,6 +2,7 @@
 import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../services/database_service.dart';
+import '../../services/notification_service.dart';
 import '../../models/complaint_model.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/admin_app_bar.dart';
@@ -751,6 +752,15 @@ class _ComplaintsManagementScreenState extends State<ComplaintsManagementScreen>
                     responseController.text.trim(),
                     'admin', // Replace with actual admin ID
                   );
+
+                  // إرسال إشعار لولي الأمر مع الصوت
+                  await NotificationService().notifyComplaintResponseWithSound(
+                    complaintId: complaint.id,
+                    parentId: complaint.parentId,
+                    subject: complaint.title,
+                    response: responseController.text.trim(),
+                  );
+
                   await _loadStats();
 
                   if (mounted) {

@@ -4,12 +4,14 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:uuid/uuid.dart';
 import '../models/notification_model.dart';
 import '../models/student_model.dart';
+import 'enhanced_notification_service.dart';
 
 
 class NotificationService {
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final Uuid _uuid = const Uuid();
+  final EnhancedNotificationService _enhancedService = EnhancedNotificationService();
 
   // Initialize notifications
   Future<void> initialize() async {
@@ -18,6 +20,9 @@ class NotificationService {
       debugPrint('Notification service skipped on web platform');
       return;
     }
+
+    // Initialize enhanced notification service
+    await _enhancedService.initialize();
 
     try {
       // Request permission for notifications
@@ -1201,6 +1206,247 @@ class NotificationService {
       await _sendPushNotification(notification);
     } catch (e) {
       throw Exception('خطأ في إرسال إشعار وجود الطالب في الباص: $e');
+    }
+  }
+
+  // ==================== إشعارات محسنة مع الصوت ====================
+
+  /// إشعار تسكين الطالب مع الصوت
+  Future<void> notifyStudentAssignmentWithSound({
+    required String studentId,
+    required String studentName,
+    required String busId,
+    required String busRoute,
+    required String parentId,
+    required String supervisorId,
+  }) async {
+    await _enhancedService.notifyStudentAssignment(
+      studentId: studentId,
+      studentName: studentName,
+      busId: busId,
+      busRoute: busRoute,
+      parentId: parentId,
+      supervisorId: supervisorId,
+    );
+  }
+
+  /// إشعار إلغاء تسكين الطالب مع الصوت
+  Future<void> notifyStudentUnassignmentWithSound({
+    required String studentId,
+    required String studentName,
+    required String busId,
+    required String parentId,
+    required String supervisorId,
+  }) async {
+    await _enhancedService.notifyStudentUnassignment(
+      studentId: studentId,
+      studentName: studentName,
+      busId: busId,
+      parentId: parentId,
+      supervisorId: supervisorId,
+    );
+  }
+
+  /// إشعار ركوب الطالب مع الصوت
+  Future<void> notifyStudentBoardedWithSound({
+    required String studentId,
+    required String studentName,
+    required String busId,
+    required String parentId,
+    required String supervisorId,
+  }) async {
+    await _enhancedService.notifyStudentBoarded(
+      studentId: studentId,
+      studentName: studentName,
+      busId: busId,
+      parentId: parentId,
+      supervisorId: supervisorId,
+      timestamp: DateTime.now(),
+    );
+  }
+
+  /// إشعار نزول الطالب مع الصوت
+  Future<void> notifyStudentAlightedWithSound({
+    required String studentId,
+    required String studentName,
+    required String busId,
+    required String parentId,
+    required String supervisorId,
+  }) async {
+    await _enhancedService.notifyStudentAlighted(
+      studentId: studentId,
+      studentName: studentName,
+      busId: busId,
+      parentId: parentId,
+      supervisorId: supervisorId,
+      timestamp: DateTime.now(),
+    );
+  }
+
+  /// إشعار طلب غياب مع الصوت
+  Future<void> notifyAbsenceRequestWithSound({
+    required String studentId,
+    required String studentName,
+    required String parentId,
+    required String supervisorId,
+    required String busId,
+    required DateTime absenceDate,
+    required String reason,
+  }) async {
+    await _enhancedService.notifyAbsenceRequest(
+      studentId: studentId,
+      studentName: studentName,
+      parentId: parentId,
+      supervisorId: supervisorId,
+      busId: busId,
+      absenceDate: absenceDate,
+      reason: reason,
+    );
+  }
+
+  /// إشعار الموافقة على الغياب مع الصوت
+  Future<void> notifyAbsenceApprovedWithSound({
+    required String studentId,
+    required String studentName,
+    required String parentId,
+    required DateTime absenceDate,
+    required String approvedBy,
+  }) async {
+    await _enhancedService.notifyAbsenceApproved(
+      studentId: studentId,
+      studentName: studentName,
+      parentId: parentId,
+      absenceDate: absenceDate,
+      approvedBy: approvedBy,
+    );
+  }
+
+  /// إشعار رفض الغياب مع الصوت
+  Future<void> notifyAbsenceRejectedWithSound({
+    required String studentId,
+    required String studentName,
+    required String parentId,
+    required DateTime absenceDate,
+    required String rejectedBy,
+    required String reason,
+  }) async {
+    await _enhancedService.notifyAbsenceRejected(
+      studentId: studentId,
+      studentName: studentName,
+      parentId: parentId,
+      absenceDate: absenceDate,
+      rejectedBy: rejectedBy,
+      reason: reason,
+    );
+  }
+
+  /// إشعار شكوى جديدة مع الصوت
+  Future<void> notifyNewComplaintWithSound({
+    required String complaintId,
+    required String parentId,
+    required String parentName,
+    required String subject,
+    required String category,
+  }) async {
+    await _enhancedService.notifyNewComplaint(
+      complaintId: complaintId,
+      parentId: parentId,
+      parentName: parentName,
+      subject: subject,
+      category: category,
+    );
+  }
+
+  /// إشعار رد على الشكوى مع الصوت
+  Future<void> notifyComplaintResponseWithSound({
+    required String complaintId,
+    required String parentId,
+    required String subject,
+    required String response,
+  }) async {
+    await _enhancedService.notifyComplaintResponse(
+      complaintId: complaintId,
+      parentId: parentId,
+      subject: subject,
+      response: response,
+    );
+  }
+
+  /// إشعار تحديث حالة الرحلة مع الصوت
+  Future<void> notifyTripStatusUpdateWithSound({
+    required String busId,
+    required String busRoute,
+    required String status,
+    required List<String> parentIds,
+    required String supervisorId,
+  }) async {
+    await _enhancedService.notifyTripStatusUpdate(
+      busId: busId,
+      busRoute: busRoute,
+      status: status,
+      parentIds: parentIds,
+      supervisorId: supervisorId,
+    );
+  }
+
+  /// إشعار طوارئ مع الصوت
+  Future<void> notifyEmergencyWithSound({
+    required String busId,
+    required String supervisorId,
+    required String supervisorName,
+    required String emergencyType,
+    required String description,
+    required List<String> parentIds,
+  }) async {
+    await _enhancedService.notifyEmergency(
+      busId: busId,
+      supervisorId: supervisorId,
+      supervisorName: supervisorName,
+      emergencyType: emergencyType,
+      description: description,
+      parentIds: parentIds,
+    );
+  }
+
+  /// حفظ FCM token للمستخدم
+  Future<void> saveFCMTokenForUser(String userId) async {
+    await _enhancedService.saveFCMToken(userId);
+  }
+
+  /// الحصول على الإشعارات غير المقروءة
+  Stream<List<NotificationModel>> getUnreadNotificationsStream(String userId) {
+    return _firestore
+        .collection('notifications')
+        .where('recipientId', isEqualTo: userId)
+        .where('isRead', isEqualTo: false)
+        .orderBy('timestamp', descending: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => NotificationModel.fromMap(doc.data()))
+            .toList());
+  }
+
+  /// تحديد الإشعار كمقروء
+  Future<void> markNotificationAsRead(String notificationId) async {
+    try {
+      await _firestore
+          .collection('notifications')
+          .doc(notificationId)
+          .update({'isRead': true});
+    } catch (e) {
+      debugPrint('❌ Error marking notification as read: $e');
+    }
+  }
+
+  /// حذف الإشعار
+  Future<void> deleteNotificationById(String notificationId) async {
+    try {
+      await _firestore
+          .collection('notifications')
+          .doc(notificationId)
+          .delete();
+    } catch (e) {
+      debugPrint('❌ Error deleting notification: $e');
     }
   }
 }

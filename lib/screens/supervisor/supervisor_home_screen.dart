@@ -11,6 +11,7 @@ import '../../models/student_model.dart';
 import '../../models/supervisor_assignment_model.dart';
 import '../../widgets/curved_app_bar.dart';
 import '../../widgets/animated_background.dart';
+import '../../widgets/responsive_widgets.dart';
 import 'school_info_screen.dart';
 import 'absence_management_screen.dart';
 import 'monthly_behavior_survey_screen.dart';
@@ -1516,7 +1517,7 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
           ],
         ),
         const SizedBox(height: 12),
-        Row(
+        ResponsiveRow(
           children: [
             Expanded(
               child: _buildActionCard(
@@ -1527,7 +1528,7 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
                 () => _showAbsenceManagement(),
               ),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: ResponsiveHelper.getSpacing(context)),
             Expanded(
               child: _buildActionCard(
                 'الاتصال الطارئ',
@@ -2702,17 +2703,13 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
         );
       }
 
-      // إرسال إشعار لولي الأمر
-      await _notificationService.sendGeneralNotification(
-        title: 'تسجيل غياب',
-        body: 'تم تسجيل غياب ${student.name} من قبل المشرف',
-        recipientId: student.parentId,
-        data: {
-          'type': 'absence_registered',
-          'studentId': student.id,
-          'studentName': student.name,
-          'date': DateTime.now().toIso8601String(),
-        },
+      // إرسال إشعار لولي الأمر مع الصوت
+      await _notificationService.notifyAbsenceApprovedWithSound(
+        studentId: student.id,
+        studentName: student.name,
+        parentId: student.parentId,
+        absenceDate: DateTime.now(),
+        approvedBy: 'المشرف',
       );
 
     } catch (e) {

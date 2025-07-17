@@ -1015,13 +1015,14 @@ class DatabaseService {
         final adminName = currentUserDoc.exists ?
           (currentUserDoc.data()?['name'] ?? 'إدمن') : 'إدمن';
 
-        await NotificationService().sendStudentBusAssignmentNotification(
+        // إرسال إشعار محسن مع الصوت
+        await NotificationService().notifyStudentAssignmentWithSound(
           studentId: studentId,
           studentName: studentData['name'] ?? 'طالب',
+          busId: busId,
+          busRoute: busData['route'] ?? 'غير محدد',
           parentId: studentData['parentId'] ?? '',
-          busPlateNumber: busData['plateNumber'] ?? 'غير محدد',
-          supervisorName: busData['supervisorName'] ?? 'غير محدد',
-          adminName: adminName,
+          supervisorId: busData['supervisorId'] ?? '',
         );
       }
 

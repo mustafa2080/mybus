@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../utils/responsive_helper.dart';
 
 class CustomButton extends StatelessWidget {
   final String text;
@@ -26,20 +27,28 @@ class CustomButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final responsiveHeight = height ?? ResponsiveHelper.getButtonHeight(context);
+    final responsiveBorderRadius = ResponsiveHelper.getBorderRadius(context);
+    final responsivePadding = ResponsiveHelper.getPadding(context,
+      mobilePadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      tabletPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      desktopPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+    );
+
     return SizedBox(
       width: width ?? double.infinity,
-      height: height,
+      height: responsiveHeight,
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
           backgroundColor: backgroundColor ?? const Color(0xFF1E88E5),
           foregroundColor: textColor ?? Colors.white,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(borderRadius),
+            borderRadius: BorderRadius.circular(responsiveBorderRadius),
           ),
           elevation: 2,
           shadowColor: Colors.black26,
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: responsivePadding,
         ),
         child: isLoading
             ? const SizedBox(

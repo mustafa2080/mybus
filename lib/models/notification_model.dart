@@ -6,6 +6,16 @@ enum NotificationType {
   tripStarted,
   tripEnded,
   general,
+  studentAssigned,
+  studentUnassigned,
+  absenceRequested,
+  absenceApproved,
+  absenceRejected,
+  complaintSubmitted,
+  complaintResponded,
+  emergency,
+  tripDelayed,
+  systemUpdate,
 }
 
 class NotificationModel {
@@ -136,6 +146,69 @@ class NotificationModel {
       return 'منذ ${difference.inMinutes} دقيقة';
     } else {
       return 'الآن';
+    }
+  }
+
+  /// الحصول على أيقونة الإشعار
+  String get icon {
+    switch (type) {
+      case NotificationType.studentBoarded:
+      case NotificationType.studentLeft:
+        return '🚌';
+      case NotificationType.studentAssigned:
+      case NotificationType.studentUnassigned:
+        return '👨‍🎓';
+      case NotificationType.absenceRequested:
+      case NotificationType.absenceApproved:
+      case NotificationType.absenceRejected:
+        return '📝';
+      case NotificationType.complaintSubmitted:
+      case NotificationType.complaintResponded:
+        return '📢';
+      case NotificationType.emergency:
+        return '🚨';
+      case NotificationType.tripStarted:
+      case NotificationType.tripEnded:
+      case NotificationType.tripDelayed:
+        return '🚌';
+      case NotificationType.systemUpdate:
+        return '⚙️';
+      default:
+        return '🔔';
+    }
+  }
+
+  /// تحديد أولوية الإشعار
+  int get priority {
+    switch (type) {
+      case NotificationType.emergency:
+        return 4; // أولوية قصوى
+      case NotificationType.studentBoarded:
+      case NotificationType.studentLeft:
+      case NotificationType.tripStarted:
+      case NotificationType.tripEnded:
+        return 3; // أولوية عالية
+      case NotificationType.absenceRequested:
+      case NotificationType.absenceApproved:
+      case NotificationType.absenceRejected:
+      case NotificationType.tripDelayed:
+        return 2; // أولوية متوسطة
+      default:
+        return 1; // أولوية منخفضة
+    }
+  }
+
+  /// تحديد ما إذا كان الإشعار يتطلب صوت
+  bool get requiresSound {
+    switch (type) {
+      case NotificationType.emergency:
+      case NotificationType.studentBoarded:
+      case NotificationType.studentLeft:
+      case NotificationType.tripStarted:
+      case NotificationType.tripEnded:
+        return true;
+      default:
+        return false;
     }
   }
 

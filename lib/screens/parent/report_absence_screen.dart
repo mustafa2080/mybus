@@ -570,8 +570,8 @@ class _ReportAbsenceScreenState extends State<ReportAbsenceScreen> {
 
       debugPrint('âœ… Absence notification created successfully!');
 
-      // إرسال إشعار للمشرفين والإدارة
-      await _sendNotificationsToStaff(absence);
+      // إرسال إشعار للمشرفين والإدارة مع الصوت
+      await _sendNotificationsToStaffWithSound(absence);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -597,6 +597,47 @@ class _ReportAbsenceScreenState extends State<ReportAbsenceScreen> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  // إرسال إشعارات للمشرفين والإدارة مع الصوت
+  Future<void> _sendNotificationsToStaffWithSound(AbsenceModel absence) async {
+    try {
+      // الحصول على جميع المشرفين والإدارة
+      final supervisors = await _databaseService.getAllSupervisors();
+      final admins = await _databaseService.getAllAdmins();
+
+      // إرسال إشعار للمشرفين
+      for (final supervisor in supervisors) {
+        await _notificationService.notifyAbsenceRequestWithSound(
+          studentId: absence.studentId,
+          studentName: absence.studentName,
+          parentId: absence.parentId,
+          supervisorId: supervisor.id,
+          busId: widget.student.busRoute,
+          absenceDate: absence.date,
+          reason: absence.reason,
+        );
+      }
+
+      // إرسال إشعار للإدارة
+      for (final admin in admins) {
+        await _notificationService.notifyAbsenceRequestWithSound(
+          studentId: absence.studentId,
+          studentName: absence.studentName,
+          parentId: absence.parentId,
+          supervisorId: admin.id, // استخدام معرف الإدمن كمشرف
+          busId: widget.student.busRoute,
+          absenceDate: absence.date,
+          reason: absence.reason,
+        );
+      }
+
+      debugPrint('✅ Enhanced notifications sent to ${supervisors.length} supervisors and ${admins.length} admins');
+    } catch (e) {
+      debugPrint('❌ Error sending enhanced notifications to staff: $e');
+      // الرجوع للطريقة القديمة في حالة الفشل
+      await _sendNotificationsToStaff(absence);
     }
   }
 

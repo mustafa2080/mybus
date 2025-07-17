@@ -4,6 +4,9 @@ import '../../models/user_model.dart';
 import '../../services/auth_service.dart';
 import '../../services/email_service.dart';
 import '../../widgets/admin_app_bar.dart';
+import '../../widgets/responsive_grid_view.dart';
+import '../../widgets/responsive_text.dart';
+import '../../utils/responsive_helper.dart';
 
 class ParentsManagementScreen extends StatefulWidget {
   const ParentsManagementScreen({super.key});

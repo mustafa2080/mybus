@@ -7,6 +7,9 @@ import '../screens/auth/forgot_password_screen.dart';
 import '../screens/parent/parent_home_screen.dart';
 import '../screens/admin/admin_home_screen.dart';
 import '../screens/supervisor/supervisor_home_screen.dart';
+import '../screens/test_responsive_screen.dart';
+import '../screens/test_notifications_screen.dart';
+import '../screens/common/notifications_screen.dart';
 import '../screens/parent/student_activity_screen.dart';
 import '../screens/parent/bus_info_screen.dart';
 import '../screens/parent/complaints_screen.dart';
@@ -88,6 +91,13 @@ class AppRoutes {
   static const String busesManagementRoute = '/admin/buses-management';
   static const String supervisorAssignments = '/admin/supervisor-assignments';
   static const String parentStudentLinking = '/admin/parent-student-linking';
+
+  // Test Routes
+  static const String testResponsive = '/test/responsive';
+  static const String testNotifications = '/test/notifications';
+
+  // Common Routes
+  static const String notifications = '/notifications';
 
   // Router Configuration
   static final GoRouter router = GoRouter(
@@ -396,6 +406,25 @@ class AppRoutes {
             ),
           ],
         ),
+      ),
+
+      // Test Routes
+      GoRoute(
+        path: testResponsive,
+        name: 'test-responsive',
+        builder: (context, state) => const TestResponsiveScreen(),
+      ),
+      GoRoute(
+        path: testNotifications,
+        name: 'test-notifications',
+        builder: (context, state) => const TestNotificationsScreen(),
+      ),
+
+      // Common Routes
+      GoRoute(
+        path: notifications,
+        name: 'notifications',
+        builder: (context, state) => const NotificationsScreen(),
       ),
     ),
   );

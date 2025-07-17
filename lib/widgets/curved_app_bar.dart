@@ -1,4 +1,5 @@
 ﻿import 'package:flutter/material.dart';
+import '../utils/responsive_helper.dart';
 
 class CurvedAppBar extends StatelessWidget implements PreferredSizeWidget {
   final String title;
@@ -64,7 +65,11 @@ class CurvedAppBar extends StatelessWidget implements PreferredSizeWidget {
           ),
           child: SafeArea(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: ResponsiveHelper.getPadding(context,
+                mobilePadding: const EdgeInsets.symmetric(horizontal: 12),
+                tabletPadding: const EdgeInsets.symmetric(horizontal: 16),
+                desktopPadding: const EdgeInsets.symmetric(horizontal: 20),
+              ),
               child: Row(
                 children: [
                   // Leading Widget

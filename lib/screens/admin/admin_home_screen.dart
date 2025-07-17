@@ -7,6 +7,7 @@ import '../../widgets/admin_bottom_navigation.dart';
 import '../../widgets/admin_app_bar.dart';
 import '../../widgets/animated_background.dart';
 import '../../widgets/notification_badge.dart';
+import '../../widgets/responsive_widgets.dart';
 import '../../utils/background_utils.dart';
 import 'system_settings_screen.dart';
 
@@ -328,13 +329,17 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
             ],
           ),
           const SizedBox(height: 28),
-          GridView.count(
-            crossAxisCount: 2,
+          ResponsiveGridView(
+            mobileColumns: 1,
+            tabletColumns: 2,
+            desktopColumns: 3,
+            largeDesktopColumns: 4,
+            mobileAspectRatio: 0.9,
+            tabletAspectRatio: 0.8,
+            desktopAspectRatio: 0.75,
+            largeDesktopAspectRatio: 0.7,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 16,
-            mainAxisSpacing: 16,
-            childAspectRatio: 0.75,
             children: [
               _buildManagementCard(
                 icon: Icons.backup,

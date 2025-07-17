@@ -9,6 +9,9 @@ import '../../models/bus_model.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/base64_image_widget.dart';
 import '../../widgets/admin_bottom_navigation.dart';
+import '../../widgets/responsive_grid_view.dart';
+import '../../widgets/responsive_text.dart';
+import '../../utils/responsive_helper.dart';
 
 // فئة لتجميع الطلاب حسب ولي الأمر
 class ParentGroup {

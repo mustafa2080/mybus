@@ -8,6 +8,7 @@ import '../../services/database_service.dart';
 import '../../services/theme_service.dart';
 import '../../utils/background_utils.dart';
 import '../../widgets/animated_background.dart';
+import '../../widgets/responsive_widgets.dart';
 
 import '../../models/student_model.dart';
 import '../../models/bus_model.dart';
@@ -560,47 +561,46 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          Row(
+          ResponsiveWrap(
             children: [
-              Expanded(
+              SizedBox(
+                width: ResponsiveHelper.isMobile(context)
+                    ? double.infinity
+                    : (MediaQuery.of(context).size.width - 48) / 2,
                 child: _buildQuickActionButton(
                   icon: Icons.feedback_outlined,
                   label: 'الشكاوى والاقتراحات',
-                  color: const Color(0xFFFF6B6B), // أحمر أكثر إشراقاً
+                  color: const Color(0xFFFF6B6B),
                   onTap: () {
                     context.push('/parent/complaints');
                   },
                 ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
+              SizedBox(
+                width: ResponsiveHelper.isMobile(context)
+                    ? double.infinity
+                    : (MediaQuery.of(context).size.width - 48) / 2,
                 child: _buildQuickActionButton(
                   icon: Icons.directions_bus_filled,
                   label: 'معلومات الباص',
-                  color: const Color(0xFF20B2AA), // تيل أكثر إشراقاً
+                  color: const Color(0xFF20B2AA),
                   onTap: () {
                     _showBusInfoDialog();
                   },
                 ),
               ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
+              SizedBox(
+                width: ResponsiveHelper.isMobile(context)
+                    ? double.infinity
+                    : (MediaQuery.of(context).size.width - 48) / 2,
                 child: _buildQuickActionButton(
                   icon: Icons.supervisor_account_outlined,
                   label: 'معلومات المشرفين',
-                  color: const Color(0xFF4A90E2), // أزرق أكثر إشراقاً
+                  color: const Color(0xFF4A90E2),
                   onTap: () {
                     context.push('/parent/supervisor-info');
                   },
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Container(), // مساحة فارغة للتوازن
               ),
             ],
           ),

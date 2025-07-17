@@ -7,7 +7,9 @@ import '../services/auth_service.dart';
 import '../models/user_model.dart';
 import '../routes/app_routes.dart';
 import '../utils/background_utils.dart';
+import '../utils/responsive_helper.dart';
 import '../widgets/animated_background.dart';
+import '../widgets/responsive_text.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});

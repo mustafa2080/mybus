@@ -4,6 +4,9 @@ import '../../services/auth_service.dart';
 import '../../services/database_service.dart';
 import '../../models/complaint_model.dart';
 import '../../widgets/custom_button.dart';
+import '../../widgets/responsive_grid_view.dart';
+import '../../widgets/responsive_text.dart';
+import '../../utils/responsive_helper.dart';
 
 class ComplaintsScreen extends StatefulWidget {
   const ComplaintsScreen({super.key});

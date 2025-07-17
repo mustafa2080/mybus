@@ -848,8 +848,8 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
         await _checkAndSendTripStartNotification(student);
       }
 
-      // إرسال إشعار مخصص لولي الأمر
-      await _sendCustomNotification(student, action);
+      // إرسال إشعار مخصص لولي الأمر مع الصوت
+      await _sendCustomNotificationWithSound(student, action);
 
       // تحديث العداد
       _updateStudentsCounter(action);
@@ -886,6 +886,36 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
           break;
       }
     });
+  }
+
+  Future<void> _sendCustomNotificationWithSound(StudentModel student, TripAction action) async {
+    final currentUser = _authService.currentUser;
+    final supervisorId = currentUser?.uid ?? '';
+
+    switch (action) {
+      case TripAction.boardBus:
+      case TripAction.boardBusToSchool:
+      case TripAction.boardBusToHome:
+        await _notificationService.notifyStudentBoardedWithSound(
+          studentId: student.id,
+          studentName: student.name,
+          busId: student.busRoute,
+          parentId: student.parentId,
+          supervisorId: supervisorId,
+        );
+        break;
+      case TripAction.leaveBus:
+      case TripAction.arriveAtSchool:
+      case TripAction.arriveAtHome:
+        await _notificationService.notifyStudentAlightedWithSound(
+          studentId: student.id,
+          studentName: student.name,
+          busId: student.busRoute,
+          parentId: student.parentId,
+          supervisorId: supervisorId,
+        );
+        break;
+    }
   }
 
   Future<void> _sendCustomNotification(StudentModel student, TripAction action) async {

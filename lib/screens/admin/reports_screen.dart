@@ -9,6 +9,8 @@ import '../../models/student_model.dart';
 import '../../models/trip_model.dart';
 import '../../widgets/admin_bottom_navigation.dart';
 import '../../widgets/admin_app_bar.dart';
+import '../../widgets/responsive_grid_view.dart';
+import '../../utils/responsive_helper.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -210,14 +212,18 @@ class _ReportsScreenState extends State<ReportsScreen> with TickerProviderStateM
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
         children: [
-          // Stats Cards - Compact Grid
-          GridView.count(
-            crossAxisCount: 2,
+          // Stats Cards - Responsive Grid
+          ResponsiveGridView(
+            mobileColumns: 1,
+            tabletColumns: 2,
+            desktopColumns: 3,
+            largeDesktopColumns: 4,
+            mobileAspectRatio: 1.5,
+            tabletAspectRatio: 1.3,
+            desktopAspectRatio: 1.2,
+            largeDesktopAspectRatio: 1.1,
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 1.3,
             children: [
               _buildCompactStatCard(
                 title: 'إجمالي الطلاب',

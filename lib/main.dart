@@ -7,6 +7,7 @@ import 'routes/app_routes.dart';
 import 'services/auth_service.dart';
 import 'services/database_service.dart';
 import 'services/notification_service.dart';
+import 'services/enhanced_notification_service.dart';
 import 'services/theme_service.dart';
 import 'utils/app_constants.dart';
 import 'utils/app_validator.dart';
@@ -24,6 +25,10 @@ void main() async {
     // تهيئة خدمة الإشعارات
     await NotificationService().initialize();
     print('✅ Notification service initialized');
+
+    // تهيئة خدمة الإشعارات المحسنة
+    await EnhancedNotificationService().initialize();
+    print('✅ Enhanced notification service initialized');
 
     // طباعة معلومات التطبيق
     AppValidator.printAppInfo();

@@ -4,7 +4,9 @@ import 'package:provider/provider.dart';
 import '../../services/auth_service.dart';
 import '../../models/user_model.dart';
 import '../../utils/background_utils.dart';
+import '../../utils/responsive_helper.dart';
 import '../../widgets/animated_background.dart';
+import '../../widgets/responsive_text.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});

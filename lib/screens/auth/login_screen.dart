@@ -8,8 +8,10 @@ import '../../routes/app_routes.dart';
 import '../../utils/navigation_helper.dart';
 import '../../utils/ui_helper.dart';
 import '../../utils/background_utils.dart';
+import '../../utils/responsive_helper.dart';
 import '../../widgets/custom_text_field.dart';
 import '../../widgets/animated_background.dart';
+import '../../widgets/responsive_text.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
