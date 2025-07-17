@@ -10,6 +10,7 @@ import '../screens/supervisor/supervisor_home_screen.dart';
 import '../screens/test_responsive_screen.dart';
 import '../screens/test_notifications_screen.dart';
 import '../screens/common/notifications_screen.dart' as common_notifications;
+import '../screens/common/error_screen.dart';
 import '../screens/parent/student_activity_screen.dart';
 import '../screens/parent/bus_info_screen.dart';
 import '../screens/parent/complaints_screen.dart';
@@ -374,39 +375,8 @@ class AppRoutes {
     ],
     
     // Error handling
-    errorBuilder: (context, state) => Scaffold(
-      appBar: AppBar(
-        title: const Text('خطأ'),
-        backgroundColor: AppConstants.primaryColor,
-        foregroundColor: Colors.white,
-      ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(
-              Icons.error_outline,
-              size: 64,
-              color: Colors.red,
-            ),
-            const SizedBox(height: 16),
-            const Text(
-              'الصفحة غير موجودة',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'المسار: ${state.fullPath}',
-              style: const TextStyle(color: Colors.grey),
-            ),
-            const SizedBox(height: 24),
-            ElevatedButton(
-              onPressed: () => context.go('/'),
-              child: const Text('العودة للرئيسية'),
-            ),
-          ],
-        ),
-      ),
+    errorBuilder: (context, state) => const ErrorScreen(),
+    routes: [
 
       // Test Routes
       GoRoute(

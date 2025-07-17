@@ -279,42 +279,4 @@ class ResponsiveWrap extends StatelessWidget {
   }
 }
 
-/// Card متجاوب مع حشو وحدود متكيفة
-class ResponsiveCard extends StatelessWidget {
-  final Widget child;
-  final EdgeInsets? padding;
-  final EdgeInsets? margin;
-  final Color? color;
-  final double? elevation;
-  final BorderRadius? borderRadius;
 
-  const ResponsiveCard({
-    super.key,
-    required this.child,
-    this.padding,
-    this.margin,
-    this.color,
-    this.elevation,
-    this.borderRadius,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final responsivePadding = padding ?? ResponsiveHelper.getPadding(context);
-    final responsiveBorderRadius = borderRadius ?? 
-        BorderRadius.circular(ResponsiveHelper.getBorderRadius(context));
-
-    return Card(
-      color: color,
-      elevation: elevation,
-      margin: margin,
-      shape: RoundedRectangleBorder(
-        borderRadius: responsiveBorderRadius,
-      ),
-      child: Padding(
-        padding: responsivePadding,
-        child: child,
-      ),
-    );
-  }
-}
