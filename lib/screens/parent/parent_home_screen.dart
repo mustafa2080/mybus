@@ -2144,6 +2144,216 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
       ),
     );
   }
+
+  // Show bus info dialog
+  void _showBusInfoDialog() {
+    if (_students.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('لا يوجد طلاب مسجلين'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    final student = _students.first;
+    if (student.busId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('لم يتم تعيين باص للطالب بعد'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    context.push('/parent/bus-info/${student.id}');
+  }
+
+  // Make phone call
+  Future<void> _makePhoneCall(String phoneNumber) async {
+    if (phoneNumber.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('رقم الهاتف غير متوفر'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+
+    try {
+      final Uri phoneUri = Uri(scheme: 'tel', path: phoneNumber);
+      if (await canLaunchUrl(phoneUri)) {
+        await launchUrl(phoneUri);
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('لا يمكن إجراء المكالمة'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ في إجراء المكالمة: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  // Navigate to add student screen
+  void _navigateToAddStudent() {
+    context.push('/parent/add-student').then((_) {
+      // Refresh the students list after adding a new student
+      setState(() {
+        // تحديث قائمة الطلاب
+      });
+    });
+  }
+
+  // Show trip history dialog
+  void _showTripHistoryDialog() {
+    if (_students.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('لا يوجد طلاب مسجلين لعرض سجل الرحلات'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Row(
+          children: [
+            Icon(Icons.history, color: Colors.purple),
+            SizedBox(width: 12),
+            Text('سجل الرحلات'),
+          ],
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: 400,
+          child: StreamBuilder<QuerySnapshot>(
+            stream: FirebaseFirestore.instance
+                .collection('trips')
+                .where('studentId', whereIn: _students.map((s) => s.id).toList())
+                .orderBy('timestamp', descending: true)
+                .limit(20)
+                .snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (snapshot.hasError) {
+                return Center(
+                  child: Text('خطأ في تحميل البيانات: ${snapshot.error}'),
+                );
+              }
+
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                return const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.history, size: 64, color: Colors.grey),
+                      SizedBox(height: 16),
+                      Text(
+                        'لا يوجد سجل رحلات',
+                        style: TextStyle(fontSize: 16, color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              final trips = snapshot.data!.docs;
+
+              return ListView.builder(
+                itemCount: trips.length,
+                itemBuilder: (context, index) {
+                  final tripData = trips[index].data() as Map<String, dynamic>;
+
+                  return Card(
+                    margin: const EdgeInsets.symmetric(vertical: 4),
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: Colors.blue,
+                        child: Icon(
+                          Icons.directions_bus,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      ),
+                      title: Text(tripData['studentName'] ?? 'طالب'),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(tripData['action'] ?? 'نشاط'),
+                          Text(
+                            tripData['timestamp']?.toDate()?.toString() ?? '',
+                            style: const TextStyle(fontSize: 12, color: Colors.grey),
+                          ),
+                        ],
+                      ),
+                      trailing: Text(
+                        tripData['busRoute'] ?? '',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.blue,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('إغلاق'),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              context.push('/parent/trip-history');
+            },
+            child: const Text('عرض التفاصيل'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Get status color
+  Color _getStatusColor(String status) {
+    switch (status) {
+      case 'onBus':
+        return Colors.orange;
+      case 'atSchool':
+        return Colors.blue;
+      case 'home':
+        return Colors.green;
+      default:
+        return Colors.grey;
+    }
+  }
 }
 
 
