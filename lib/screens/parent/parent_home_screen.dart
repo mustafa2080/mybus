@@ -2029,13 +2029,13 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
     }
   }
 
+  // Get supervisor info for emergency contact
   Future<Map<String, String>> _getSupervisorInfo() async {
     try {
-      // Get current user's students
       final currentUser = _authService.currentUser;
       if (currentUser == null) return {};
 
-      // Get student's bus assignment
+      // Get student data to find bus ID
       final studentsSnapshot = await FirebaseFirestore.instance
           .collection('students')
           .where('parentId', isEqualTo: currentUser.uid)
@@ -2068,224 +2068,67 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
       builder: (context) => AlertDialog(
         title: const Row(
           children: [
-            Icon(Icons.phone, color: Colors.red),
-            SizedBox(width: 12),
-            Text('اتصال طارئ'),
+            Icon(Icons.emergency, color: Colors.red),
+            SizedBox(width: 8),
+            Text('جهات الاتصال الطارئة'),
           ],
         ),
         content: SingleChildScrollView(
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Icon(Icons.emergency, size: 64, color: Colors.red),
-              const SizedBox(height: 16),
-              const Text(
-                'أرقام الطوارئ',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 16),
-
-
-
-              // School contact
               if (_schoolInfo.isNotEmpty) ...[
-                const Divider(),
                 const Text(
-                  'معلومات المدرسة',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  'المدرسة:',
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
                 ),
                 const SizedBox(height: 8),
-                Row(
-                  children: [
-                    const Icon(Icons.school, color: Colors.green, size: 20),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text('${_schoolInfo['name'] ?? 'المدرسة'}: ${_schoolInfo['phone'] ?? 'غير متوفر'}'),
-                    ),
-                  ],
+                ListTile(
+                  leading: const Icon(Icons.school, color: Colors.blue),
+                  title: Text('${_schoolInfo['name'] ?? 'المدرسة'}: ${_schoolInfo['phone'] ?? 'غير متوفر'}'),
+                  onTap: () => _makePhoneCall(_schoolInfo['phone'] ?? ''),
                 ),
                 if (_schoolInfo['email'] != null) ...[
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Icon(Icons.email, color: Colors.green, size: 20),
-                      const SizedBox(width: 12),
-                      Expanded(child: Text(_schoolInfo['email'])),
-                    ],
+                  ListTile(
+                    leading: const Icon(Icons.email, color: Colors.green),
+                    title: const Text('البريد الإلكتروني'),
+                    subtitle: Text(_schoolInfo['email']),
                   ),
                 ],
+                const Divider(),
               ],
-
-              // Supervisor contacts
-              const SizedBox(height: 16),
-              const Divider(),
-              Row(
-                children: [
-                  const Icon(Icons.supervisor_account, color: Colors.purple, size: 20),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'معلومات المشرف الحالي',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.blue[50],
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.blue[200]!),
-                    ),
-                    child: Text(
-                      _getCurrentPeriod(),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.blue[700],
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
+              const Text(
+                'المشرف:',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
               ),
-              const SizedBox(height: 12),
-
-              // Supervisor info - will be loaded from database
+              const SizedBox(height: 8),
               FutureBuilder<Map<String, String>>(
                 future: _getSupervisorInfo(),
                 builder: (context, snapshot) {
                   if (snapshot.connectionState == ConnectionState.waiting) {
-                    return Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.grey[50],
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey[200]!),
-                      ),
-                      child: const Row(
-                        children: [
-                          SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          ),
-                          SizedBox(width: 12),
-                          Text('جاري تحميل معلومات المشرف...'),
-                        ],
-                      ),
-                    );
+                    return const Center(child: CircularProgressIndicator());
                   }
 
                   final supervisorInfo = snapshot.data ?? {};
-
-                  if (supervisorInfo.isEmpty || supervisorInfo['name'] == 'غير محدد') {
-                    return Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.orange[50],
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.orange[200]!),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.info_outline, color: Colors.orange[600], size: 20),
-                          const SizedBox(width: 12),
-                          const Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'لم يتم تعيين مشرف للفترة الحالية',
-                                  style: TextStyle(fontWeight: FontWeight.w600),
-                                ),
-                                SizedBox(height: 4),
-                                Text(
-                                  'يرجى التواصل مع الإدارة',
-                                  style: TextStyle(fontSize: 12, color: Colors.grey),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
+                  if (supervisorInfo.isEmpty || supervisorInfo['phone']?.isEmpty == true) {
+                    return const ListTile(
+                      leading: Icon(Icons.person_off, color: Colors.grey),
+                      title: Text('لا يوجد مشرف متاح حالياً'),
                     );
                   }
 
-                  return Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.green[50],
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: Colors.green[200]!),
-                    ),
-                    child: Column(
-                      children: [
-                        // Supervisor name and phone
-                        Row(
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(8),
-                              decoration: BoxDecoration(
-                                color: Colors.green[100],
-                                borderRadius: BorderRadius.circular(8),
-                              ),
-                              child: Icon(Icons.person, color: Colors.green[700], size: 20),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    supervisorInfo['name'] ?? 'غير محدد',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                    ),
-                                  ),
-                                  if (supervisorInfo['direction']?.isNotEmpty == true)
-                                    Text(
-                                      supervisorInfo['direction']!,
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey[600],
-                                      ),
-                                    ),
-                                  if (supervisorInfo['phone']?.isNotEmpty == true)
-                                    Text(
-                                      supervisorInfo['phone']!,
-                                      style: const TextStyle(
-                                        color: Colors.blue,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                            if (supervisorInfo['phone']?.isNotEmpty == true)
-                              Container(
-                                decoration: BoxDecoration(
-                                  color: Colors.green[600],
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                                child: IconButton(
-                                  icon: const Icon(Icons.phone, color: Colors.white, size: 20),
-                                  onPressed: () => _makePhoneCall(supervisorInfo['phone']!),
-                                  tooltip: 'اتصال بالمشرف',
-                                ),
-                              ),
-                          ],
-                        ),
-
-                        // Additional info
-                        const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            const Icon(Icons.schedule, color: Colors.orange, size: 20),
-                            const SizedBox(width: 12),
-                            Text('متاحة للذهاب والعودة'),
-                          ],
-                        ),
-                      ],
-                    ),
+                  return ListTile(
+                    leading: const Icon(Icons.person, color: Colors.orange),
+                    title: Text(supervisorInfo['name'] ?? 'مشرف'),
+                    subtitle: Text(supervisorInfo['phone'] ?? ''),
+                    onTap: () => _makePhoneCall(supervisorInfo['phone'] ?? ''),
                   );
                 },
               ),
@@ -2294,310 +2137,12 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('إغلاق'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('يتم الاتصال بالمدرسة...'),
-                  backgroundColor: Colors.green,
-                ),
-              );
-            },
-            child: const Text('اتصال بالمدرسة'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _showTripHistoryDialog() {
-    if (_students.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('لا يوجد طلاب مسجلين لعرض سجل الرحلات'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.history, color: Colors.purple),
-            SizedBox(width: 12),
-            Text('سجل الرحلات'),
-          ],
-        ),
-        content: SizedBox(
-          width: double.maxFinite,
-          height: 400,
-          child: StreamBuilder<QuerySnapshot>(
-            stream: FirebaseFirestore.instance
-                .collection('trips')
-                .where('studentId', whereIn: _students.map((s) => s.id).toList())
-                .orderBy('timestamp', descending: true)
-                .limit(20)
-                .snapshots(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              if (snapshot.hasError) {
-                return Center(
-                  child: Text('خطأ في تحميل البيانات: ${snapshot.error}'),
-                );
-              }
-
-              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                return const Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.history, size: 64, color: Colors.grey),
-                      SizedBox(height: 16),
-                      Text(
-                        'لا يوجد سجل رحلات',
-                        style: TextStyle(fontSize: 16, color: Colors.grey),
-                      ),
-                    ],
-                  ),
-                );
-              }
-
-              final trips = snapshot.data!.docs;
-
-              return ListView.builder(
-                itemCount: trips.length,
-                itemBuilder: (context, index) {
-                  final tripData = trips[index].data() as Map<String, dynamic>;
-                  final trip = TripModel.fromMap(tripData);
-
-                  return Card(
-                    margin: const EdgeInsets.symmetric(vertical: 4),
-                    child: ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: _getTripActionColor(trip.action),
-                        child: Icon(
-                          _getTripActionIcon(trip.action),
-                          color: Colors.white,
-                          size: 20,
-                        ),
-                      ),
-                      title: Text(trip.studentName),
-                      subtitle: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(trip.actionDisplayText),
-                          Text(
-                            '${trip.formattedDate} - ${trip.formattedTime}',
-                            style: const TextStyle(fontSize: 12, color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                      trailing: Text(
-                        trip.busRoute,
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.blue,
-                        ),
-                      ),
-                    ),
-                  );
-                },
-              );
-            },
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('إغلاق'),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              context.push('/parent/trip-history');
-            },
-            child: const Text('عرض التفاصيل'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Navigate to add student screen
-  void _navigateToAddStudent() {
-    context.push('/parent/add-student').then((_) {
-      // Refresh the students list after adding a new student
-      setState(() {
-        // تحديث قائمة الطلاب
-      });
-    });
-  }
-
-  // Show students status dialog
-  void _showStudentsStatusDialog() {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Row(
-          children: [
-            Icon(Icons.location_on, color: Colors.teal),
-            SizedBox(width: 8),
-            Text('حالة الطلاب الحالية'),
-          ],
-        ),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: _students.isEmpty
-              ? const Text('لا يوجد طلاب مسجلين')
-              : Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: _students.map((student) {
-                    return ListTile(
-                      leading: StudentAvatar(
-                        photoUrl: student.photoUrl,
-                        studentName: student.name,
-                        radius: 20,
-                      ),
-                      title: Text(student.name),
-                      subtitle: Text('الصف: ${student.grade}'),
-                      trailing: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: _getStudentStatusColor(student.currentStatus),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Text(
-                          student.statusDisplayText,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.of(context).pop(),
             child: const Text('إغلاق'),
           ),
         ],
       ),
     );
-  }
-
-  // Get student status color
-  Color _getStudentStatusColor(StudentStatus status) {
-    switch (status) {
-      case StudentStatus.home:
-        return Colors.green;
-      case StudentStatus.onBus:
-        return Colors.orange;
-      case StudentStatus.atSchool:
-        return Colors.blue;
-    }
-  }
-
-  // Make phone call
-  Future<void> _makePhoneCall(String phoneNumber) async {
-    final Uri launchUri = Uri(
-      scheme: 'tel',
-      path: phoneNumber,
-    );
-    try {
-      if (await canLaunchUrl(launchUri)) {
-        await launchUrl(launchUri);
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('لا يمكن الاتصال بالرقم: $phoneNumber'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('خطأ في الاتصال: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  // Get trip action color
-  Color _getTripActionColor(TripAction action) {
-    switch (action) {
-      case TripAction.boardBusToSchool:
-      case TripAction.boardBus:
-        return Colors.blue;
-      case TripAction.arriveAtSchool:
-        return Colors.green;
-      case TripAction.boardBusToHome:
-        return Colors.orange;
-      case TripAction.arriveAtHome:
-      case TripAction.leaveBus:
-        return Colors.purple;
-    }
-  }
-
-  // Get trip action icon
-  IconData _getTripActionIcon(TripAction action) {
-    switch (action) {
-      case TripAction.boardBusToSchool:
-      case TripAction.boardBus:
-        return Icons.directions_bus;
-      case TripAction.arriveAtSchool:
-        return Icons.school;
-      case TripAction.boardBusToHome:
-        return Icons.home;
-      case TripAction.arriveAtHome:
-      case TripAction.leaveBus:
-        return Icons.home_filled;
-    }
-  }
-
-  void _showBusInfoDialog() {
-    if (_students.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('لا يوجد طلاب مسجلين'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
-    final student = _students.first;
-    if (student.busId.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('لم يتم تعيين باص للطالب بعد'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
-
-    context.push('/parent/bus-info/${student.id}');
   }
 }
 
