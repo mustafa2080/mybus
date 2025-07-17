@@ -1146,9 +1146,6 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
     );
   }
 
-
-  }
-
   Widget _buildStudentInfoRow(String label, String value, {bool isPhone = false}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
@@ -2341,19 +2338,6 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
     );
   }
 
-  // Get status color
-  Color _getStatusColor(String status) {
-    switch (status) {
-      case 'onBus':
-        return Colors.orange;
-      case 'atSchool':
-        return Colors.blue;
-      case 'home':
-        return Colors.green;
-      default:
-        return Colors.grey;
-    }
-  }
 }
 
 
