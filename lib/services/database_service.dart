@@ -451,7 +451,6 @@ class DatabaseService {
       debugPrint('✅ Student status updated successfully: $studentId');
 
       // إرسال إشعار تغيير الحالة
-      final currentUserId = _getCurrentUserId();
       if (currentUserId.isNotEmpty) {
         final currentUserDoc = await _firestore.collection('users').doc(currentUserId).get();
         final supervisorName = currentUserDoc.exists ?
