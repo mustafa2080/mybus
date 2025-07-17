@@ -391,40 +391,7 @@ class NotificationService {
     return '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
   }
 
-  // Get notifications stream for user
-  Stream<List<NotificationModel>> getNotificationsForUser(String userId) {
-    return _firestore
-        .collection('notifications')
-        .where('recipientId', isEqualTo: userId)
-        .orderBy('timestamp', descending: true)
-        .limit(50)
-        .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => NotificationModel.fromMap(doc.data()))
-            .toList());
-  }
 
-  // Get unread notifications count
-  Stream<int> getUnreadNotificationsCount(String userId) {
-    return _firestore
-        .collection('notifications')
-        .where('recipientId', isEqualTo: userId)
-        .where('isRead', isEqualTo: false)
-        .snapshots()
-        .map((snapshot) => snapshot.docs.length);
-  }
-
-  // Mark notification as read
-  Future<void> markNotificationAsRead(String notificationId) async {
-    try {
-      await _firestore
-          .collection('notifications')
-          .doc(notificationId)
-          .update({'isRead': true});
-    } catch (e) {
-      debugPrint('❌ Error marking notification as read: $e');
-    }
-  }
 
   // Mark all notifications as read for user
   Future<void> markAllNotificationsAsRead(String userId) async {
