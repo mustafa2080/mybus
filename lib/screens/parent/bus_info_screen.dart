@@ -270,13 +270,6 @@ class _BusInfoScreenState extends State<BusInfoScreen> {
                   ),
                   const SizedBox(height: 12),
                   _buildInfoRow(
-                    icon: Icons.confirmation_number,
-                    label: 'رقم اللوحة',
-                    value: _bus?.plateNumber ?? 'غير محدد',
-                    color: Colors.green,
-                  ),
-                  const SizedBox(height: 12),
-                  _buildInfoRow(
                     icon: Icons.route,
                     label: 'خط السير',
                     value: _bus?.route ?? '',
