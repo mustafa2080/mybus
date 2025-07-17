@@ -1,5 +1,4 @@
-﻿import 'dart:async';
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -47,22 +46,6 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
     _checkProfileCompletion();
     _loadUserData();
     _loadSchoolData();
-    _setupRealTimeUpdates();
-  }
-
-  // إعداد التحديثات في الوقت الفعلي
-  void _setupRealTimeUpdates() {
-    // تحديث البيانات كل دقيقة للتأكد من الحصول على أحدث المعلومات
-    // بدون إعادة بناء الواجهة لتجنب مشاكل الـ scroll
-    Timer.periodic(const Duration(minutes: 1), (timer) {
-      if (mounted) {
-        // تحديث صامت بدون setState لتجنب إعادة بناء الواجهة
-        _loadUserData();
-        _loadSchoolData();
-      } else {
-        timer.cancel();
-      }
-    });
   }
 
   Future<void> _checkProfileCompletion() async {
@@ -1115,67 +1098,55 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
     );
   }
 
-  // بناء قسم معلومات الطالب الخارجية مع التحديث التلقائي
+  // بناء قسم معلومات الطالب الخارجية
   Widget _buildStudentInfoSection(StudentModel student) {
-    return StreamBuilder<DocumentSnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('students')
-          .doc(student.id)
-          .snapshots(),
-      builder: (context, snapshot) {
-        // استخدام البيانات المحدثة إذا كانت متاحة، وإلا استخدام البيانات الأصلية
-        final studentData = snapshot.hasData && snapshot.data!.exists
-            ? StudentModel.fromMap(snapshot.data!.data() as Map<String, dynamic>)
-            : student;
-
-        return Container(
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: Colors.green.withAlpha(25),
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: Colors.green.withAlpha(76)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.green.withAlpha(25),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.green.withAlpha(76)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             children: [
-              Row(
-                children: [
-                  Icon(Icons.person, color: Colors.green, size: 20),
-                  const SizedBox(width: 8),
-                  const Text(
-                    'معلومات الطالب',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Colors.green,
-                    ),
-                  ),
-                  if (snapshot.connectionState == ConnectionState.waiting)
-                    const Padding(
-                      padding: EdgeInsets.only(left: 8),
-                      child: SizedBox(
-                        width: 12,
-                        height: 12,
-                        child: CircularProgressIndicator(strokeWidth: 1),
-                      ),
-                    ),
-                ],
+              Icon(Icons.person, color: Colors.green, size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'معلومات الطالب',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green,
+                ),
               ),
-              const SizedBox(height: 8),
-              _buildStudentInfoRow('الاسم الكامل', studentData.name),
-              _buildStudentInfoRow('الصف الدراسي', studentData.grade),
-              _buildStudentInfoRow('رقم الهوية', studentData.qrCode.isNotEmpty ? studentData.qrCode : 'غير محدد'),
-              _buildStudentInfoRow('المدرسة', studentData.schoolName.isNotEmpty ? studentData.schoolName : 'غير محدد'),
-              _buildStudentInfoRow('العنوان', studentData.address.isNotEmpty ? studentData.address : 'غير محدد'),
-              _buildStudentInfoRow('خط السير', _getBusRouteDisplay(studentData)),
-              _buildStudentInfoRow('الحالة الحالية', _getStatusDisplayText(studentData.currentStatus.toString().split('.').last)),
-              _buildStudentInfoRow('هاتف ولي الأمر', studentData.parentPhone, isPhone: true),
-              if (studentData.notes.isNotEmpty)
-                _buildStudentInfoRow('ملاحظات', studentData.notes),
             ],
           ),
-        );
-      },
+          const SizedBox(height: 8),
+          _buildStudentInfoRow('الاسم الكامل', student.name),
+          _buildStudentInfoRow('الصف الدراسي', student.grade),
+          _buildStudentInfoRow('رقم الهوية', student.qrCode.isNotEmpty ? student.qrCode : 'غير محدد'),
+          _buildStudentInfoRow('المدرسة', student.schoolName.isNotEmpty ? student.schoolName : 'غير محدد'),
+          _buildStudentInfoRow('العنوان', student.address.isNotEmpty ? student.address : 'غير محدد'),
+          // عرض خط السير مع التحديث من قاعدة البيانات
+          FutureBuilder<String>(
+            future: _getStudentBusRoute(student),
+            builder: (context, routeSnapshot) {
+              final busRoute = routeSnapshot.data ?? 'جاري التحميل...';
+              return _buildStudentInfoRow('خط السير', busRoute);
+            },
+          ),
+          _buildStudentInfoRow('الحالة الحالية', _getStatusDisplayText(student.currentStatus.toString().split('.').last)),
+          _buildStudentInfoRow('هاتف ولي الأمر', student.parentPhone, isPhone: true),
+          if (student.notes.isNotEmpty)
+            _buildStudentInfoRow('ملاحظات', student.notes),
+        ],
+      ),
     );
+  }
+
+
   }
 
   Widget _buildStudentInfoRow(String label, String value, {bool isPhone = false}) {
@@ -1239,19 +1210,61 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
     }
   }
 
-  // الحصول على خط السير مع التحقق من البيانات
+  // الحصول على خط السير من قاعدة البيانات
+  Future<String> _getStudentBusRoute(StudentModel student) async {
+    try {
+      // أولاً، التحقق من خط السير في بيانات الطالب
+      if (student.busRoute.isNotEmpty && student.busRoute.trim() != '') {
+        return student.busRoute;
+      }
+
+      // إذا لم يكن موجود، جلب البيانات المحدثة من قاعدة البيانات
+      final studentDoc = await FirebaseFirestore.instance
+          .collection('students')
+          .doc(student.id)
+          .get();
+
+      if (studentDoc.exists) {
+        final data = studentDoc.data()!;
+        final busRoute = data['busRoute'] as String? ?? '';
+
+        if (busRoute.isNotEmpty && busRoute.trim() != '') {
+          return busRoute;
+        }
+
+        // إذا لم يكن هناك خط سير، التحقق من الباص المُسكن
+        final busId = data['busId'] as String? ?? '';
+        if (busId.isNotEmpty) {
+          final busDoc = await FirebaseFirestore.instance
+              .collection('buses')
+              .doc(busId)
+              .get();
+
+          if (busDoc.exists) {
+            final busData = busDoc.data()!;
+            final route = busData['route'] as String? ?? '';
+            if (route.isNotEmpty) {
+              return route;
+            }
+          }
+        }
+      }
+
+      return 'لم يتم تحديد خط السير';
+    } catch (e) {
+      debugPrint('❌ Error getting bus route: $e');
+      return 'خطأ في تحميل خط السير';
+    }
+  }
+
+  // الحصول على خط السير مع التحقق من البيانات (للعرض السريع)
   String _getBusRouteDisplay(StudentModel student) {
     // التحقق من خط السير في بيانات الطالب
     if (student.busRoute.isNotEmpty && student.busRoute.trim() != '') {
       return student.busRoute;
     }
 
-    // إذا لم يكن هناك خط سير، التحقق من الباص المُسكن
-    if (student.busId.isNotEmpty) {
-      return 'جاري تحميل خط السير...';
-    }
-
-    return 'لم يتم تحديد خط السير';
+    return 'جاري التحميل...';
   }
 
   Future<Map<String, dynamic>?> _getBusDetails(String busId) async {

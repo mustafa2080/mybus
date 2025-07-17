@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
@@ -29,20 +28,6 @@ class _StudentActivityScreenState extends State<StudentActivityScreen> {
     super.initState();
     debugPrint('🚀 StudentActivityScreen initialized for student: ${widget.studentId}');
     _loadStudentData();
-    _setupAutoRefresh();
-  }
-
-  // إعداد التحديث التلقائي كل دقيقة
-  void _setupAutoRefresh() {
-    Timer.periodic(const Duration(minutes: 1), (timer) {
-      if (mounted) {
-        setState(() {
-          // تحديث البيانات
-        });
-      } else {
-        timer.cancel();
-      }
-    });
   }
 
   @override
