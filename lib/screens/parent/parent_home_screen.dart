@@ -1,4 +1,5 @@
-﻿import 'package:flutter/material.dart';
+﻿import 'dart:async';
+import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -47,6 +48,21 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
     _checkProfileCompletion();
     _loadUserData();
     _loadSchoolData();
+    _setupRealTimeUpdates();
+  }
+
+  // إعداد التحديثات في الوقت الفعلي
+  void _setupRealTimeUpdates() {
+    // تحديث البيانات كل 30 ثانية للتأكد من الحصول على أحدث المعلومات
+    Timer.periodic(const Duration(seconds: 30), (timer) {
+      if (mounted) {
+        setState(() {
+          _refreshKey++;
+        });
+      } else {
+        timer.cancel();
+      }
+    });
   }
 
   Future<void> _checkProfileCompletion() async {
@@ -712,6 +728,11 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
               _buildStatusChip(student.currentStatus),
             ],
           ),
+
+          const SizedBox(height: 16),
+
+          // معلومات الطالب الخارجية
+          _buildStudentInfoSection(student),
           const SizedBox(height: 16),
 
           // Bus Assignment Info
@@ -1019,7 +1040,6 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
               const SizedBox(height: 8),
               if (busData != null) ...[
                 _buildBusInfoRow('نوع الباص', busData['description'] ?? 'غير محدد'),
-                _buildBusInfoRow('خط السير', student.busRoute.isNotEmpty ? student.busRoute : 'غير محدد'),
                 // Show supervisor info based on current time and assignment
                 FutureBuilder<Map<String, String>>(
                   future: _databaseService.getSupervisorInfoForParent(student.busId),
@@ -1040,7 +1060,6 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
                   },
                 ),
               ] else ...[
-                _buildBusInfoRow('خط السير', student.busRoute.isNotEmpty ? student.busRoute : 'غير محدد'),
                 const Text(
                   'تفاصيل الباص غير متاحة',
                   style: TextStyle(
@@ -1095,6 +1114,129 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
         ],
       ),
     );
+  }
+
+  // بناء قسم معلومات الطالب الخارجية مع التحديث التلقائي
+  Widget _buildStudentInfoSection(StudentModel student) {
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('students')
+          .doc(student.id)
+          .snapshots(),
+      builder: (context, snapshot) {
+        // استخدام البيانات المحدثة إذا كانت متاحة، وإلا استخدام البيانات الأصلية
+        final studentData = snapshot.hasData && snapshot.data!.exists
+            ? StudentModel.fromMap(snapshot.data!.data() as Map<String, dynamic>)
+            : student;
+
+        return Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: Colors.green.withAlpha(25),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.green.withAlpha(76)),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.person, color: Colors.green, size: 20),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'معلومات الطالب',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.green,
+                    ),
+                  ),
+                  if (snapshot.connectionState == ConnectionState.waiting)
+                    const Padding(
+                      padding: EdgeInsets.only(left: 8),
+                      child: SizedBox(
+                        width: 12,
+                        height: 12,
+                        child: CircularProgressIndicator(strokeWidth: 1),
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              _buildStudentInfoRow('الاسم الكامل', studentData.name),
+              _buildStudentInfoRow('الصف الدراسي', studentData.grade),
+              _buildStudentInfoRow('رقم الهوية', studentData.studentId.isNotEmpty ? studentData.studentId : 'غير محدد'),
+              _buildStudentInfoRow('تاريخ الميلاد', studentData.dateOfBirth?.isNotEmpty == true ? studentData.dateOfBirth! : 'غير محدد'),
+              _buildStudentInfoRow('العنوان', studentData.address.isNotEmpty ? studentData.address : 'غير محدد'),
+              _buildStudentInfoRow('خط السير', studentData.busRoute.isNotEmpty ? studentData.busRoute : 'غير محدد'),
+              _buildStudentInfoRow('الحالة الحالية', _getStatusDisplayText(studentData.currentStatus)),
+              if (studentData.emergencyContact.isNotEmpty)
+                _buildStudentInfoRow('جهة اتصال طوارئ', studentData.emergencyContact, isPhone: true),
+              if (studentData.medicalInfo.isNotEmpty)
+                _buildStudentInfoRow('معلومات طبية', studentData.medicalInfo),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildStudentInfoRow(String label, String value, {bool isPhone = false}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Row(
+        children: [
+          Text(
+            '$label: ',
+            style: const TextStyle(
+              fontSize: 12,
+              color: Colors.grey,
+            ),
+          ),
+          Expanded(
+            child: isPhone
+                ? GestureDetector(
+                    onTap: () => _makePhoneCall(value),
+                    child: Text(
+                      value,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: Colors.blue,
+                        fontWeight: FontWeight.w500,
+                        decoration: TextDecoration.underline,
+                      ),
+                    ),
+                  )
+                : Text(
+                    value,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: Color(0xFF2D3748),
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _getStatusDisplayText(String status) {
+    switch (status) {
+      case 'onBus':
+        return 'في الباص';
+      case 'atSchool':
+        return 'في المدرسة';
+      case 'leftSchool':
+        return 'غادر المدرسة';
+      case 'onWayHome':
+        return 'في الطريق للمنزل';
+      case 'arrivedHome':
+        return 'وصل المنزل';
+      case 'absent':
+        return 'غائب';
+      default:
+        return 'غير محدد';
+    }
   }
 
   Future<Map<String, dynamic>?> _getBusDetails(String busId) async {

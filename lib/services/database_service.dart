@@ -410,15 +410,81 @@ class DatabaseService {
         });
   }
 
-  // Update student
+  // Update student with notifications
   Future<void> updateStudent(StudentModel student) async {
     try {
+      // Get current student data for comparison
+      final currentDoc = await _firestore.collection('students').doc(student.id).get();
+      Map<String, dynamic>? currentData;
+
+      if (currentDoc.exists) {
+        currentData = currentDoc.data()!;
+      }
+
       await _firestore
           .collection('students')
           .doc(student.id)
           .update(student.copyWith(updatedAt: DateTime.now()).toMap());
+
+      // Send notifications for important changes if we have previous data
+      if (currentData != null) {
+        await _sendStudentUpdateNotifications(student.id, currentData, student.toMap());
+      }
     } catch (e) {
       throw Exception('خطأ في تحديث بيانات الطالب: $e');
+    }
+  }
+
+  // Send notifications for student information updates
+  Future<void> _sendStudentUpdateNotifications(
+    String studentId,
+    Map<String, dynamic> oldData,
+    Map<String, dynamic> newData
+  ) async {
+    try {
+      final studentName = oldData['name'] ?? 'طالب';
+      final parentId = oldData['parentId'] ?? '';
+
+      if (parentId.isEmpty) return;
+
+      List<String> changes = [];
+
+      // Check for important field changes
+      if (newData['name'] != oldData['name']) {
+        changes.add('الاسم: من "${oldData['name']}" إلى "${newData['name']}"');
+      }
+
+      if (newData['grade'] != oldData['grade']) {
+        changes.add('الصف: من "${oldData['grade']}" إلى "${newData['grade']}"');
+      }
+
+      if (newData['busRoute'] != oldData['busRoute']) {
+        changes.add('خط السير: من "${oldData['busRoute'] ?? 'غير محدد'}" إلى "${newData['busRoute'] ?? 'غير محدد'}"');
+      }
+
+      if (newData['address'] != oldData['address']) {
+        changes.add('العنوان: تم تحديثه');
+      }
+
+      if (newData['emergencyContact'] != oldData['emergencyContact']) {
+        changes.add('جهة اتصال الطوارئ: تم تحديثها');
+      }
+
+      if (newData['medicalInfo'] != oldData['medicalInfo']) {
+        changes.add('المعلومات الطبية: تم تحديثها');
+      }
+
+      if (changes.isNotEmpty) {
+        await NotificationService().sendStudentInfoUpdateNotification(
+          studentId: studentId,
+          studentName: studentName,
+          parentId: parentId,
+          changes: changes,
+        );
+      }
+
+    } catch (e) {
+      debugPrint('❌ Error sending student update notifications: $e');
     }
   }
 
