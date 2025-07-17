@@ -35,7 +35,6 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
   final AuthService _authService = AuthService();
   final DatabaseService _databaseService = DatabaseService();
   List<StudentModel> _students = [];
-  int _refreshKey = 0;
 
   // User and school data
   UserModel? _currentUser;
@@ -53,12 +52,13 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
 
   // إعداد التحديثات في الوقت الفعلي
   void _setupRealTimeUpdates() {
-    // تحديث البيانات كل 30 ثانية للتأكد من الحصول على أحدث المعلومات
-    Timer.periodic(const Duration(seconds: 30), (timer) {
+    // تحديث البيانات كل دقيقة للتأكد من الحصول على أحدث المعلومات
+    // بدون إعادة بناء الواجهة لتجنب مشاكل الـ scroll
+    Timer.periodic(const Duration(minutes: 1), (timer) {
       if (mounted) {
-        setState(() {
-          _refreshKey++;
-        });
+        // تحديث صامت بدون setState لتجنب إعادة بناء الواجهة
+        _loadUserData();
+        _loadSchoolData();
       } else {
         timer.cancel();
       }
@@ -268,7 +268,6 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
                 ),
                 Expanded(
                   child: StreamBuilder<List<StudentModel>>(
-        key: ValueKey(_refreshKey),
         stream: _databaseService.getStudentsByParent(_authService.currentUser?.uid ?? ''),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -1167,7 +1166,7 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
               _buildStudentInfoRow('رقم الهوية', studentData.qrCode.isNotEmpty ? studentData.qrCode : 'غير محدد'),
               _buildStudentInfoRow('المدرسة', studentData.schoolName.isNotEmpty ? studentData.schoolName : 'غير محدد'),
               _buildStudentInfoRow('العنوان', studentData.address.isNotEmpty ? studentData.address : 'غير محدد'),
-              _buildStudentInfoRow('خط السير', studentData.busRoute.isNotEmpty ? studentData.busRoute : 'غير محدد'),
+              _buildStudentInfoRow('خط السير', _getBusRouteDisplay(studentData)),
               _buildStudentInfoRow('الحالة الحالية', _getStatusDisplayText(studentData.currentStatus.toString().split('.').last)),
               _buildStudentInfoRow('هاتف ولي الأمر', studentData.parentPhone, isPhone: true),
               if (studentData.notes.isNotEmpty)
@@ -1238,6 +1237,21 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
       default:
         return 'في المنزل';
     }
+  }
+
+  // الحصول على خط السير مع التحقق من البيانات
+  String _getBusRouteDisplay(StudentModel student) {
+    // التحقق من خط السير في بيانات الطالب
+    if (student.busRoute.isNotEmpty && student.busRoute.trim() != '') {
+      return student.busRoute;
+    }
+
+    // إذا لم يكن هناك خط سير، التحقق من الباص المُسكن
+    if (student.busId.isNotEmpty) {
+      return 'جاري تحميل خط السير...';
+    }
+
+    return 'لم يتم تحديد خط السير';
   }
 
   Future<Map<String, dynamic>?> _getBusDetails(String busId) async {
@@ -1564,7 +1578,7 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
                   textColor: Colors.blue,
                 ),
                 title: Text(student.name),
-                subtitle: Text('الصف: ${student.grade} - الخط: ${student.busRoute}'),
+                subtitle: Text('الصف: ${student.grade} - الخط: ${_getBusRouteDisplay(student)}'),
                 onTap: () {
                   Navigator.pop(context);
                   Navigator.push(
@@ -1822,14 +1836,14 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
 
                   // Force rebuild to refresh the StreamBuilder
                   setState(() {
-                    _refreshKey++;
+                    // تحديث الواجهة
                   });
 
                   // Wait a moment then refresh again to ensure data is loaded
                   Future.delayed(const Duration(milliseconds: 500), () {
                     if (mounted) {
                       setState(() {
-                        _refreshKey++;
+                        // تحديث الواجهة مرة أخرى
                       });
                     }
                   });
@@ -2412,7 +2426,7 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
     context.push('/parent/add-student').then((_) {
       // Refresh the students list after adding a new student
       setState(() {
-        _refreshKey++;
+        // تحديث قائمة الطلاب
       });
     });
   }
