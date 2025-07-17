@@ -41,6 +41,16 @@ flutter pub cache clean && flutter clean && flutter pub get
 # بناء مع تفاصيل أكثر
 flutter build apk --debug --verbose
 
+## 10. حل مشاكل Configuration Cache مع JDK 21
+# بناء بدون configuration cache
+cd android && ./gradlew assembleRelease --no-configuration-cache
+
+# حذف configuration cache
+cd android && ./gradlew --stop && rm -rf .gradle/configuration-cache
+
+# بناء release مع إعدادات محسنة
+flutter build apk --release --no-tree-shake-icons
+
 ## ملاحظات مهمة لـ Gradle 8.9 + JDK 21:
 # - تم تحسين الإعدادات لـ ZGC (أسرع من G1GC مع JDK 21)
 # - تم إضافة --add-opens flags للتوافق مع JDK 21
