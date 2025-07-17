@@ -28,6 +28,19 @@ flutter build apk --debug --analyze-size
 cd android && ./gradlew assembleDebug --parallel --build-cache
 cd android && ./gradlew assembleDebug --configuration-cache
 
+## 9. حل مشاكل الشبكة والتحميل
+# تنظيف شامل
+flutter clean && cd android && ./gradlew clean && cd .. && flutter pub get
+
+# إعادة تحميل dependencies
+cd android && ./gradlew assembleDebug --refresh-dependencies
+
+# حذف cache وإعادة البناء
+flutter pub cache clean && flutter clean && flutter pub get
+
+# بناء مع تفاصيل أكثر
+flutter build apk --debug --verbose
+
 ## ملاحظات مهمة لـ Gradle 8.9 + JDK 21:
 # - تم تحسين الإعدادات لـ ZGC (أسرع من G1GC مع JDK 21)
 # - تم إضافة --add-opens flags للتوافق مع JDK 21

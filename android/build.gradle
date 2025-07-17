@@ -1,10 +1,20 @@
 buildscript {
     ext.kotlin_version = '1.9.10'
     repositories {
-        google()
+        google {
+            content {
+                includeGroupByRegex("com\\.android.*")
+                includeGroupByRegex("com\\.google.*")
+                includeGroupByRegex("androidx.*")
+            }
+        }
         mavenCentral()
         // إضافة gradlePluginPortal للاستقرار
         gradlePluginPortal()
+        // إضافة JitPack كـ fallback
+        maven { url 'https://jitpack.io' }
+        // إضافة Maven Central mirror
+        maven { url 'https://repo1.maven.org/maven2/' }
     }
 
     dependencies {
@@ -24,8 +34,18 @@ buildscript {
 
 allprojects {
     repositories {
-        google()
+        google {
+            content {
+                includeGroupByRegex("com\\.android.*")
+                includeGroupByRegex("com\\.google.*")
+                includeGroupByRegex("androidx.*")
+            }
+        }
         mavenCentral()
+        // إضافة JitPack كـ fallback
+        maven { url 'https://jitpack.io' }
+        // إضافة Maven Central mirror
+        maven { url 'https://repo1.maven.org/maven2/' }
     }
 }
 
