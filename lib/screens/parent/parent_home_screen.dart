@@ -466,48 +466,59 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
                             ),
                           ],
                         ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
+                        child: Stack(
                           children: [
-                            Icon(
-                              hasNotifications ? Icons.notifications_active : Icons.notifications_outlined,
-                              color: hasNotifications ? Colors.white : Colors.white.withOpacity(0.9),
-                              size: 20,
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              'الإشعارات',
-                              style: TextStyle(
-                                color: hasNotifications ? Colors.white : Colors.white.withOpacity(0.95),
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
+                            // المحتوى الرئيسي في الوسط
+                            Center(
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    hasNotifications ? Icons.notifications_active : Icons.notifications_outlined,
+                                    color: hasNotifications ? Colors.white : Colors.white.withOpacity(0.9),
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'الإشعارات',
+                                    style: TextStyle(
+                                      color: hasNotifications ? Colors.white : Colors.white.withOpacity(0.95),
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                            if (hasNotifications) ...[
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                  borderRadius: BorderRadius.circular(10),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withOpacity(0.2),
-                                      blurRadius: 4,
-                                      offset: const Offset(0, 2),
+                            // العداد في الزاوية اليمنى العلوية
+                            if (hasNotifications)
+                              Positioned(
+                                top: 4,
+                                right: 8,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(10),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withOpacity(0.2),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
+                                  ),
+                                  child: Text(
+                                    notificationCount > 99 ? '99+' : notificationCount.toString(),
+                                    style: const TextStyle(
+                                      color: Color(0xFFFF6B6B),
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
                                     ),
-                                  ],
-                                ),
-                                child: Text(
-                                  notificationCount > 99 ? '99+' : notificationCount.toString(),
-                                  style: const TextStyle(
-                                    color: Color(0xFFFF6B6B),
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
                                   ),
                                 ),
                               ),
-                            ],
                           ],
                         ),
                       ),

@@ -432,12 +432,35 @@ class DatabaseService {
 
       debugPrint('🔄 Updating student status: $studentId to ${status.toString().split('.').last}');
 
+      // Get student data first
+      final studentDoc = await _firestore.collection('students').doc(studentId).get();
+      if (!studentDoc.exists) {
+        throw Exception('الطالب غير موجود');
+      }
+
+      final studentData = studentDoc.data()!;
+      final oldStatus = studentData['currentStatus'] ?? 'unknown';
+      final newStatus = status.toString().split('.').last;
+
       await _firestore.collection('students').doc(studentId).update({
-        'currentStatus': status.toString().split('.').last,
+        'currentStatus': newStatus,
         'updatedAt': Timestamp.fromDate(DateTime.now()),
       });
 
       debugPrint('✅ Student status updated successfully: $studentId');
+
+      // إرسال إشعار تغيير الحالة
+      final currentUser = await getCurrentUser();
+      if (currentUser != null) {
+        await NotificationService().sendStudentStatusChangeNotification(
+          studentId: studentId,
+          studentName: studentData['name'] ?? 'طالب',
+          parentId: studentData['parentId'] ?? '',
+          oldStatus: oldStatus,
+          newStatus: newStatus,
+          supervisorName: currentUser.name,
+        );
+      }
 
       // Invalidate cache for this student
       final cacheKey = 'student_$studentId';
@@ -448,7 +471,7 @@ class DatabaseService {
       await _firestore.collection('system_updates').doc('last_student_update').set({
         'timestamp': Timestamp.fromDate(DateTime.now()),
         'studentId': studentId,
-        'newStatus': status.toString().split('.').last,
+        'newStatus': newStatus,
       }, SetOptions(merge: true));
 
     } catch (e) {
@@ -899,10 +922,35 @@ class DatabaseService {
   // Assign bus to student
   Future<void> assignBusToStudent(String studentId, String busId) async {
     try {
+      // Get student and bus data
+      final studentDoc = await _firestore.collection('students').doc(studentId).get();
+      final busDoc = await _firestore.collection('buses').doc(busId).get();
+
+      if (!studentDoc.exists || !busDoc.exists) {
+        throw Exception('الطالب أو الباص غير موجود');
+      }
+
+      final studentData = studentDoc.data()!;
+      final busData = busDoc.data()!;
+
       await _firestore.collection('students').doc(studentId).update({
         'busId': busId,
         'updatedAt': Timestamp.fromDate(DateTime.now()),
       });
+
+      // إرسال إشعار تسكين الطالب
+      final currentUser = await getCurrentUser();
+      if (currentUser != null) {
+        await NotificationService().sendStudentBusAssignmentNotification(
+          studentId: studentId,
+          studentName: studentData['name'] ?? 'طالب',
+          parentId: studentData['parentId'] ?? '',
+          busPlateNumber: busData['plateNumber'] ?? 'غير محدد',
+          supervisorName: busData['supervisorName'] ?? 'غير محدد',
+          adminName: currentUser.name,
+        );
+      }
+
       debugPrint('✅ Bus assigned to student successfully');
     } catch (e) {
       debugPrint('❌ Error assigning bus to student: $e');
@@ -1175,10 +1223,29 @@ class DatabaseService {
   /// Update complaint status
   Future<void> updateComplaintStatus(String complaintId, ComplaintStatus status) async {
     try {
+      // Get complaint data first
+      final complaintDoc = await _firestore.collection('complaints').doc(complaintId).get();
+      if (!complaintDoc.exists) {
+        throw Exception('الشكوى غير موجودة');
+      }
+
+      final complaintData = complaintDoc.data()!;
+
       await _firestore.collection('complaints').doc(complaintId).update({
         'status': status.toString().split('.').last,
         'updatedAt': FieldValue.serverTimestamp(),
       });
+
+      // إرسال إشعار تحديث حالة الشكوى
+      await NotificationService().sendComplaintNotification(
+        complaintId: complaintId,
+        title: complaintData['title'] ?? 'شكوى',
+        description: complaintData['description'] ?? '',
+        parentId: complaintData['parentId'] ?? '',
+        parentName: complaintData['parentName'] ?? 'ولي أمر',
+        status: status.toString().split('.').last,
+      );
+
       debugPrint('✅ Complaint status updated successfully');
     } catch (e) {
       debugPrint('❌ Error updating complaint status: $e');
@@ -2762,12 +2829,30 @@ class DatabaseService {
     try {
       debugPrint('🔄 Updating absence status: $absenceId to ${status.toString().split('.').last}');
 
+      // Get absence data first
+      final absenceDoc = await _firestore.collection('absences').doc(absenceId).get();
+      if (!absenceDoc.exists) {
+        throw Exception('طلب الغياب غير موجود');
+      }
+
+      final absenceData = absenceDoc.data()!;
+
       await _firestore.collection('absences').doc(absenceId).update({
         'status': status.toString().split('.').last,
         'approvedBy': userId,
         'approvedAt': Timestamp.now(),
         'updatedAt': Timestamp.now(),
       });
+
+      // إرسال إشعار تحديث حالة الغياب
+      await NotificationService().sendStudentAbsenceNotification(
+        studentId: absenceData['studentId'] ?? '',
+        studentName: absenceData['studentName'] ?? 'طالب',
+        parentId: absenceData['parentId'] ?? '',
+        reason: absenceData['reason'] ?? 'غير محدد',
+        date: (absenceData['date'] as Timestamp?)?.toDate() ?? DateTime.now(),
+        status: status.toString().split('.').last,
+      );
 
       debugPrint('✅ Absence status updated successfully: $absenceId');
     } catch (e) {
@@ -4265,12 +4350,24 @@ class DatabaseService {
   // Bus Assignment Functions
   Future<void> assignSupervisorToBus(String supervisorId, String busId) async {
     try {
+      // Get supervisor and bus data
+      final supervisorDoc = await _firestore.collection('users').doc(supervisorId).get();
+      final busDoc = await _firestore.collection('buses').doc(busId).get();
+
+      if (!supervisorDoc.exists || !busDoc.exists) {
+        throw Exception('المشرف أو الباص غير موجود');
+      }
+
+      final supervisorData = supervisorDoc.data()!;
+      final busData = busDoc.data()!;
+
       final batch = _firestore.batch();
 
       // Update bus with supervisor info
       final busRef = _firestore.collection('buses').doc(busId);
       batch.update(busRef, {
         'supervisorId': supervisorId,
+        'supervisorName': supervisorData['name'] ?? 'غير محدد',
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
@@ -4282,6 +4379,19 @@ class DatabaseService {
       });
 
       await batch.commit();
+
+      // إرسال إشعار تسكين المشرف
+      final currentUser = await getCurrentUser();
+      if (currentUser != null) {
+        await NotificationService().sendSupervisorAssignmentNotification(
+          supervisorId: supervisorId,
+          supervisorName: supervisorData['name'] ?? 'مشرف',
+          busId: busId,
+          busPlateNumber: busData['plateNumber'] ?? 'غير محدد',
+          adminName: currentUser.name,
+        );
+      }
+
       debugPrint('✅ Supervisor assigned to bus successfully');
     } catch (e) {
       debugPrint('❌ Error assigning supervisor to bus: $e');

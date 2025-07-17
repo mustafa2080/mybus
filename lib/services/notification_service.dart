@@ -62,7 +62,30 @@ class NotificationService {
   // Handle background messages
   static Future<void> _handleBackgroundMessage(RemoteMessage message) async {
     debugPrint('Received background message: ${message.notification?.title}');
-    // Handle the message when app is in background
+
+    // حفظ الإشعار في قاعدة البيانات المحلية حتى لو كان التطبيق مغلق
+    try {
+      final firestore = FirebaseFirestore.instance;
+
+      // إنشاء إشعار من الرسالة المستلمة
+      final notification = {
+        'id': message.messageId ?? DateTime.now().millisecondsSinceEpoch.toString(),
+        'title': message.notification?.title ?? 'إشعار جديد',
+        'body': message.notification?.body ?? '',
+        'recipientId': message.data['recipientId'] ?? '',
+        'type': message.data['type'] ?? 'general',
+        'timestamp': FieldValue.serverTimestamp(),
+        'isRead': false,
+        'data': message.data,
+      };
+
+      // حفظ الإشعار في Firestore
+      await firestore.collection('notifications').add(notification);
+
+      debugPrint('✅ Background notification saved to database');
+    } catch (e) {
+      debugPrint('❌ Error saving background notification: $e');
+    }
   }
 
   // Send notification for student boarding
@@ -248,18 +271,49 @@ class NotificationService {
   // Send push notification
   Future<void> _sendPushNotification(NotificationModel notification) async {
     try {
-      // حفظ الإشعار في قائمة انتظار FCM
+      // حفظ الإشعار في قائمة انتظار FCM مع إعدادات محسنة
       await _firestore.collection('fcm_queue').add({
         'recipientId': notification.recipientId,
         'title': notification.title,
         'body': notification.body,
-        'data': notification.data ?? {},
+        'data': {
+          ...notification.data ?? {},
+          'click_action': 'FLUTTER_NOTIFICATION_CLICK',
+          'sound': 'default',
+          'priority': 'high',
+          'notification_priority': 'PRIORITY_HIGH',
+        },
         'timestamp': FieldValue.serverTimestamp(),
         'status': 'pending',
         'type': notification.type.toString().split('.').last,
+        // إعدادات إضافية لضمان الوصول
+        'android': {
+          'priority': 'high',
+          'notification': {
+            'channel_id': 'high_importance_channel',
+            'priority': 'high',
+            'sound': 'default',
+            'default_sound': true,
+            'default_vibrate_timings': true,
+            'default_light_settings': true,
+          }
+        },
+        'apns': {
+          'payload': {
+            'aps': {
+              'alert': {
+                'title': notification.title,
+                'body': notification.body,
+              },
+              'badge': 1,
+              'sound': 'default',
+              'content-available': 1,
+            }
+          }
+        },
       });
 
-      debugPrint('✅ Push notification queued: ${notification.title}');
+      debugPrint('✅ Enhanced push notification queued: ${notification.title}');
     } catch (e) {
       debugPrint('❌ Error queuing push notification: $e');
     }
@@ -443,6 +497,526 @@ class NotificationService {
     } catch (e) {
       throw Exception('خطأ في إرسال إشعار وصول الطالب للمدرسة: $e');
     }
+  }
+
+  // ==================== إشعارات شاملة لجميع الأحداث ====================
+
+  // إشعار تسكين طالب في باص
+  Future<void> sendStudentBusAssignmentNotification({
+    required String studentId,
+    required String studentName,
+    required String parentId,
+    required String busPlateNumber,
+    required String supervisorName,
+    required String adminName,
+  }) async {
+    try {
+      // إشعار لولي الأمر
+      final parentNotification = NotificationModel(
+        id: _uuid.v4(),
+        title: 'تم تسكين ${studentName} في الباص',
+        body: 'تم تسكين ${studentName} في الباص رقم $busPlateNumber مع المشرف $supervisorName',
+        recipientId: parentId,
+        studentId: studentId,
+        studentName: studentName,
+        type: NotificationType.general,
+        timestamp: DateTime.now(),
+        data: {
+          'type': 'bus_assignment',
+          'studentId': studentId,
+          'busPlateNumber': busPlateNumber,
+          'supervisorName': supervisorName,
+        },
+      );
+
+      await _saveNotification(parentNotification);
+      await _sendPushNotification(parentNotification);
+
+      // إشعار للمشرف
+      await _sendSupervisorNotification(
+        title: 'طالب جديد تم تسكينه',
+        body: 'تم تسكين الطالب $studentName في باصك رقم $busPlateNumber',
+        data: {
+          'type': 'new_student_assigned',
+          'studentId': studentId,
+          'studentName': studentName,
+        },
+      );
+
+      // إشعار للإدمن
+      await _sendAdminNotification(
+        title: 'تم تسكين طالب جديد',
+        body: 'تم تسكين $studentName في الباص $busPlateNumber بواسطة $adminName',
+        data: {
+          'type': 'student_assignment_completed',
+          'studentId': studentId,
+          'busPlateNumber': busPlateNumber,
+          'assignedBy': adminName,
+        },
+      );
+
+    } catch (e) {
+      throw Exception('خطأ في إرسال إشعار تسكين الطالب: $e');
+    }
+  }
+
+  // إشعار بدء الرحلة
+  Future<void> sendTripStartNotification({
+    required String supervisorId,
+    required String supervisorName,
+    required String busPlateNumber,
+    required String direction,
+    required List<String> studentIds,
+  }) async {
+    try {
+      // إشعار لأولياء الأمور
+      for (String studentId in studentIds) {
+        final student = await _getStudentById(studentId);
+        if (student != null) {
+          final parentNotification = NotificationModel(
+            id: _uuid.v4(),
+            title: 'بدء رحلة الباص',
+            body: 'بدأت رحلة الباص رقم $busPlateNumber ${direction == 'toSchool' ? 'إلى المدرسة' : 'إلى المنزل'} مع المشرف $supervisorName',
+            recipientId: student.parentId,
+            studentId: studentId,
+            studentName: student.name,
+            type: NotificationType.general,
+            timestamp: DateTime.now(),
+            data: {
+              'type': 'trip_started',
+              'direction': direction,
+              'busPlateNumber': busPlateNumber,
+              'supervisorName': supervisorName,
+            },
+          );
+
+          await _saveNotification(parentNotification);
+          await _sendPushNotification(parentNotification);
+        }
+      }
+
+      // إشعار للإدمن
+      await _sendAdminNotification(
+        title: 'بدء رحلة جديدة',
+        body: 'بدأ المشرف $supervisorName رحلة الباص $busPlateNumber ${direction == 'toSchool' ? 'إلى المدرسة' : 'إلى المنزل'}',
+        data: {
+          'type': 'trip_started',
+          'supervisorId': supervisorId,
+          'busPlateNumber': busPlateNumber,
+          'direction': direction,
+          'studentsCount': studentIds.length.toString(),
+        },
+      );
+
+    } catch (e) {
+      throw Exception('خطأ في إرسال إشعار بدء الرحلة: $e');
+    }
+  }
+
+  // إشعار انتهاء الرحلة
+  Future<void> sendTripEndNotification({
+    required String supervisorId,
+    required String supervisorName,
+    required String busPlateNumber,
+    required String direction,
+    required List<String> studentIds,
+  }) async {
+    try {
+      // إشعار لأولياء الأمور
+      for (String studentId in studentIds) {
+        final student = await _getStudentById(studentId);
+        if (student != null) {
+          final parentNotification = NotificationModel(
+            id: _uuid.v4(),
+            title: 'انتهاء رحلة الباص',
+            body: 'انتهت رحلة الباص رقم $busPlateNumber ${direction == 'toSchool' ? 'ووصل إلى المدرسة' : 'ووصل إلى المنطقة'}',
+            recipientId: student.parentId,
+            studentId: studentId,
+            studentName: student.name,
+            type: NotificationType.general,
+            timestamp: DateTime.now(),
+            data: {
+              'type': 'trip_ended',
+              'direction': direction,
+              'busPlateNumber': busPlateNumber,
+              'supervisorName': supervisorName,
+            },
+          );
+
+          await _saveNotification(parentNotification);
+          await _sendPushNotification(parentNotification);
+        }
+      }
+
+      // إشعار للإدمن
+      await _sendAdminNotification(
+        title: 'انتهاء رحلة',
+        body: 'انتهى المشرف $supervisorName من رحلة الباص $busPlateNumber ${direction == 'toSchool' ? 'إلى المدرسة' : 'إلى المنزل'}',
+        data: {
+          'type': 'trip_ended',
+          'supervisorId': supervisorId,
+          'busPlateNumber': busPlateNumber,
+          'direction': direction,
+          'studentsCount': studentIds.length.toString(),
+        },
+      );
+
+    } catch (e) {
+      throw Exception('خطأ في إرسال إشعار انتهاء الرحلة: $e');
+    }
+  }
+
+  // إشعار تغيير حالة الطالب (في الطريق، وصل، إلخ)
+  Future<void> sendStudentStatusChangeNotification({
+    required String studentId,
+    required String studentName,
+    required String parentId,
+    required String oldStatus,
+    required String newStatus,
+    required String supervisorName,
+  }) async {
+    try {
+      String statusMessage = _getStatusMessage(newStatus);
+
+      final notification = NotificationModel(
+        id: _uuid.v4(),
+        title: 'تحديث حالة ${studentName}',
+        body: '$statusMessage مع المشرف $supervisorName',
+        recipientId: parentId,
+        studentId: studentId,
+        studentName: studentName,
+        type: NotificationType.general,
+        timestamp: DateTime.now(),
+        data: {
+          'type': 'status_change',
+          'oldStatus': oldStatus,
+          'newStatus': newStatus,
+          'supervisorName': supervisorName,
+        },
+      );
+
+      await _saveNotification(notification);
+      await _sendPushNotification(notification);
+
+      // إشعار للإدمن عن تغيير الحالة
+      await _sendAdminNotification(
+        title: 'تحديث حالة طالب',
+        body: 'تم تحديث حالة $studentName من $oldStatus إلى $newStatus بواسطة $supervisorName',
+        data: {
+          'type': 'student_status_updated',
+          'studentId': studentId,
+          'oldStatus': oldStatus,
+          'newStatus': newStatus,
+          'supervisorName': supervisorName,
+        },
+      );
+
+    } catch (e) {
+      throw Exception('خطأ في إرسال إشعار تغيير حالة الطالب: $e');
+    }
+  }
+
+  // إشعار تسكين مشرف في باص
+  Future<void> sendSupervisorAssignmentNotification({
+    required String supervisorId,
+    required String supervisorName,
+    required String busId,
+    required String busPlateNumber,
+    required String adminName,
+  }) async {
+    try {
+      // إشعار للمشرف
+      final supervisorNotification = NotificationModel(
+        id: _uuid.v4(),
+        title: 'تم تسكينك في باص جديد',
+        body: 'تم تسكينك في الباص رقم $busPlateNumber بواسطة $adminName',
+        recipientId: supervisorId,
+        type: NotificationType.general,
+        timestamp: DateTime.now(),
+        data: {
+          'type': 'supervisor_assignment',
+          'busId': busId,
+          'busPlateNumber': busPlateNumber,
+          'assignedBy': adminName,
+        },
+      );
+
+      await _saveNotification(supervisorNotification);
+      await _sendPushNotification(supervisorNotification);
+
+      // إشعار للإدمن
+      await _sendAdminNotification(
+        title: 'تم تسكين مشرف',
+        body: 'تم تسكين المشرف $supervisorName في الباص $busPlateNumber',
+        data: {
+          'type': 'supervisor_assignment_completed',
+          'supervisorId': supervisorId,
+          'busId': busId,
+          'assignedBy': adminName,
+        },
+      );
+
+    } catch (e) {
+      throw Exception('خطأ في إرسال إشعار تسكين المشرف: $e');
+    }
+  }
+
+  // إشعار غياب طالب
+  Future<void> sendStudentAbsenceNotification({
+    required String studentId,
+    required String studentName,
+    required String parentId,
+    required String reason,
+    required DateTime date,
+    required String status,
+  }) async {
+    try {
+      String title = status == 'approved' ? 'تم قبول طلب الغياب' :
+                    status == 'rejected' ? 'تم رفض طلب الغياب' : 'طلب غياب جديد';
+
+      String body = status == 'approved' ? 'تم قبول طلب غياب $studentName ليوم ${_formatDate(date)}' :
+                   status == 'rejected' ? 'تم رفض طلب غياب $studentName ليوم ${_formatDate(date)}' :
+                   'تم تسجيل طلب غياب $studentName ليوم ${_formatDate(date)} - السبب: $reason';
+
+      final notification = NotificationModel(
+        id: _uuid.v4(),
+        title: title,
+        body: body,
+        recipientId: parentId,
+        studentId: studentId,
+        studentName: studentName,
+        type: NotificationType.general,
+        timestamp: DateTime.now(),
+        data: {
+          'type': 'absence_notification',
+          'status': status,
+          'reason': reason,
+          'date': date.toIso8601String(),
+        },
+      );
+
+      await _saveNotification(notification);
+      await _sendPushNotification(notification);
+
+      // إشعار للإدمن عن طلب الغياب
+      if (status == 'pending') {
+        await _sendAdminNotification(
+          title: 'طلب غياب جديد',
+          body: 'طلب غياب جديد للطالب $studentName ليوم ${_formatDate(date)} - السبب: $reason',
+          data: {
+            'type': 'new_absence_request',
+            'studentId': studentId,
+            'studentName': studentName,
+            'reason': reason,
+            'date': date.toIso8601String(),
+          },
+        );
+      }
+
+    } catch (e) {
+      throw Exception('خطأ في إرسال إشعار الغياب: $e');
+    }
+  }
+
+  // إشعار شكوى جديدة
+  Future<void> sendComplaintNotification({
+    required String complaintId,
+    required String title,
+    required String description,
+    required String parentId,
+    required String parentName,
+    required String status,
+  }) async {
+    try {
+      // إشعار لولي الأمر
+      if (status != 'pending') {
+        String statusText = status == 'resolved' ? 'تم حل الشكوى' :
+                           status == 'in_progress' ? 'جاري معالجة الشكوى' : 'تم رفض الشكوى';
+
+        final parentNotification = NotificationModel(
+          id: _uuid.v4(),
+          title: statusText,
+          body: 'تم تحديث حالة شكواك: $title',
+          recipientId: parentId,
+          type: NotificationType.general,
+          timestamp: DateTime.now(),
+          data: {
+            'type': 'complaint_status_update',
+            'complaintId': complaintId,
+            'status': status,
+          },
+        );
+
+        await _saveNotification(parentNotification);
+        await _sendPushNotification(parentNotification);
+      }
+
+      // إشعار للإدمن
+      await _sendAdminNotification(
+        title: status == 'pending' ? 'شكوى جديدة' : 'تحديث حالة شكوى',
+        body: status == 'pending' ? 'شكوى جديدة من $parentName: $title' : 'تم تحديث حالة الشكوى: $title',
+        data: {
+          'type': status == 'pending' ? 'new_complaint' : 'complaint_updated',
+          'complaintId': complaintId,
+          'parentName': parentName,
+          'status': status,
+        },
+      );
+
+    } catch (e) {
+      throw Exception('خطأ في إرسال إشعار الشكوى: $e');
+    }
+  }
+
+  // ==================== دوال مساعدة للإشعارات ====================
+
+  // إرسال إشعار للمشرفين
+  Future<void> _sendSupervisorNotification({
+    required String title,
+    required String body,
+    Map<String, dynamic>? data,
+    String? specificSupervisorId,
+  }) async {
+    try {
+      if (specificSupervisorId != null) {
+        // إرسال لمشرف محدد
+        final notification = NotificationModel(
+          id: _uuid.v4(),
+          title: title,
+          body: body,
+          recipientId: specificSupervisorId,
+          type: NotificationType.general,
+          timestamp: DateTime.now(),
+          data: data,
+        );
+
+        await _saveNotification(notification);
+        await _sendPushNotification(notification);
+      } else {
+        // إرسال لجميع المشرفين
+        final supervisors = await _getAllSupervisors();
+        for (var supervisor in supervisors) {
+          final notification = NotificationModel(
+            id: _uuid.v4(),
+            title: title,
+            body: body,
+            recipientId: supervisor['id'],
+            type: NotificationType.general,
+            timestamp: DateTime.now(),
+            data: data,
+          );
+
+          await _saveNotification(notification);
+          await _sendPushNotification(notification);
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Error sending supervisor notification: $e');
+    }
+  }
+
+  // إرسال إشعار للإدمن
+  Future<void> _sendAdminNotification({
+    required String title,
+    required String body,
+    Map<String, dynamic>? data,
+  }) async {
+    try {
+      final admins = await _getAllAdmins();
+      for (var admin in admins) {
+        final notification = NotificationModel(
+          id: _uuid.v4(),
+          title: title,
+          body: body,
+          recipientId: admin['id'],
+          type: NotificationType.general,
+          timestamp: DateTime.now(),
+          data: data,
+        );
+
+        await _saveNotification(notification);
+        await _sendPushNotification(notification);
+      }
+    } catch (e) {
+      debugPrint('❌ Error sending admin notification: $e');
+    }
+  }
+
+  // الحصول على جميع المشرفين
+  Future<List<Map<String, dynamic>>> _getAllSupervisors() async {
+    try {
+      final snapshot = await _firestore
+          .collection('users')
+          .where('role', isEqualTo: 'supervisor')
+          .where('isActive', isEqualTo: true)
+          .get();
+
+      return snapshot.docs.map((doc) => {
+        'id': doc.id,
+        ...doc.data(),
+      }).toList();
+    } catch (e) {
+      debugPrint('❌ Error getting supervisors: $e');
+      return [];
+    }
+  }
+
+  // الحصول على جميع الإدمن
+  Future<List<Map<String, dynamic>>> _getAllAdmins() async {
+    try {
+      final snapshot = await _firestore
+          .collection('users')
+          .where('role', isEqualTo: 'admin')
+          .where('isActive', isEqualTo: true)
+          .get();
+
+      return snapshot.docs.map((doc) => {
+        'id': doc.id,
+        ...doc.data(),
+      }).toList();
+    } catch (e) {
+      debugPrint('❌ Error getting admins: $e');
+      return [];
+    }
+  }
+
+  // الحصول على بيانات طالب
+  Future<StudentModel?> _getStudentById(String studentId) async {
+    try {
+      final doc = await _firestore.collection('students').doc(studentId).get();
+      if (doc.exists) {
+        return StudentModel.fromMap(doc.data()!);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('❌ Error getting student: $e');
+      return null;
+    }
+  }
+
+  // تحويل حالة الطالب إلى رسالة
+  String _getStatusMessage(String status) {
+    switch (status) {
+      case 'onBus':
+        return 'ركب ${status} الباص';
+      case 'atSchool':
+        return 'وصل إلى المدرسة';
+      case 'leftSchool':
+        return 'غادر المدرسة';
+      case 'onWayHome':
+        return 'في الطريق إلى المنزل';
+      case 'arrivedHome':
+        return 'وصل إلى المنزل';
+      case 'absent':
+        return 'غائب اليوم';
+      default:
+        return 'تم تحديث الحالة';
+    }
+  }
+
+  // تنسيق التاريخ
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
   }
 
   // Send notification when student arrives at home
