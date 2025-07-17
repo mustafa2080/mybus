@@ -24,7 +24,7 @@ class MainActivity : FlutterActivity() {
                 NotificationManager.IMPORTANCE_HIGH
             ).apply {
                 description = "إشعارات تطبيق MyBus للطلاب والمشرفين"
-                enableSound(true)
+                setSound(android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION), null)
                 enableVibration(true)
                 enableLights(true)
                 lightColor = android.graphics.Color.parseColor("#FF6B6B")
@@ -39,7 +39,7 @@ class MainActivity : FlutterActivity() {
                 NotificationManager.IMPORTANCE_DEFAULT
             ).apply {
                 description = "إشعارات عامة للتطبيق"
-                enableSound(true)
+                setSound(android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_NOTIFICATION), null)
                 enableVibration(true)
                 setShowBadge(true)
             }
@@ -51,7 +51,7 @@ class MainActivity : FlutterActivity() {
                 NotificationManager.IMPORTANCE_MAX
             ).apply {
                 description = "تنبيهات طوارئ مهمة"
-                enableSound(true)
+                setSound(android.media.RingtoneManager.getDefaultUri(android.media.RingtoneManager.TYPE_ALARM), null)
                 enableVibration(true)
                 enableLights(true)
                 lightColor = android.graphics.Color.RED
