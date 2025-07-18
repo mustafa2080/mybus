@@ -330,11 +330,11 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
           ),
           const SizedBox(height: 28),
           ResponsiveGridView(
-            mobileColumns: 1,
-            tabletColumns: 2,
-            desktopColumns: 3,
+            mobileColumns: 2,
+            tabletColumns: 3,
+            desktopColumns: 4,
             largeDesktopColumns: 4,
-            mobileAspectRatio: 0.9,
+            mobileAspectRatio: 0.85,
             tabletAspectRatio: 0.8,
             desktopAspectRatio: 0.75,
             largeDesktopAspectRatio: 0.7,
@@ -418,7 +418,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         onTap: onTap,
         borderRadius: BorderRadius.circular(20),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(20),
@@ -445,7 +445,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
             mainAxisSize: MainAxisSize.max,
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
@@ -455,7 +455,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                   ),
-                  borderRadius: BorderRadius.circular(14),
+                  borderRadius: BorderRadius.circular(12),
                   border: Border.all(
                     color: color.withOpacity(0.2),
                     width: 1,
@@ -463,11 +463,11 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                 ),
                 child: Icon(
                   icon,
-                  size: 28,
+                  size: 24,
                   color: color,
                 ),
               ),
-              const SizedBox(height: 12),
+              const SizedBox(height: 8),
               Expanded(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -475,7 +475,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                     Text(
                       label,
                       style: const TextStyle(
-                        fontSize: 14,
+                        fontSize: 12,
                         fontWeight: FontWeight.bold,
                         color: Color(0xFF1A202C),
                         letterSpacing: -0.2,
@@ -484,17 +484,17 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: 4),
                     Text(
                       description,
                       style: TextStyle(
-                        fontSize: 11,
+                        fontSize: 9,
                         color: Colors.grey[600],
                         fontWeight: FontWeight.w500,
-                        height: 1.3,
+                        height: 1.2,
                       ),
                       textAlign: TextAlign.center,
-                      maxLines: 3,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                     ),
                   ],
