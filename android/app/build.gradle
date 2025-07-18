@@ -55,7 +55,7 @@ android {
         targetSdk = 35
         versionCode = 1
         versionName = "1.0"
-        multiDexEnabled = false
+        multiDexEnabled = true
 
         // تحسينات لتقليل حجم التطبيق والسرعة - جهاز واحد فقط
         ndk {
@@ -107,6 +107,8 @@ dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
     // Core library desugaring للدعم المتقدم للمكتبات
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
+    // MultiDex support للتطبيقات الكبيرة
+    implementation 'androidx.multidex:multidex:2.0.1'
 }
 
 // Google Services plugin تم تطبيقه في plugins block أعلاه

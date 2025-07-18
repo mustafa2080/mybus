@@ -30,7 +30,7 @@
 
     <application
         android:label="كيدز باص"
-        android:name="${applicationName}"
+        android:name=".MainApplication"
         android:icon="@mipmap/launcher_icon">
         <activity
             android:name=".MainActivity"
