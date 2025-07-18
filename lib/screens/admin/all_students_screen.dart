@@ -1,10 +1,12 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/student_model.dart';
 import '../../models/bus_model.dart';
 import '../../services/database_service.dart';
 import '../../services/notification_service.dart';
+import '../../services/enhanced_notification_service.dart';
 import '../../utils/constants.dart';
 
 class AllStudentsScreen extends StatefulWidget {
@@ -16,6 +18,7 @@ class AllStudentsScreen extends StatefulWidget {
 
 class _AllStudentsScreenState extends State<AllStudentsScreen> {
   final DatabaseService _databaseService = DatabaseService();
+  final EnhancedNotificationService _notificationService = EnhancedNotificationService();
   String _searchQuery = '';
   String _selectedGrade = 'الكل';
   String _selectedStatus = 'الكل';
@@ -1810,7 +1813,10 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
       // Update student in database
       await _databaseService.updateStudent(updatedStudent);
 
-      // إرسال إشعار التسكين أو إلغاء التسكين مع الصوت
+      // إرسال إشعارات التحديث
+      await _sendBusAssignmentNotifications(student, updatedStudent, busId, busRoute);
+
+      // إرسال إشعار التسكين أو إلغاء التسكين مع الصوت (النظام القديم للتوافق)
       if (busId != null) {
         // تسكين جديد
         final busDoc = await FirebaseFirestore.instance
@@ -1963,5 +1969,75 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
         ),
       ],
     );
+  }
+
+  /// إرسال إشعارات تحديث تسكين الباص
+  Future<void> _sendBusAssignmentNotifications(
+    StudentModel originalStudent,
+    StudentModel updatedStudent,
+    String? newBusId,
+    String busRoute,
+  ) async {
+    try {
+      // الحصول على معلومات الإدمن الحالي
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) return;
+
+      final adminDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(currentUser.uid)
+          .get();
+      final adminName = adminDoc.data()?['name'] ?? 'الإدارة';
+
+      // تحديد نوع التغيير
+      final updatedFields = <String, dynamic>{};
+
+      if (originalStudent.busId != updatedStudent.busId) {
+        // الحصول على أسماء الباصات للعرض
+        String oldBusName = 'غير محدد';
+        String newBusName = 'غير محدد';
+
+        if (originalStudent.busId.isNotEmpty) {
+          final oldBusDoc = await FirebaseFirestore.instance
+              .collection('buses')
+              .doc(originalStudent.busId)
+              .get();
+          if (oldBusDoc.exists) {
+            oldBusName = oldBusDoc.data()?['plateNumber'] ?? 'غير محدد';
+          }
+        }
+
+        if (updatedStudent.busId.isNotEmpty) {
+          final newBusDoc = await FirebaseFirestore.instance
+              .collection('buses')
+              .doc(updatedStudent.busId)
+              .get();
+          if (newBusDoc.exists) {
+            newBusName = newBusDoc.data()?['plateNumber'] ?? 'غير محدد';
+          }
+        }
+
+        updatedFields['busId'] = {
+          'old': oldBusName,
+          'new': newBusName,
+        };
+      }
+
+      // إرسال الإشعارات إذا كان هناك تغييرات
+      if (updatedFields.isNotEmpty) {
+        await _notificationService.notifyStudentDataUpdate(
+          studentId: updatedStudent.id,
+          studentName: updatedStudent.name,
+          parentId: updatedStudent.parentId,
+          busId: updatedStudent.busId,
+          updatedFields: updatedFields,
+          adminName: adminName,
+        );
+      }
+
+      debugPrint('✅ Bus assignment notifications sent successfully');
+    } catch (e) {
+      debugPrint('❌ Error sending bus assignment notifications: $e');
+    }
   }
 }

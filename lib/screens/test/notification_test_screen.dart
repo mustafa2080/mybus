@@ -103,10 +103,31 @@ class _NotificationTestScreenState extends State<NotificationTestScreen> {
         description: 'حالة طوارئ طبية في الباص',
         parentIds: ['test_parent'],
       );
-      
+
       _showSuccessMessage('تم إرسال إشعار الطوارئ بنجاح');
     } catch (e) {
       _showErrorMessage('خطأ في إرسال إشعار الطوارئ: $e');
+    }
+  }
+
+  Future<void> _testStudentDataUpdateNotification() async {
+    try {
+      await _enhancedService.notifyStudentDataUpdate(
+        studentId: 'test_student',
+        studentName: 'سارة أحمد',
+        parentId: 'test_parent',
+        busId: 'bus_001',
+        updatedFields: {
+          'name': {'old': 'سارة محمد', 'new': 'سارة أحمد'},
+          'grade': {'old': 'الصف الثاني', 'new': 'الصف الثالث'},
+          'busId': {'old': 'غير محدد', 'new': 'باص رقم 123'},
+        },
+        adminName: 'أحمد الإدمن',
+      );
+
+      _showSuccessMessage('تم إرسال إشعار تحديث البيانات بنجاح');
+    } catch (e) {
+      _showErrorMessage('خطأ في إرسال إشعار تحديث البيانات: $e');
     }
   }
 
@@ -220,6 +241,14 @@ class _NotificationTestScreenState extends State<NotificationTestScreen> {
               Icons.emergency,
               Colors.red,
               _testEmergencyNotification,
+            ),
+
+            _buildTestButton(
+              'اختبار تحديث بيانات الطالب',
+              'إشعار تحديث بيانات من الإدمن',
+              Icons.edit_note,
+              Colors.purple,
+              _testStudentDataUpdateNotification,
             ),
             
             const SizedBox(height: 20),

@@ -892,4 +892,176 @@ class EnhancedNotificationService {
       },
     );
   }
+
+  /// إشعار تحديث بيانات الطالب لولي الأمر والمشرف
+  Future<void> notifyStudentDataUpdate({
+    required String studentId,
+    required String studentName,
+    required String parentId,
+    required String busId,
+    required Map<String, dynamic> updatedFields,
+    required String adminName,
+  }) async {
+    try {
+      debugPrint('🔔 Sending student data update notifications for: $studentName');
+
+      // إنشاء رسالة التحديث
+      final updatedFieldsText = _formatUpdatedFields(updatedFields);
+
+      // إشعار ولي الأمر
+      await _notifyParentOfStudentUpdate(
+        parentId: parentId,
+        studentName: studentName,
+        updatedFields: updatedFieldsText,
+        adminName: adminName,
+      );
+
+      // إشعار المشرف (إذا كان الطالب مسكن في باص)
+      if (busId.isNotEmpty) {
+        await _notifySupervisorOfStudentUpdate(
+          busId: busId,
+          studentName: studentName,
+          updatedFields: updatedFieldsText,
+          adminName: adminName,
+        );
+      }
+
+      debugPrint('✅ Student data update notifications sent successfully');
+    } catch (e) {
+      debugPrint('❌ Error sending student data update notifications: $e');
+    }
+  }
+
+  /// إشعار ولي الأمر بتحديث بيانات الطالب
+  Future<void> _notifyParentOfStudentUpdate({
+    required String parentId,
+    required String studentName,
+    required String updatedFields,
+    required String adminName,
+  }) async {
+    try {
+      final title = 'تحديث بيانات الطالب';
+      final body = 'تم تحديث بيانات الطالب $studentName من قبل الإدارة\n\nالتحديثات:\n$updatedFields';
+
+      await sendNotificationToUser(
+        userId: parentId,
+        title: title,
+        body: body,
+        type: 'student',
+        data: {
+          'type': 'student_data_update',
+          'studentName': studentName,
+          'updatedBy': adminName,
+          'updatedFields': updatedFields,
+          'timestamp': DateTime.now().toIso8601String(),
+        },
+      );
+
+      debugPrint('✅ Parent notification sent for student data update');
+    } catch (e) {
+      debugPrint('❌ Error sending parent notification: $e');
+    }
+  }
+
+  /// إشعار المشرف بتحديث بيانات الطالب
+  Future<void> _notifySupervisorOfStudentUpdate({
+    required String busId,
+    required String studentName,
+    required String updatedFields,
+    required String adminName,
+  }) async {
+    try {
+      // الحصول على المشرف المسؤول عن الباص
+      final supervisorId = await _getActiveSupervisorForBus(busId);
+
+      if (supervisorId != null) {
+        final title = 'تحديث بيانات طالب في الباص';
+        final body = 'تم تحديث بيانات الطالب $studentName في الباص الخاص بك\n\nالتحديثات:\n$updatedFields';
+
+        await sendNotificationToUser(
+          userId: supervisorId,
+          title: title,
+          body: body,
+          type: 'student',
+          data: {
+            'type': 'student_data_update',
+            'studentName': studentName,
+            'busId': busId,
+            'updatedBy': adminName,
+            'updatedFields': updatedFields,
+            'timestamp': DateTime.now().toIso8601String(),
+          },
+        );
+
+        debugPrint('✅ Supervisor notification sent for student data update');
+      } else {
+        debugPrint('⚠️ No active supervisor found for bus: $busId');
+      }
+    } catch (e) {
+      debugPrint('❌ Error sending supervisor notification: $e');
+    }
+  }
+
+  /// الحصول على المشرف النشط للباص
+  Future<String?> _getActiveSupervisorForBus(String busId) async {
+    try {
+      final querySnapshot = await _firestore
+          .collection('supervisor_assignments')
+          .where('busId', isEqualTo: busId)
+          .where('status', isEqualTo: 'active')
+          .limit(1)
+          .get();
+
+      if (querySnapshot.docs.isNotEmpty) {
+        return querySnapshot.docs.first.data()['supervisorId'] as String?;
+      }
+      return null;
+    } catch (e) {
+      debugPrint('❌ Error getting active supervisor for bus: $e');
+      return null;
+    }
+  }
+
+  /// تنسيق الحقول المحدثة لعرضها في الإشعار
+  String _formatUpdatedFields(Map<String, dynamic> updatedFields) {
+    final List<String> formattedFields = [];
+
+    updatedFields.forEach((key, value) {
+      final fieldName = _getFieldDisplayName(key);
+      final oldValue = value['old']?.toString() ?? 'غير محدد';
+      final newValue = value['new']?.toString() ?? 'غير محدد';
+
+      if (oldValue != newValue) {
+        formattedFields.add('• $fieldName: من "$oldValue" إلى "$newValue"');
+      }
+    });
+
+    return formattedFields.isEmpty ? 'لا توجد تغييرات' : formattedFields.join('\n');
+  }
+
+  /// الحصول على اسم الحقل باللغة العربية
+  String _getFieldDisplayName(String fieldKey) {
+    switch (fieldKey) {
+      case 'name':
+        return 'اسم الطالب';
+      case 'schoolName':
+        return 'اسم المدرسة';
+      case 'grade':
+        return 'الصف';
+      case 'busId':
+        return 'الباص المخصص';
+      case 'parentName':
+        return 'اسم ولي الأمر';
+      case 'parentPhone':
+        return 'رقم هاتف ولي الأمر';
+      case 'address':
+        return 'العنوان';
+      case 'notes':
+        return 'ملاحظات';
+      case 'currentStatus':
+        return 'الحالة الحالية';
+      default:
+        return fieldKey;
+    }
+  }
 }

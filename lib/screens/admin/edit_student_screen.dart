@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/student_model.dart';
 import '../../models/bus_model.dart';
 import '../../services/database_service.dart';
+import '../../services/enhanced_notification_service.dart';
 import '../../utils/app_constants.dart';
 
 
@@ -19,6 +21,7 @@ class EditStudentScreen extends StatefulWidget {
 class _EditStudentScreenState extends State<EditStudentScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final DatabaseService _databaseService = DatabaseService();
+  final EnhancedNotificationService _notificationService = EnhancedNotificationService();
 
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
@@ -690,6 +693,110 @@ class _EditStudentScreenState extends State<EditStudentScreen> {
           status = StudentStatus.home;
       }
 
+      // تتبع التغييرات
+      final updatedFields = <String, dynamic>{};
+
+      if (_student!.name != _nameController.text.trim()) {
+        updatedFields['name'] = {
+          'old': _student!.name,
+          'new': _nameController.text.trim(),
+        };
+      }
+
+      if (_student!.schoolName != _schoolNameController.text.trim()) {
+        updatedFields['schoolName'] = {
+          'old': _student!.schoolName,
+          'new': _schoolNameController.text.trim(),
+        };
+      }
+
+      if (_student!.grade != _gradeController.text.trim()) {
+        updatedFields['grade'] = {
+          'old': _student!.grade,
+          'new': _gradeController.text.trim(),
+        };
+      }
+
+      if (_student!.busId != (_selectedBusId ?? '')) {
+        // الحصول على اسم الباص للعرض
+        String oldBusName = 'غير محدد';
+        String newBusName = 'غير محدد';
+
+        if (_student!.busId.isNotEmpty) {
+          final oldBus = _availableBuses.firstWhere(
+            (bus) => bus.id == _student!.busId,
+            orElse: () => BusModel(
+              id: '',
+              plateNumber: 'غير محدد',
+              description: '',
+              driverName: '',
+              driverPhone: '',
+              route: '',
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+            ),
+          );
+          oldBusName = oldBus.plateNumber;
+        }
+
+        if (_selectedBusId != null && _selectedBusId!.isNotEmpty) {
+          final newBus = _availableBuses.firstWhere(
+            (bus) => bus.id == _selectedBusId,
+            orElse: () => BusModel(
+              id: '',
+              plateNumber: 'غير محدد',
+              description: '',
+              driverName: '',
+              driverPhone: '',
+              route: '',
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+            ),
+          );
+          newBusName = newBus.plateNumber;
+        }
+
+        updatedFields['busId'] = {
+          'old': oldBusName,
+          'new': newBusName,
+        };
+      }
+
+      if (_student!.parentName != _parentNameController.text.trim()) {
+        updatedFields['parentName'] = {
+          'old': _student!.parentName,
+          'new': _parentNameController.text.trim(),
+        };
+      }
+
+      if (_student!.parentPhone != _parentPhoneController.text.trim()) {
+        updatedFields['parentPhone'] = {
+          'old': _student!.parentPhone,
+          'new': _parentPhoneController.text.trim(),
+        };
+      }
+
+      if (_student!.address != _addressController.text.trim()) {
+        updatedFields['address'] = {
+          'old': _student!.address,
+          'new': _addressController.text.trim(),
+        };
+      }
+
+      if (_student!.notes != _notesController.text.trim()) {
+        updatedFields['notes'] = {
+          'old': _student!.notes,
+          'new': _notesController.text.trim(),
+        };
+      }
+
+      if (_student!.currentStatus != status) {
+        updatedFields['currentStatus'] = {
+          'old': _student!.statusDisplayText,
+          'new': _getStatusDisplayText(status),
+        };
+      }
+
       // Update student data
       final updatedStudent = _student!.copyWith(
         name: _nameController.text.trim(),
@@ -707,6 +814,11 @@ class _EditStudentScreenState extends State<EditStudentScreen> {
 
       // Save to Firestore
       await _firestore.collection('students').doc(widget.studentId).update(updatedStudent.toMap());
+
+      // إرسال الإشعارات إذا كان هناك تغييرات
+      if (updatedFields.isNotEmpty) {
+        await _sendUpdateNotifications(updatedStudent, updatedFields);
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -781,6 +893,47 @@ class _EditStudentScreenState extends State<EditStudentScreen> {
           ),
         );
       }
+    }
+  }
+
+  /// إرسال إشعارات التحديث لولي الأمر والمشرف
+  Future<void> _sendUpdateNotifications(
+    StudentModel updatedStudent,
+    Map<String, dynamic> updatedFields,
+  ) async {
+    try {
+      // الحصول على معلومات الإدمن الحالي
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) return;
+
+      final adminDoc = await _firestore.collection('users').doc(currentUser.uid).get();
+      final adminName = adminDoc.data()?['name'] ?? 'الإدارة';
+
+      // إرسال الإشعارات
+      await _notificationService.notifyStudentDataUpdate(
+        studentId: updatedStudent.id,
+        studentName: updatedStudent.name,
+        parentId: updatedStudent.parentId,
+        busId: updatedStudent.busId,
+        updatedFields: updatedFields,
+        adminName: adminName,
+      );
+
+      debugPrint('✅ Update notifications sent successfully');
+    } catch (e) {
+      debugPrint('❌ Error sending update notifications: $e');
+    }
+  }
+
+  /// الحصول على نص عرض الحالة
+  String _getStatusDisplayText(StudentStatus status) {
+    switch (status) {
+      case StudentStatus.home:
+        return 'في المنزل';
+      case StudentStatus.onBus:
+        return 'في الباص';
+      case StudentStatus.atSchool:
+        return 'في المدرسة';
     }
   }
 }
