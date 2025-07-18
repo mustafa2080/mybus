@@ -194,8 +194,12 @@ class FCMService {
   /// معالج الرسائل في المقدمة
   Future<void> _handleForegroundMessage(RemoteMessage message) async {
     debugPrint('📱 Received foreground message: ${message.messageId}');
-    
-    // عرض الإشعار محلياً
+    debugPrint('📱 Title: ${message.notification?.title}');
+    debugPrint('📱 Body: ${message.notification?.body}');
+    debugPrint('📱 Data: ${message.data}');
+
+    // عرض الإشعار محلياً فقط في المقدمة
+    // في الخلفية، الخدمة المخصصة ستتولى الأمر
     await _showLocalNotification(message);
   }
 
@@ -362,4 +366,36 @@ class FCMService {
 
   /// التحقق من حالة التهيئة
   bool get isInitialized => _isInitialized;
+
+  /// إرسال إشعار تجريبي لاختبار النظام
+  Future<void> sendTestNotification() async {
+    try {
+      final token = _currentToken;
+      if (token == null) {
+        debugPrint('❌ No FCM token available');
+        return;
+      }
+
+      // محاكاة رسالة FCM
+      final testMessage = RemoteMessage(
+        messageId: 'test_${DateTime.now().millisecondsSinceEpoch}',
+        data: {
+          'title': 'اختبار الإشعار',
+          'body': 'هذا إشعار تجريبي للتأكد من عمل النظام',
+          'type': 'test',
+          'channelId': 'mybus_notifications',
+        },
+        notification: const RemoteMessage.Notification(
+          title: 'اختبار الإشعار',
+          body: 'هذا إشعار تجريبي للتأكد من عمل النظام',
+        ),
+      );
+
+      // عرض الإشعار محلياً
+      await _showLocalNotification(testMessage);
+      debugPrint('✅ Test notification sent');
+    } catch (e) {
+      debugPrint('❌ Error sending test notification: $e');
+    }
+  }
 }

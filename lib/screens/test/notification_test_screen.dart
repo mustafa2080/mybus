@@ -156,6 +156,15 @@ class _NotificationTestScreenState extends State<NotificationTestScreen> {
     }
   }
 
+  Future<void> _testBackgroundNotification() async {
+    try {
+      await _fcmService.sendTestNotification();
+      _showSuccessMessage('تم إرسال إشعار تجريبي\nتحقق من شريط الإشعارات');
+    } catch (e) {
+      _showErrorMessage('خطأ في إرسال الإشعار التجريبي: $e');
+    }
+  }
+
   void _showSuccessMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -319,6 +328,14 @@ class _NotificationTestScreenState extends State<NotificationTestScreen> {
               Icons.edit_note,
               Colors.purple,
               _testStudentDataUpdateNotification,
+            ),
+
+            _buildTestButton(
+              'اختبار إشعار الخلفية',
+              'اختبار ظهور الإشعار في شريط الإشعارات',
+              Icons.notifications_active,
+              Colors.teal,
+              _testBackgroundNotification,
             ),
             
             const SizedBox(height: 20),
