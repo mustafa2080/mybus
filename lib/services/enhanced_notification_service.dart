@@ -79,25 +79,27 @@ class EnhancedNotificationService {
   /// إنشاء قنوات الإشعارات
   Future<void> _createNotificationChannels() async {
     final List<AndroidNotificationChannel> channels = [
-      // قناة الإشعارات العامة
+      // قناة الإشعارات الرئيسية (متطابقة مع AndroidManifest)
       const AndroidNotificationChannel(
-        'general_notifications',
-        'الإشعارات العامة',
-        description: 'إشعارات عامة للتطبيق',
-        importance: Importance.high,
+        'mybus_notifications',
+        'إشعارات MyBus',
+        description: 'إشعارات عامة لتطبيق MyBus',
+        importance: Importance.max,
         sound: RawResourceAndroidNotificationSound('notification_sound'),
         enableVibration: true,
         playSound: true,
+        showBadge: true,
       ),
       // قناة إشعارات الطلاب
       const AndroidNotificationChannel(
         'student_notifications',
         'إشعارات الطلاب',
-        description: 'إشعارات متعلقة بالطلاب',
+        description: 'إشعارات متعلقة بالطلاب وأنشطتهم',
         importance: Importance.max,
         sound: RawResourceAndroidNotificationSound('notification_sound'),
         enableVibration: true,
         playSound: true,
+        showBadge: true,
       ),
       // قناة إشعارات الباص
       const AndroidNotificationChannel(
@@ -108,6 +110,7 @@ class EnhancedNotificationService {
         sound: RawResourceAndroidNotificationSound('notification_sound'),
         enableVibration: true,
         playSound: true,
+        showBadge: true,
       ),
       // قناة إشعارات الغياب
       const AndroidNotificationChannel(
@@ -118,6 +121,7 @@ class EnhancedNotificationService {
         sound: RawResourceAndroidNotificationSound('notification_sound'),
         enableVibration: true,
         playSound: true,
+        showBadge: true,
       ),
       // قناة إشعارات الإدارة
       const AndroidNotificationChannel(
@@ -128,6 +132,7 @@ class EnhancedNotificationService {
         sound: RawResourceAndroidNotificationSound('notification_sound'),
         enableVibration: true,
         playSound: true,
+        showBadge: true,
       ),
     ];
 
@@ -205,22 +210,29 @@ class EnhancedNotificationService {
     required String title,
     required String body,
     String? payload,
-    String channelId = 'general_notifications',
+    String channelId = 'mybus_notifications',
   }) async {
     final int notificationId = DateTime.now().millisecondsSinceEpoch.remainder(100000);
 
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      'general_notifications',
-      'الإشعارات العامة',
-      channelDescription: 'إشعارات عامة للتطبيق',
+    AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      channelId,
+      _getChannelName(channelId),
+      channelDescription: _getChannelDescription(channelId),
       importance: Importance.max,
       priority: Priority.high,
-      sound: RawResourceAndroidNotificationSound('notification_sound'),
+      sound: const RawResourceAndroidNotificationSound('notification_sound'),
       enableVibration: true,
       playSound: true,
       icon: '@drawable/ic_notification',
-      color: Color(0xFF1E88E5),
+      color: const Color(0xFFFF6B6B),
       showWhen: true,
+      when: DateTime.now().millisecondsSinceEpoch,
+      autoCancel: true,
+      ongoing: false,
+      silent: false,
+      channelShowBadge: true,
+      onlyAlertOnce: false,
+      visibility: NotificationVisibility.public,
     );
 
     const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
@@ -256,7 +268,39 @@ class EnhancedNotificationService {
       case 'admin':
         return 'admin_notifications';
       default:
-        return 'general_notifications';
+        return 'mybus_notifications';
+    }
+  }
+
+  /// الحصول على اسم القناة
+  String _getChannelName(String channelId) {
+    switch (channelId) {
+      case 'student_notifications':
+        return 'إشعارات الطلاب';
+      case 'bus_notifications':
+        return 'إشعارات الباص';
+      case 'absence_notifications':
+        return 'إشعارات الغياب';
+      case 'admin_notifications':
+        return 'إشعارات الإدارة';
+      default:
+        return 'إشعارات MyBus';
+    }
+  }
+
+  /// الحصول على وصف القناة
+  String _getChannelDescription(String channelId) {
+    switch (channelId) {
+      case 'student_notifications':
+        return 'إشعارات متعلقة بالطلاب وأنشطتهم';
+      case 'bus_notifications':
+        return 'إشعارات ركوب ونزول الباص';
+      case 'absence_notifications':
+        return 'إشعارات طلبات الغياب';
+      case 'admin_notifications':
+        return 'إشعارات خاصة بالإدارة';
+      default:
+        return 'إشعارات عامة لتطبيق MyBus';
     }
   }
 

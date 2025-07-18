@@ -9,6 +9,7 @@ import '../screens/admin/admin_home_screen.dart';
 import '../screens/supervisor/supervisor_home_screen.dart';
 import '../screens/test_responsive_screen.dart';
 import '../screens/test_notifications_screen.dart';
+import '../screens/test/notification_test_screen.dart';
 import '../screens/common/notifications_screen.dart' as common_notifications;
 import '../screens/common/error_screen.dart';
 import '../screens/parent/student_activity_screen.dart';
@@ -96,6 +97,7 @@ class AppRoutes {
   // Test Routes
   static const String testResponsive = '/test/responsive';
   static const String testNotifications = '/test/notifications';
+  static const String testNotificationSystem = '/test/notification-system';
 
   // Common Routes
   static const String notifications = '/notifications';
@@ -382,6 +384,11 @@ class AppRoutes {
         path: testNotifications,
         name: 'test-notifications',
         builder: (context, state) => const TestNotificationsScreen(),
+      ),
+      GoRoute(
+        path: testNotificationSystem,
+        name: 'test-notification-system',
+        builder: (context, state) => const NotificationTestScreen(),
       ),
 
       // Common Routes
