@@ -78,15 +78,14 @@ class _NotificationTestScreenState extends State<NotificationTestScreen> {
 
   Future<void> _testBusNotification() async {
     try {
-      await _notificationService.notifyStudentBoardingWithSound(
+      await _notificationService.notifyStudentBoardedWithSound(
         studentId: 'test_student',
         studentName: 'فاطمة أحمد',
         busId: 'bus_002',
         parentId: 'test_parent',
         supervisorId: 'test_supervisor',
-        action: 'boarding',
       );
-      
+
       _showSuccessMessage('تم إرسال إشعار الباص بنجاح');
     } catch (e) {
       _showErrorMessage('خطأ في إرسال إشعار الباص: $e');

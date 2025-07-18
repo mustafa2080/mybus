@@ -214,7 +214,7 @@ class EnhancedNotificationService {
   }) async {
     final int notificationId = DateTime.now().millisecondsSinceEpoch.remainder(100000);
 
-    AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+    final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       channelId,
       _getChannelName(channelId),
       channelDescription: _getChannelDescription(channelId),
@@ -242,7 +242,7 @@ class EnhancedNotificationService {
       sound: 'notification_sound.mp3',
     );
 
-    const NotificationDetails details = NotificationDetails(
+    final NotificationDetails details = NotificationDetails(
       android: androidDetails,
       iOS: iosDetails,
     );
