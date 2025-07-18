@@ -105,6 +105,16 @@ flutter {
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+
+    // Firebase dependencies
+    implementation platform('com.google.firebase:firebase-bom:33.7.0')
+    implementation 'com.google.firebase:firebase-messaging-ktx'
+    implementation 'com.google.firebase:firebase-analytics-ktx'
+
+    // AndroidX dependencies
+    implementation 'androidx.core:core-ktx:1.12.0'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+
     // Core library desugaring للدعم المتقدم للمكتبات
     coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
     // MultiDex support للتطبيقات الكبيرة

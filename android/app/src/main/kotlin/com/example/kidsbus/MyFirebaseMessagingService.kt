@@ -11,14 +11,12 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
-import io.flutter.embedding.android.FlutterActivity
 
 class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     companion object {
         private const val TAG = "MyFirebaseMsgService"
         private const val CHANNEL_ID = "mybus_notifications"
-        private const val NOTIFICATION_ID = 1
     }
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
@@ -56,12 +54,12 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
 
     private fun sendNotification(title: String, messageBody: String, data: Map<String, String>) {
         // إنشاء Intent لفتح التطبيق
-        val intent = Intent(this, MainActivity::class.java).apply {
-            addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
-            // إضافة البيانات للـ Intent
-            data.forEach { (key, value) ->
-                putExtra(key, value)
-            }
+        val intent = Intent(this, MainActivity::class.java)
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+
+        // إضافة البيانات للـ Intent
+        for ((key, value) in data) {
+            intent.putExtra(key, value)
         }
 
         val pendingIntentFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -70,9 +68,7 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             PendingIntent.FLAG_ONE_SHOT
         }
 
-        val pendingIntent = PendingIntent.getActivity(
-            this, 0, intent, pendingIntentFlags
-        )
+        val pendingIntent = PendingIntent.getActivity(this, 0, intent, pendingIntentFlags)
 
         // إعداد الصوت
         val defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
@@ -88,7 +84,6 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
             .setPriority(NotificationCompat.PRIORITY_HIGH)
             .setDefaults(NotificationCompat.DEFAULT_ALL)
             .setVibrate(longArrayOf(1000, 1000, 1000, 1000, 1000))
-            .setLights(0xFFFF6B6B.toInt(), 3000, 3000)
             .setStyle(NotificationCompat.BigTextStyle().bigText(messageBody))
 
         val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -111,67 +106,20 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
                 CHANNEL_ID,
                 "إشعارات MyBus",
                 NotificationManager.IMPORTANCE_HIGH
-            ).apply {
-                description = "إشعارات عامة لتطبيق MyBus"
-                enableLights(true)
-                lightColor = 0xFFFF6B6B.toInt()
-                enableVibration(true)
-                vibrationPattern = longArrayOf(1000, 1000, 1000, 1000, 1000)
-                setSound(
-                    RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),
-                    null
-                )
-                setShowBadge(true)
-            }
-            notificationManager.createNotificationChannel(channel)
-
-            // إنشاء قنوات إضافية
-            createAdditionalChannels(notificationManager)
-        }
-    }
-
-    private fun createAdditionalChannels(notificationManager: NotificationManager) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channels = listOf(
-                NotificationChannel(
-                    "student_notifications",
-                    "إشعارات الطلاب",
-                    NotificationManager.IMPORTANCE_HIGH
-                ).apply {
-                    description = "إشعارات متعلقة بالطلاب وأنشطتهم"
-                    enableLights(true)
-                    lightColor = 0xFF4CAF50.toInt()
-                    enableVibration(true)
-                    setShowBadge(true)
-                },
-                NotificationChannel(
-                    "bus_notifications",
-                    "إشعارات الباص",
-                    NotificationManager.IMPORTANCE_HIGH
-                ).apply {
-                    description = "إشعارات ركوب ونزول الباص"
-                    enableLights(true)
-                    lightColor = 0xFF2196F3.toInt()
-                    enableVibration(true)
-                    setShowBadge(true)
-                },
-                NotificationChannel(
-                    "emergency_notifications",
-                    "تنبيهات الطوارئ",
-                    NotificationManager.IMPORTANCE_MAX
-                ).apply {
-                    description = "تنبيهات طوارئ مهمة وعاجلة"
-                    enableLights(true)
-                    lightColor = 0xFFF44336.toInt()
-                    enableVibration(true)
-                    vibrationPattern = longArrayOf(100, 200, 300, 400, 500, 400, 300, 200, 400)
-                    setShowBadge(true)
-                }
             )
+            channel.description = "إشعارات عامة لتطبيق MyBus"
+            channel.enableLights(true)
+            channel.lightColor = android.graphics.Color.parseColor("#FF6B6B")
+            channel.enableVibration(true)
+            channel.vibrationPattern = longArrayOf(1000, 1000, 1000, 1000, 1000)
+            channel.setSound(
+                RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),
+                null
+            )
+            channel.setShowBadge(true)
 
-            channels.forEach { channel ->
-                notificationManager.createNotificationChannel(channel)
-            }
+            notificationManager.createNotificationChannel(channel)
         }
     }
+
 }
