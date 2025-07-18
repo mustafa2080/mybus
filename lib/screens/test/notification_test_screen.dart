@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:kidsbus/services/enhanced_notification_service.dart';
 import 'package:kidsbus/services/notification_service.dart';
+import 'package:kidsbus/services/fcm_service.dart';
 import 'package:kidsbus/utils/permissions_helper.dart';
 
 class NotificationTestScreen extends StatefulWidget {
@@ -13,18 +14,28 @@ class NotificationTestScreen extends StatefulWidget {
 class _NotificationTestScreenState extends State<NotificationTestScreen> {
   final EnhancedNotificationService _enhancedService = EnhancedNotificationService();
   final NotificationService _notificationService = NotificationService();
+  final FCMService _fcmService = FCMService();
   bool _permissionsGranted = false;
+  String? _fcmToken;
 
   @override
   void initState() {
     super.initState();
     _checkPermissions();
+    _getFCMToken();
   }
 
   Future<void> _checkPermissions() async {
     final granted = await PermissionsHelper.isNotificationPermissionGranted();
     setState(() {
       _permissionsGranted = granted;
+    });
+  }
+
+  Future<void> _getFCMToken() async {
+    final token = _fcmService.currentToken;
+    setState(() {
+      _fcmToken = token;
     });
   }
 
@@ -130,6 +141,21 @@ class _NotificationTestScreenState extends State<NotificationTestScreen> {
     }
   }
 
+  Future<void> _testFCMStatus() async {
+    try {
+      final isInitialized = _fcmService.isInitialized;
+      final token = _fcmService.currentToken;
+
+      if (isInitialized && token != null) {
+        _showSuccessMessage('FCM جاهز ومتصل\nToken: ${token.substring(0, 20)}...');
+      } else {
+        _showErrorMessage('FCM غير جاهز أو لا يوجد Token');
+      }
+    } catch (e) {
+      _showErrorMessage('خطأ في فحص حالة FCM: $e');
+    }
+  }
+
   void _showSuccessMessage(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -195,6 +221,51 @@ class _NotificationTestScreenState extends State<NotificationTestScreen> {
                         child: const Text('طلب الأذونات'),
                       ),
                     ],
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            // حالة FCM
+            Card(
+              color: Colors.blue.shade50,
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  children: [
+                    const Icon(
+                      Icons.cloud_sync,
+                      color: Colors.blue,
+                      size: 48,
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'حالة Firebase Cloud Messaging',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.blue,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _fcmToken != null
+                        ? 'متصل - Token: ${_fcmToken!.substring(0, 20)}...'
+                        : 'غير متصل',
+                      style: const TextStyle(fontSize: 12),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    ElevatedButton(
+                      onPressed: _testFCMStatus,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('فحص حالة FCM'),
+                    ),
                   ],
                 ),
               ),

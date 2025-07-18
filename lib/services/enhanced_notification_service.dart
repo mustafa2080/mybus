@@ -9,6 +9,7 @@ import 'package:uuid/uuid.dart';
 import '../models/notification_model.dart';
 import '../models/student_model.dart';
 import '../models/user_model.dart';
+import 'fcm_service.dart';
 
 // تعريف UserRole للتوافق مع الكود
 enum UserRole {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
@@ -8,6 +9,8 @@ import 'services/auth_service.dart';
 import 'services/database_service.dart';
 import 'services/notification_service.dart';
 import 'services/enhanced_notification_service.dart';
+import 'services/fcm_service.dart';
+import 'services/fcm_background_handler.dart';
 import 'services/theme_service.dart';
 import 'utils/app_constants.dart';
 import 'utils/app_validator.dart';
@@ -21,6 +24,14 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     print('✅ Firebase initialized successfully');
+
+    // تسجيل معالج الرسائل في الخلفية
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    print('✅ Background message handler registered');
+
+    // تهيئة خدمة FCM المتكاملة
+    await FCMService().initialize();
+    print('✅ FCM service initialized');
 
     // تهيئة خدمة الإشعارات
     await NotificationService().initialize();
@@ -59,6 +70,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthService()),
         Provider(create: (_) => DatabaseService()),
         Provider(create: (_) => NotificationService()),
+        Provider(create: (_) => FCMService()),
         ChangeNotifierProvider(create: (_) => ThemeService()),
       ],
       child: Consumer<ThemeService>(
