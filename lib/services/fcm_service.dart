@@ -370,29 +370,51 @@ class FCMService {
   /// إرسال إشعار تجريبي لاختبار النظام
   Future<void> sendTestNotification() async {
     try {
-      final token = _currentToken;
-      if (token == null) {
-        debugPrint('❌ No FCM token available');
-        return;
-      }
+      // عرض إشعار محلي مباشرة للاختبار
+      final int notificationId = DateTime.now().millisecondsSinceEpoch.remainder(100000);
 
-      // محاكاة رسالة FCM
-      final testMessage = RemoteMessage(
-        messageId: 'test_${DateTime.now().millisecondsSinceEpoch}',
-        data: {
-          'title': 'اختبار الإشعار',
-          'body': 'هذا إشعار تجريبي للتأكد من عمل النظام',
-          'type': 'test',
-          'channelId': 'mybus_notifications',
-        },
-        notification: const RemoteMessage.Notification(
-          title: 'اختبار الإشعار',
-          body: 'هذا إشعار تجريبي للتأكد من عمل النظام',
-        ),
+      final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+        'mybus_notifications',
+        'إشعارات MyBus',
+        channelDescription: 'إشعارات عامة لتطبيق MyBus',
+        importance: Importance.max,
+        priority: Priority.high,
+        sound: const RawResourceAndroidNotificationSound('notification_sound'),
+        enableVibration: true,
+        playSound: true,
+        icon: '@drawable/ic_notification',
+        color: const Color(0xFFFF6B6B),
+        showWhen: true,
+        when: DateTime.now().millisecondsSinceEpoch,
+        autoCancel: true,
+        ongoing: false,
+        silent: false,
+        channelShowBadge: true,
+        onlyAlertOnce: false,
+        visibility: NotificationVisibility.public,
+        ticker: 'اختبار الإشعار',
       );
 
-      // عرض الإشعار محلياً
-      await _showLocalNotification(testMessage);
+      const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+        sound: 'notification_sound.mp3',
+      );
+
+      final NotificationDetails details = NotificationDetails(
+        android: androidDetails,
+        iOS: iosDetails,
+      );
+
+      await _localNotifications.show(
+        notificationId,
+        'اختبار الإشعار',
+        'هذا إشعار تجريبي للتأكد من عمل النظام في شريط الإشعارات',
+        details,
+        payload: '{"type": "test", "timestamp": "${DateTime.now().toIso8601String()}"}',
+      );
+
       debugPrint('✅ Test notification sent');
     } catch (e) {
       debugPrint('❌ Error sending test notification: $e');
