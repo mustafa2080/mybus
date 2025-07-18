@@ -10,19 +10,20 @@ android {
     compileSdk = 35
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_21
-        targetCompatibility = JavaVersion.VERSION_21
+        sourceCompatibility = JavaVersion.VERSION_1_8
+        targetCompatibility = JavaVersion.VERSION_1_8
         // تحسين عملية الترجمة
         incremental = true
+        // تفعيل core library desugaring للمكتبات الحديثة
+        coreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
-        jvmTarget = "21"
-        // تحسينات Kotlin للسرعة مع JDK 21
+        jvmTarget = "1.8"
+        // تحسينات Kotlin للسرعة
         freeCompilerArgs += [
             "-opt-in=kotlin.RequiresOptIn",
-            "-Xjvm-default=all",
-            "-Xjdk-release=21"
+            "-Xjvm-default=all"
         ]
     }
 
@@ -104,6 +105,8 @@ flutter {
 
 dependencies {
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
+    // Core library desugaring للدعم المتقدم للمكتبات
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs:2.0.4'
 }
 
 // Google Services plugin تم تطبيقه في plugins block أعلاه
