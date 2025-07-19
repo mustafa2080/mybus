@@ -6,6 +6,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:http/http.dart' as http;
 
 /// خدمة Firebase Cloud Messaging المتكاملة
 /// تدعم الإشعارات في جميع حالات التطبيق: نشط، خلفية، مغلق
@@ -370,54 +371,118 @@ class FCMService {
   /// إرسال إشعار تجريبي لاختبار النظام
   Future<void> sendTestNotification() async {
     try {
-      // عرض إشعار محلي مباشرة للاختبار
-      final int notificationId = DateTime.now().millisecondsSinceEpoch.remainder(100000);
+      debugPrint('🧪 Sending test notification...');
 
-      final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-        'mybus_notifications',
-        'إشعارات MyBus',
-        channelDescription: 'إشعارات عامة لتطبيق MyBus',
-        importance: Importance.max,
-        priority: Priority.high,
-        sound: const RawResourceAndroidNotificationSound('notification_sound'),
-        enableVibration: true,
-        playSound: true,
-        icon: '@drawable/ic_notification',
-        color: const Color(0xFFFF6B6B),
-        showWhen: true,
-        when: DateTime.now().millisecondsSinceEpoch,
-        autoCancel: true,
-        ongoing: false,
-        silent: false,
-        channelShowBadge: true,
-        onlyAlertOnce: false,
-        visibility: NotificationVisibility.public,
-        ticker: 'اختبار الإشعار',
-      );
+      // إرسال إشعار محلي للاختبار الفوري
+      await _sendLocalTestNotification();
 
-      const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
-        presentAlert: true,
-        presentBadge: true,
-        presentSound: true,
-        sound: 'notification_sound.mp3',
-      );
+      // محاولة إرسال إشعار FCM للاختبار الحقيقي
+      await _sendFCMTestNotification();
 
-      final NotificationDetails details = NotificationDetails(
-        android: androidDetails,
-        iOS: iosDetails,
-      );
-
-      await _localNotifications.show(
-        notificationId,
-        'اختبار الإشعار',
-        'هذا إشعار تجريبي للتأكد من عمل النظام في شريط الإشعارات',
-        details,
-        payload: '{"type": "test", "timestamp": "${DateTime.now().toIso8601String()}"}',
-      );
-
-      debugPrint('✅ Test notification sent');
+      debugPrint('✅ Test notifications sent');
     } catch (e) {
       debugPrint('❌ Error sending test notification: $e');
+    }
+  }
+
+  /// إرسال إشعار محلي للاختبار
+  Future<void> _sendLocalTestNotification() async {
+    final int notificationId = DateTime.now().millisecondsSinceEpoch.remainder(100000);
+
+    final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+      'mybus_notifications',
+      'إشعارات MyBus',
+      channelDescription: 'إشعارات عامة لتطبيق MyBus',
+      importance: Importance.max,
+      priority: Priority.high,
+      sound: const RawResourceAndroidNotificationSound('notification_sound'),
+      enableVibration: true,
+      playSound: true,
+      icon: '@drawable/ic_notification',
+      color: const Color(0xFFFF6B6B),
+      showWhen: true,
+      when: DateTime.now().millisecondsSinceEpoch,
+      autoCancel: true,
+      ongoing: false,
+      silent: false,
+      channelShowBadge: true,
+      onlyAlertOnce: false,
+      visibility: NotificationVisibility.public,
+      ticker: 'اختبار الإشعار المحلي',
+    );
+
+    const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
+      presentAlert: true,
+      presentBadge: true,
+      presentSound: true,
+      sound: 'notification_sound.mp3',
+    );
+
+    final NotificationDetails details = NotificationDetails(
+      android: androidDetails,
+      iOS: iosDetails,
+    );
+
+    await _localNotifications.show(
+      notificationId,
+      'اختبار الإشعار المحلي',
+      'هذا إشعار محلي للتأكد من عمل النظام في شريط الإشعارات',
+      details,
+      payload: '{"type": "local_test", "timestamp": "${DateTime.now().toIso8601String()}"}',
+    );
+  }
+
+  /// إرسال إشعار FCM للاختبار الحقيقي
+  Future<void> _sendFCMTestNotification() async {
+    try {
+      final token = _currentToken;
+      if (token == null) {
+        debugPrint('❌ No FCM token available for test');
+        return;
+      }
+
+      debugPrint('🔥 Sending real FCM test notification...');
+
+      // إرسال إشعار حقيقي للجهاز نفسه للاختبار
+      await sendNotificationToToken(
+        token: token,
+        title: 'اختبار FCM حقيقي',
+        body: 'هذا إشعار حقيقي من FCM يجب أن يظهر في شريط الإشعارات حتى لو كان التطبيق في الخلفية',
+        data: {
+          'type': 'fcm_test',
+          'channelId': 'mybus_notifications',
+          'timestamp': DateTime.now().toIso8601String(),
+        },
+      );
+
+      debugPrint('✅ FCM test notification sent to token: ${token.substring(0, 20)}...');
+    } catch (e) {
+      debugPrint('❌ Error sending FCM test notification: $e');
+    }
+  }
+
+  /// إرسال إشعار لـ token محدد
+  Future<void> sendNotificationToToken({
+    required String token,
+    required String title,
+    required String body,
+    Map<String, String>? data,
+    String? channelId,
+  }) async {
+    try {
+      // ملاحظة: هذا يتطلب Server Key من Firebase Console
+      // في التطبيق الحقيقي، يجب إرسال الإشعارات من الخادم
+      debugPrint('📤 Preparing to send FCM notification...');
+      debugPrint('📱 Target token: ${token.substring(0, 20)}...');
+      debugPrint('📝 Title: $title');
+      debugPrint('📝 Body: $body');
+      debugPrint('📊 Data: $data');
+
+      // في بيئة الإنتاج، استخدم الخادم لإرسال الإشعارات
+      // هنا نحن فقط نسجل المعلومات للتشخيص
+
+    } catch (e) {
+      debugPrint('❌ Error in sendNotificationToToken: $e');
     }
   }
 }

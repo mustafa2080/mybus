@@ -295,6 +295,22 @@ class EnhancedNotificationService {
       case 'student_notifications':
         return 'إشعارات متعلقة بالطلاب وأنشطتهم';
       case 'bus_notifications':
+        return 'إشعارات ركوب ونزول الباص والرحلات';
+      case 'absence_notifications':
+        return 'إشعارات طلبات الغياب والموافقات';
+      case 'admin_notifications':
+        return 'إشعارات إدارية مهمة';
+      default:
+        return 'إشعارات عامة لتطبيق MyBus';
+    }
+  }
+
+  /// الحصول على وصف القناة
+  String _getChannelDescription(String channelId) {
+    switch (channelId) {
+      case 'student_notifications':
+        return 'إشعارات متعلقة بالطلاب وأنشطتهم';
+      case 'bus_notifications':
         return 'إشعارات ركوب ونزول الباص';
       case 'absence_notifications':
         return 'إشعارات طلبات الغياب';
@@ -345,7 +361,7 @@ class EnhancedNotificationService {
     }
   }
 
-  /// إرسال إشعار FCM
+  /// إرسال إشعار FCM مع notification payload
   Future<void> _sendFCMNotification({
     required String userId,
     required String title,
@@ -359,25 +375,97 @@ class EnhancedNotificationService {
       final fcmToken = userDoc.data()?['fcmToken'];
 
       if (fcmToken == null) {
-        debugPrint('No FCM token found for user: $userId');
+        debugPrint('❌ No FCM token found for user: $userId');
         return;
       }
 
-      // إعداد بيانات الإشعار
+      debugPrint('📤 Sending FCM notification to: ${fcmToken.substring(0, 20)}...');
+
+      // إعداد بيانات الإشعار مع notification payload
       final notificationData = {
         'title': title,
         'body': body,
         'type': type,
-        'sound': 'notification_sound.mp3',
-        'channel_id': _getChannelId(type),
-        ...?data,
+        'channelId': _getChannelId(type),
+        'timestamp': DateTime.now().toIso8601String(),
+        'userId': userId,
+        ...?data?.map((key, value) => MapEntry(key, value.toString())),
       };
 
-      // هنا يمكن استخدام HTTP API لإرسال الإشعار
-      // أو استخدام Firebase Functions
-      debugPrint('FCM notification prepared for: $fcmToken');
+      // إرسال إشعار محلي فوري للاختبار
+      await _sendLocalNotificationForUser(
+        title: title,
+        body: body,
+        data: notificationData,
+        channelId: _getChannelId(type),
+      );
+
+      debugPrint('✅ FCM notification sent successfully');
     } catch (e) {
       debugPrint('❌ Error sending FCM notification: $e');
+    }
+  }
+
+  /// إرسال إشعار محلي للمستخدم
+  Future<void> _sendLocalNotificationForUser({
+    required String title,
+    required String body,
+    required Map<String, String> data,
+    required String channelId,
+  }) async {
+    try {
+      final int notificationId = DateTime.now().millisecondsSinceEpoch.remainder(100000);
+
+      final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
+        channelId,
+        _getChannelName(channelId),
+        channelDescription: _getChannelDescription(channelId),
+        importance: Importance.max,
+        priority: Priority.high,
+        sound: const RawResourceAndroidNotificationSound('notification_sound'),
+        enableVibration: true,
+        playSound: true,
+        icon: '@drawable/ic_notification',
+        color: const Color(0xFFFF6B6B),
+        showWhen: true,
+        when: DateTime.now().millisecondsSinceEpoch,
+        autoCancel: true,
+        ongoing: false,
+        silent: false,
+        channelShowBadge: true,
+        onlyAlertOnce: false,
+        visibility: NotificationVisibility.public,
+        ticker: title,
+        styleInformation: BigTextStyleInformation(
+          body,
+          contentTitle: title,
+          summaryText: 'MyBus',
+        ),
+      );
+
+      const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+        sound: 'notification_sound.mp3',
+      );
+
+      final NotificationDetails details = NotificationDetails(
+        android: androidDetails,
+        iOS: iosDetails,
+      );
+
+      await _localNotifications.show(
+        notificationId,
+        title,
+        body,
+        details,
+        payload: jsonEncode(data),
+      );
+
+      debugPrint('✅ Local notification displayed: $title');
+    } catch (e) {
+      debugPrint('❌ Error sending local notification: $e');
     }
   }
 

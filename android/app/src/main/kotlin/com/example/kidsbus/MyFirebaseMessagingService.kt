@@ -20,25 +20,35 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     }
 
     override fun onMessageReceived(remoteMessage: RemoteMessage) {
-        Log.d(TAG, "From: ${remoteMessage.from}")
+        Log.d(TAG, "📱 FCM Message received from: ${remoteMessage.from}")
+        Log.d(TAG, "📱 Message ID: ${remoteMessage.messageId}")
 
-        // التحقق من وجود بيانات في الرسالة
+        // طباعة جميع البيانات للتشخيص
         if (remoteMessage.data.isNotEmpty()) {
-            Log.d(TAG, "Message data payload: ${remoteMessage.data}")
+            Log.d(TAG, "📱 Message data payload: ${remoteMessage.data}")
         }
 
-        // التحقق من وجود إشعار في الرسالة
-        remoteMessage.notification?.let {
-            Log.d(TAG, "Message Notification Body: ${it.body}")
-            sendNotification(it.title ?: "إشعار جديد", it.body ?: "", remoteMessage.data)
+        // متغيرات العنوان والمحتوى
+        var title = "إشعار جديد"
+        var body = "لديك إشعار جديد"
+
+        // أولوية للـ notification payload إذا كان موجود
+        remoteMessage.notification?.let { notification ->
+            Log.d(TAG, "📱 Notification payload found")
+            title = notification.title ?: title
+            body = notification.body ?: body
         }
 
-        // إذا لم يكن هناك notification payload، أنشئ إشعار من البيانات
+        // إذا لم يكن هناك notification payload، استخدم البيانات
         if (remoteMessage.notification == null && remoteMessage.data.isNotEmpty()) {
-            val title = remoteMessage.data["title"] ?: "إشعار جديد"
-            val body = remoteMessage.data["body"] ?: "لديك إشعار جديد"
-            sendNotification(title, body, remoteMessage.data)
+            Log.d(TAG, "📱 No notification payload, using data")
+            title = remoteMessage.data["title"] ?: title
+            body = remoteMessage.data["body"] ?: body
         }
+
+        // إرسال الإشعار في جميع الحالات
+        Log.d(TAG, "📱 Sending notification: $title - $body")
+        sendNotification(title, body, remoteMessage.data)
     }
 
     override fun onNewToken(token: String) {
@@ -53,72 +63,128 @@ class MyFirebaseMessagingService : FirebaseMessagingService() {
     }
 
     private fun sendNotification(title: String, messageBody: String, data: Map<String, String>) {
-        // إنشاء Intent لفتح التطبيق
-        val intent = Intent(this, MainActivity::class.java)
-        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
+        Log.d(TAG, "🔔 Creating notification: $title")
 
-        // إضافة البيانات للـ Intent
-        for ((key, value) in data) {
-            intent.putExtra(key, value)
+        try {
+            // إنشاء Intent لفتح التطبيق
+            val intent = Intent(this, MainActivity::class.java)
+            intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_NEW_TASK)
+
+            // إضافة البيانات للـ Intent
+            for ((key, value) in data) {
+                intent.putExtra(key, value)
+            }
+
+            val pendingIntentFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
+            } else {
+                PendingIntent.FLAG_ONE_SHOT
+            }
+
+            val pendingIntent = PendingIntent.getActivity(this, 0, intent, pendingIntentFlags)
+
+            // إعداد الصوت
+            val defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
+
+            // تحديد قناة الإشعار حسب النوع
+            val channelId = data["channelId"] ?: CHANNEL_ID
+
+            // إنشاء الإشعار مع جميع الخصائص
+            val notificationBuilder = NotificationCompat.Builder(this, channelId)
+                .setSmallIcon(R.drawable.ic_notification)
+                .setContentTitle(title)
+                .setContentText(messageBody)
+                .setAutoCancel(true)
+                .setSound(defaultSoundUri)
+                .setContentIntent(pendingIntent)
+                .setPriority(NotificationCompat.PRIORITY_MAX)
+                .setCategory(NotificationCompat.CATEGORY_MESSAGE)
+                .setDefaults(NotificationCompat.DEFAULT_ALL)
+                .setVibrate(longArrayOf(0, 1000, 500, 1000))
+                .setLights(android.graphics.Color.parseColor("#FF6B6B"), 3000, 3000)
+                .setStyle(NotificationCompat.BigTextStyle().bigText(messageBody))
+                .setShowWhen(true)
+                .setWhen(System.currentTimeMillis())
+                .setOnlyAlertOnce(false)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+
+            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+
+            // إنشاء قناة الإشعارات لـ Android O والأحدث
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                createNotificationChannel(notificationManager)
+            }
+
+            // عرض الإشعار مع ID فريد
+            val notificationId = System.currentTimeMillis().toInt()
+            notificationManager.notify(notificationId, notificationBuilder.build())
+
+            Log.d(TAG, "✅ Notification displayed successfully: $title")
+
+        } catch (e: Exception) {
+            Log.e(TAG, "❌ Error creating notification: ${e.message}", e)
         }
-
-        val pendingIntentFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            PendingIntent.FLAG_ONE_SHOT or PendingIntent.FLAG_IMMUTABLE
-        } else {
-            PendingIntent.FLAG_ONE_SHOT
-        }
-
-        val pendingIntent = PendingIntent.getActivity(this, 0, intent, pendingIntentFlags)
-
-        // إعداد الصوت
-        val defaultSoundUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
-
-        // إنشاء الإشعار
-        val notificationBuilder = NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_notification)
-            .setContentTitle(title)
-            .setContentText(messageBody)
-            .setAutoCancel(true)
-            .setSound(defaultSoundUri)
-            .setContentIntent(pendingIntent)
-            .setPriority(NotificationCompat.PRIORITY_HIGH)
-            .setDefaults(NotificationCompat.DEFAULT_ALL)
-            .setVibrate(longArrayOf(1000, 1000, 1000, 1000, 1000))
-            .setStyle(NotificationCompat.BigTextStyle().bigText(messageBody))
-
-        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-
-        // إنشاء قناة الإشعارات لـ Android O والأحدث
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            createNotificationChannel(notificationManager)
-        }
-
-        // عرض الإشعار
-        val notificationId = System.currentTimeMillis().toInt()
-        notificationManager.notify(notificationId, notificationBuilder.build())
-
-        Log.d(TAG, "Notification sent: $title - $messageBody")
     }
 
     private fun createNotificationChannel(notificationManager: NotificationManager) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
+            Log.d(TAG, "🔧 Creating notification channels...")
+
+            // القناة الرئيسية
+            val mainChannel = NotificationChannel(
                 CHANNEL_ID,
                 "إشعارات MyBus",
                 NotificationManager.IMPORTANCE_HIGH
             )
-            channel.description = "إشعارات عامة لتطبيق MyBus"
-            channel.enableLights(true)
-            channel.lightColor = android.graphics.Color.parseColor("#FF6B6B")
-            channel.enableVibration(true)
-            channel.vibrationPattern = longArrayOf(1000, 1000, 1000, 1000, 1000)
-            channel.setSound(
+            mainChannel.description = "إشعارات عامة لتطبيق MyBus"
+            mainChannel.enableLights(true)
+            mainChannel.lightColor = android.graphics.Color.parseColor("#FF6B6B")
+            mainChannel.enableVibration(true)
+            mainChannel.vibrationPattern = longArrayOf(0, 1000, 500, 1000)
+            mainChannel.setSound(
                 RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION),
                 null
             )
-            channel.setShowBadge(true)
+            mainChannel.setShowBadge(true)
+            mainChannel.lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
+            mainChannel.setBypassDnd(false)
 
-            notificationManager.createNotificationChannel(channel)
+            notificationManager.createNotificationChannel(mainChannel)
+
+            // قنوات إضافية
+            val studentChannel = NotificationChannel(
+                "student_notifications",
+                "إشعارات الطلاب",
+                NotificationManager.IMPORTANCE_HIGH
+            )
+            studentChannel.description = "إشعارات متعلقة بالطلاب"
+            studentChannel.enableVibration(true)
+            studentChannel.setShowBadge(true)
+
+            val busChannel = NotificationChannel(
+                "bus_notifications",
+                "إشعارات الباص",
+                NotificationManager.IMPORTANCE_HIGH
+            )
+            busChannel.description = "إشعارات الباص والرحلات"
+            busChannel.enableVibration(true)
+            busChannel.setShowBadge(true)
+
+            val emergencyChannel = NotificationChannel(
+                "emergency_notifications",
+                "تنبيهات الطوارئ",
+                NotificationManager.IMPORTANCE_MAX
+            )
+            emergencyChannel.description = "تنبيهات طوارئ مهمة"
+            emergencyChannel.enableVibration(true)
+            emergencyChannel.setShowBadge(true)
+            emergencyChannel.setBypassDnd(true)
+
+            notificationManager.createNotificationChannel(studentChannel)
+            notificationManager.createNotificationChannel(busChannel)
+            notificationManager.createNotificationChannel(emergencyChannel)
+
+            Log.d(TAG, "✅ Notification channels created successfully")
         }
     }
 
