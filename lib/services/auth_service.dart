@@ -2,9 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
-import 'notification_badge_service.dart';
-import 'notification_checker_service.dart';
-import 'real_time_notification_service.dart';
+// تم حذف الخدمات المتكررة واستبدالها بالخدمة الموحدة
 
 class AuthService extends ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -153,8 +151,8 @@ class AuthService extends ChangeNotifier {
           }
         }
 
-        // بدء مراقبة عداد الإشعارات بعد تسجيل الدخول
-        _startNotificationBadgeService();
+        // تم استبدال خدمات الإشعارات بالخدمة الموحدة
+        debugPrint('✅ User logged in successfully');
 
         return userData;
       }
@@ -257,9 +255,8 @@ class AuthService extends ChangeNotifier {
     try {
       _setLoading(true);
 
-      // إيقاف مراقبة الإشعارات قبل تسجيل الخروج
-      NotificationBadgeService().stopListening();
-      RealTimeNotificationService().stopListening();
+      // تم استبدال خدمات الإشعارات بالخدمة الموحدة
+      debugPrint('✅ Stopping notification services before logout');
 
       await _auth.signOut();
       _currentUserData = null;
@@ -343,31 +340,6 @@ class AuthService extends ChangeNotifier {
     return user?.userType == UserType.parent;
   }
 
-  // بدء مراقبة عداد الإشعارات بعد تسجيل الدخول
-  void _startNotificationBadgeService() {
-    try {
-      // بدء مراقبة عداد الإشعارات بعد تأخير قصير
-      Future.delayed(const Duration(seconds: 1), () async {
-        final badgeService = NotificationBadgeService();
-        await badgeService.restart();
-        debugPrint('✅ Notification badge service restarted for new user');
-      });
-
-      // فحص الإشعارات الجديدة بعد تأخير أطول قليلاً
-      Future.delayed(const Duration(seconds: 3), () async {
-        final checkerService = NotificationCheckerService();
-        await checkerService.checkUnreadNotifications();
-        debugPrint('✅ Checked for new notifications after login');
-      });
-
-      // بدء مراقبة الإشعارات الفورية
-      Future.delayed(const Duration(seconds: 2), () async {
-        final realTimeService = RealTimeNotificationService();
-        await realTimeService.restart();
-        debugPrint('✅ Real-time notification service restarted for new user');
-      });
-    } catch (e) {
-      debugPrint('❌ Error starting notification services: $e');
-    }
-  }
+  // تم استبدال خدمات الإشعارات بالخدمة الموحدة
+  // الخدمة الموحدة تعمل تلقائياً بعد تسجيل الدخول
 }

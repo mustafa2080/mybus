@@ -9,11 +9,8 @@ import 'services/auth_service.dart';
 import 'services/database_service.dart';
 import 'services/notification_service.dart';
 import 'services/enhanced_notification_service.dart';
-import 'services/notification_checker_service.dart';
-import 'services/notification_badge_service.dart';
-import 'services/real_time_notification_service.dart';
-import 'services/background_notification_service.dart';
-import 'services/enhanced_notification_checker.dart';
+import 'services/unified_notification_service.dart';
+// تم حذف الخدمات المتكررة واستبدالها بالخدمة الموحدة
 import 'services/fcm_service.dart';
 import 'services/fcm_background_handler.dart';
 import 'services/theme_service.dart';
@@ -42,29 +39,13 @@ void main() async {
     await NotificationService().initialize();
     print('✅ Notification service initialized');
 
+    // تهيئة الخدمة الموحدة للإشعارات
+    await UnifiedNotificationService().initialize();
+    print('✅ Unified notification service initialized');
+
     // تهيئة خدمة الإشعارات المحسنة
     await EnhancedNotificationService().initialize();
     print('✅ Enhanced notification service initialized');
-
-    // تهيئة خدمة فحص الإشعارات
-    await NotificationCheckerService().initialize();
-    print('✅ Notification checker service initialized');
-
-    // تهيئة خدمة عداد الإشعارات
-    await NotificationBadgeService().startListening();
-    print('✅ Notification badge service initialized');
-
-    // تهيئة خدمة الإشعارات الفورية
-    await RealTimeNotificationService().startListening();
-    print('✅ Real-time notification service initialized');
-
-    // تهيئة خدمة إشعارات الخلفية الشاملة
-    await BackgroundNotificationService().initialize();
-    print('✅ Background notification service initialized');
-
-    // تهيئة خدمة فحص الإشعارات المحسنة
-    await EnhancedNotificationChecker().initialize();
-    print('✅ Enhanced notification checker initialized');
 
     // طباعة معلومات التطبيق
     AppValidator.printAppInfo();
@@ -95,10 +76,9 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthService()),
         Provider(create: (_) => DatabaseService()),
         Provider(create: (_) => NotificationService()),
+        Provider(create: (_) => EnhancedNotificationService()),
+        Provider(create: (_) => UnifiedNotificationService()),
         Provider(create: (_) => FCMService()),
-        ChangeNotifierProvider(create: (_) => NotificationBadgeService()),
-        ChangeNotifierProvider(create: (_) => BackgroundNotificationService()),
-        Provider(create: (_) => EnhancedNotificationChecker()),
         ChangeNotifierProvider(create: (_) => ThemeService()),
       ],
       child: Consumer<ThemeService>(

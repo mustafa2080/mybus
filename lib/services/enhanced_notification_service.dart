@@ -10,7 +10,7 @@ import 'package:uuid/uuid.dart';
 import '../models/notification_model.dart';
 import '../models/student_model.dart';
 import '../models/user_model.dart';
-import '../utils/notification_images.dart';
+import '../utils/notification_images.dart' as NotificationUtils;
 import 'unified_notification_service.dart';
 import 'fcm_http_service.dart';
 
@@ -31,6 +31,7 @@ class EnhancedNotificationService {
   final UnifiedNotificationService _unifiedService = UnifiedNotificationService();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FCMHttpService _fcmHttpService = FCMHttpService();
+  final FirebaseMessaging _messaging = FirebaseMessaging.instance;
   final Uuid _uuid = const Uuid();
 
   bool _isInitialized = false;
@@ -213,7 +214,7 @@ class EnhancedNotificationService {
       );
 
       // تحسين العنوان والمحتوى
-      final enhancedTitle = NotificationImages.getCustomTitle(type, title);
+      final enhancedTitle = NotificationUtils.NotificationImages.getCustomTitle(type, title);
       final notificationImage = _getNotificationImage(type);
       final notificationIcon = _getNotificationIcon(type);
 
@@ -321,18 +322,12 @@ class EnhancedNotificationService {
 
   /// الحصول على رابط الصورة حسب نوع الإشعار
   String _getNotificationImage(String type) {
-    return NotificationImages.getNotificationImage(type);
+    return NotificationUtils.NotificationImages.getNotificationImage(type);
   }
 
   /// الحصول على رابط الأيقونة حسب نوع الإشعار
   String _getNotificationIcon(String type) {
-    return NotificationImages.getNotificationIcon(type);
-  }
-
-      debugPrint('✅ Notification sent to user: $userId');
-    } catch (e) {
-      debugPrint('❌ Error sending notification: $e');
-    }
+    return NotificationUtils.NotificationImages.getNotificationIcon(type);
   }
 
   /// إرسال إشعار FCM مع notification payload
@@ -1587,6 +1582,63 @@ class EnhancedNotificationService {
       await _notifySupervisorOfBusActivation(
         busId: busId,
         busPlateNumber: busPlateNumber,
+        driverName: driverName,
+        adminName: adminName,
+        adminId: adminId,
+      );
+
+      debugPrint('✅ Bus activation notifications sent successfully');
+    } catch (e) {
+      debugPrint('❌ Error sending bus activation notifications: $e');
+    }
+  }
+
+  /// إشعار المشرف بتفعيل الحافلة
+  Future<void> _notifySupervisorOfBusActivation({
+    required String busId,
+    required String busPlateNumber,
+    required String driverName,
+    required String adminName,
+    String? adminId,
+  }) async {
+    try {
+      final supervisorId = await _getActiveSupervisorForBus(busId);
+
+      if (supervisorId != null && supervisorId != adminId) {
+        await sendNotificationToUser(
+          userId: supervisorId,
+          title: '🚌 تم تفعيل الحافلة',
+          body: 'تم تفعيل الحافلة $busPlateNumber\nالسائق: $driverName\nيمكنك الآن بدء الرحلات',
+          type: 'admin',
+          data: {
+            'busId': busId,
+            'busPlateNumber': busPlateNumber,
+            'driverName': driverName,
+            'action': 'bus_activated',
+          },
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ Error notifying supervisor of bus activation: $e');
+    }
+  }
+
+  /// حفظ FCM Token
+  Future<void> saveFCMToken(String userId) async {
+    try {
+      final token = await _messaging.getToken();
+      if (token != null) {
+        await _firestore.collection('users').doc(userId).update({
+          'fcmToken': token,
+          'lastTokenUpdate': FieldValue.serverTimestamp(),
+        });
+        debugPrint('✅ FCM Token saved for user: $userId');
+      }
+    } catch (e) {
+      debugPrint('❌ Error saving FCM token: $e');
+    }
+  }
+}
         driverName: driverName,
         adminName: adminName,
         adminId: adminId,
