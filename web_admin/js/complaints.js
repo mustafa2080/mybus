@@ -297,21 +297,25 @@ function displayComplaints() {
             </td>
             <td>
                 <div class="btn-group btn-group-sm" role="group">
-                    <button class="btn btn-outline-primary" onclick="viewComplaintDetails('${complaint.id}')" title="عرض التفاصيل">
-                        <i class="fas fa-eye"></i>
+                    <button class="btn btn-outline-primary btn-sm" onclick="viewComplaintDetails('${complaint.id}')" title="عرض التفاصيل">
+                        <i class="fas fa-eye me-1"></i>
+                        <span>عرض</span>
                     </button>
                     ${complaint.status === 'pending' ? `
-                        <button class="btn btn-outline-success" onclick="startProcessing('${complaint.id}')" title="بدء المعالجة">
-                            <i class="fas fa-play"></i>
+                        <button class="btn btn-outline-success btn-sm" onclick="startProcessing('${complaint.id}')" title="بدء المعالجة">
+                            <i class="fas fa-play me-1"></i>
+                            <span>بدء المعالجة</span>
                         </button>
                     ` : ''}
                     ${complaint.status === 'inProgress' ? `
-                        <button class="btn btn-outline-info" onclick="showAddResponseModal('${complaint.id}')" title="إضافة رد">
-                            <i class="fas fa-reply"></i>
+                        <button class="btn btn-outline-info btn-sm" onclick="showAddResponseModal('${complaint.id}')" title="إضافة رد">
+                            <i class="fas fa-reply me-1"></i>
+                            <span>إضافة رد</span>
                         </button>
                     ` : ''}
-                    <button class="btn btn-outline-warning" onclick="showUpdateStatusModal('${complaint.id}')" title="تحديث الحالة">
-                        <i class="fas fa-edit"></i>
+                    <button class="btn btn-outline-warning btn-sm" onclick="showUpdateStatusModal('${complaint.id}')" title="تحديث الحالة">
+                        <i class="fas fa-edit me-1"></i>
+                        <span>تحديث</span>
                     </button>
                 </div>
             </td>
