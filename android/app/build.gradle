@@ -50,7 +50,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.kidsbus"
+        applicationId = "com.example.mybus"
         minSdk = 23
         targetSdk = 35
         versionCode = 1
