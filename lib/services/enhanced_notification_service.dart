@@ -449,12 +449,11 @@ class EnhancedNotificationService {
         iOS: iosDetails,
       );
 
-      await _localNotifications.show(
-        notificationId,
-        title,
-        body,
-        details,
-        payload: jsonEncode(data),
+      await _unifiedService.showLocalNotification(
+        title: title,
+        body: body,
+        channelId: channelId,
+        data: data,
       );
 
       debugPrint('✅ Local notification displayed for current user: $title');
@@ -1623,19 +1622,67 @@ class EnhancedNotificationService {
     }
   }
 
-  /// حفظ FCM Token
-  Future<void> saveFCMToken(String userId) async {
+  /// إشعار إيقاف الحافلة
+  Future<void> notifyBusDeactivation({
+    required String busId,
+    required String busPlateNumber,
+    required String driverName,
+    required String adminName,
+    String? adminId,
+  }) async {
     try {
-      final token = await _messaging.getToken();
-      if (token != null) {
-        await _firestore.collection('users').doc(userId).update({
-          'fcmToken': token,
-          'lastTokenUpdate': FieldValue.serverTimestamp(),
-        });
-        debugPrint('✅ FCM Token saved for user: $userId');
+      debugPrint('🔔 Sending bus deactivation notifications for: $busPlateNumber');
+
+      // إشعار المشرف المعين للحافلة
+      final supervisorId = await _getActiveSupervisorForBus(busId);
+      if (supervisorId != null && supervisorId != adminId) {
+        await sendNotificationToUser(
+          userId: supervisorId,
+          title: '⚠️ تم إيقاف الحافلة',
+          body: 'تم إيقاف الحافلة $busPlateNumber (السائق: $driverName) من قبل $adminName\n\nيرجى التوقف عن العمليات والرحلات',
+          type: 'admin',
+          data: {
+            'busId': busId,
+            'busPlateNumber': busPlateNumber,
+            'driverName': driverName,
+            'deactivatedBy': adminName,
+            'action': 'bus_deactivated',
+          },
+        );
       }
+
+      // إشعار أولياء أمور الطلاب المسكنين في الحافلة
+      final studentsSnapshot = await _firestore
+          .collection('students')
+          .where('busId', isEqualTo: busId)
+          .where('isActive', isEqualTo: true)
+          .get();
+
+      for (final studentDoc in studentsSnapshot.docs) {
+        final studentData = studentDoc.data();
+        final parentId = studentData['parentId'];
+        final studentName = studentData['name'] ?? 'الطالب';
+
+        if (parentId != null && parentId.isNotEmpty && parentId != adminId) {
+          await sendNotificationToUser(
+            userId: parentId,
+            title: '⚠️ تم إيقاف حافلة طفلك',
+            body: 'تم إيقاف الحافلة $busPlateNumber الخاصة بـ $studentName مؤقتاً\n\nيرجى ترتيب وسيلة نقل بديلة',
+            type: 'student',
+            data: {
+              'busId': busId,
+              'busPlateNumber': busPlateNumber,
+              'studentName': studentName,
+              'deactivatedBy': adminName,
+              'action': 'bus_deactivated',
+            },
+          );
+        }
+      }
+
+      debugPrint('✅ Bus deactivation notifications sent successfully');
     } catch (e) {
-      debugPrint('❌ Error saving FCM token: $e');
+      debugPrint('❌ Error sending bus deactivation notifications: $e');
     }
   }
 }

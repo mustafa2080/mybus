@@ -282,6 +282,28 @@ class UnifiedNotificationService {
     debugPrint('✅ Local notification shown: $title');
   }
 
+  /// تحويل النوع من String إلى NotificationType
+  NotificationType _parseNotificationType(String? typeString) {
+    switch (typeString) {
+      case 'student':
+        return NotificationType.studentAssigned;
+      case 'bus':
+        return NotificationType.studentBoarded;
+      case 'absence':
+        return NotificationType.absenceRequested;
+      case 'admin':
+        return NotificationType.systemUpdate;
+      case 'emergency':
+        return NotificationType.emergency;
+      case 'complaint':
+        return NotificationType.complaintSubmitted;
+      case 'survey':
+        return NotificationType.general;
+      default:
+        return NotificationType.general;
+    }
+  }
+
   /// حفظ الإشعار في Firestore - دالة موحدة
   Future<void> saveNotificationToFirestore({
     required String userId,
@@ -296,7 +318,7 @@ class UnifiedNotificationService {
         title: title,
         body: body,
         recipientId: userId,
-        type: type,
+        type: _parseNotificationType(type),
         timestamp: DateTime.now(),
         isRead: false,
         data: data ?? {},
