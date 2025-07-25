@@ -3464,13 +3464,14 @@ class DatabaseService {
     try {
       debugPrint('🔍 Getting simple assignments for supervisor: $supervisorId');
 
-      final snapshot = await _firestore
+      // الطريقة الأولى: البحث بـ supervisorId و status = active
+      var snapshot = await _firestore
           .collection('supervisor_assignments')
           .where('supervisorId', isEqualTo: supervisorId)
           .where('status', isEqualTo: 'active')
           .get();
 
-      final assignments = snapshot.docs
+      var assignments = snapshot.docs
           .map((doc) {
             final data = doc.data();
             debugPrint('📄 Assignment data: $data');
@@ -3478,12 +3479,62 @@ class DatabaseService {
           })
           .toList();
 
-      // Sort manually to avoid index requirement
-      assignments.sort((a, b) => b.assignedAt.compareTo(a.assignedAt));
+      debugPrint('📋 Found ${assignments.length} active assignments for supervisor $supervisorId');
 
-      debugPrint('📋 Found ${assignments.length} assignments for supervisor $supervisorId');
+      // إذا لم نجد تعيينات نشطة، جرب البحث بدون قيد status
+      if (assignments.isEmpty) {
+        debugPrint('🔍 No active assignments found, trying without status filter...');
+        snapshot = await _firestore
+            .collection('supervisor_assignments')
+            .where('supervisorId', isEqualTo: supervisorId)
+            .get();
+
+        assignments = snapshot.docs
+            .map((doc) {
+              final data = doc.data();
+              debugPrint('📄 Assignment data (any status): $data');
+              return SupervisorAssignmentModel.fromMap(data);
+            })
+            .toList();
+
+        debugPrint('📋 Found ${assignments.length} total assignments for supervisor $supervisorId');
+      }
+
+      // إذا لم نجد أي تعيينات، جرب البحث في جميع التعيينات
+      if (assignments.isEmpty) {
+        debugPrint('🔍 No assignments found by supervisorId, checking all assignments...');
+        snapshot = await _firestore
+            .collection('supervisor_assignments')
+            .get();
+
+        final allAssignments = snapshot.docs
+            .map((doc) {
+              final data = doc.data();
+              return SupervisorAssignmentModel.fromMap(data);
+            })
+            .toList();
+
+        debugPrint('📊 Total assignments in database: ${allAssignments.length}');
+        for (final assignment in allAssignments) {
+          debugPrint('   - Assignment: supervisorId=${assignment.supervisorId}, busRoute="${assignment.busRoute}", status=${assignment.status}');
+        }
+
+        // فلترة بناءً على supervisorId مع مرونة أكثر
+        assignments = allAssignments.where((assignment) {
+          return assignment.supervisorId == supervisorId;
+        }).toList();
+
+        debugPrint('📋 Found ${assignments.length} assignments after manual filtering');
+      }
+
+      // Sort manually to avoid index requirement
+      if (assignments.isNotEmpty) {
+        assignments.sort((a, b) => b.assignedAt.compareTo(a.assignedAt));
+      }
+
+      debugPrint('📋 Final result: ${assignments.length} assignments for supervisor $supervisorId');
       for (final assignment in assignments) {
-        debugPrint('   - Assignment: busId=${assignment.busId}, busRoute="${assignment.busRoute}", busPlate=${assignment.busPlateNumber}');
+        debugPrint('   - Assignment: busId="${assignment.busId}", busRoute="${assignment.busRoute}", busPlate="${assignment.busPlateNumber}", status="${assignment.status}"');
       }
 
       return assignments;
