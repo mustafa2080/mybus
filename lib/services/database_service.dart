@@ -3673,7 +3673,7 @@ class DatabaseService {
       // إذا لم نجد طلاب، جرب البحث باستخدام busId
       if (students.isEmpty) {
         debugPrint('🔍 No students found by route, trying to find by busId...');
-        return await getStudentsByBusId(busRoute); // قد يكون busRoute هو في الواقع busId
+        return await getStudentsByBusIdSimple(busRoute); // قد يكون busRoute هو في الواقع busId
       }
 
       return students;
@@ -3683,8 +3683,8 @@ class DatabaseService {
     }
   }
 
-  /// Get students by bus ID
-  Future<List<StudentModel>> getStudentsByBusId(String busId) async {
+  /// Get students by bus ID (Future version)
+  Future<List<StudentModel>> getStudentsByBusIdSimple(String busId) async {
     try {
       debugPrint('🔍 Getting students for busId: $busId');
 

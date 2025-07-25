@@ -122,7 +122,7 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
       // إذا لم نجد طلاب بالـ route، جرب بالـ busId
       if (students.isEmpty && assignment.busId.isNotEmpty) {
         debugPrint('🔍 No students found by route, trying busId: ${assignment.busId}');
-        students = await _databaseService.getStudentsByBusId(assignment.busId);
+        students = await _databaseService.getStudentsByBusIdSimple(assignment.busId);
         debugPrint('👥 Found ${students.length} students in busId ${assignment.busId}');
       }
 
