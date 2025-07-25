@@ -138,21 +138,25 @@ class _StudentsListScreenState extends State<StudentsListScreen> {
         final assignedStudents = await _databaseService.getAssignedStudents();
         debugPrint('👥 Total assigned students in database: ${assignedStudents.length}');
 
-        // بحث مرن - يشمل البحث الجزئي والتطابق غير الحساس للحالة
+        // بحث مرن ولكن دقيق - فقط للطلاب المرتبطين فعلاً بهذا المشرف
         students = assignedStudents.where((student) {
+          if (route.isEmpty) return false;
+
           final studentRoute = student.busRoute.toLowerCase().trim();
           final studentBusId = student.busId.toLowerCase().trim();
           final searchRoute = route.toLowerCase().trim();
 
-          // تطابق مباشر
+          // تطابق مباشر فقط (لا نريد تطابق جزئي قد يجلب طلاب من خطوط أخرى)
           final exactRouteMatch = studentRoute == searchRoute;
           final exactBusIdMatch = studentBusId == searchRoute;
 
-          // تطابق جزئي (يحتوي على)
-          final partialRouteMatch = studentRoute.contains(searchRoute) || searchRoute.contains(studentRoute);
-          final partialBusIdMatch = studentBusId.contains(searchRoute) || searchRoute.contains(studentBusId);
+          // تطابق مرن للاختلافات الطفيفة (مثل المسافات أو الأحرف الكبيرة/الصغيرة)
+          final flexibleRouteMatch = studentRoute.isNotEmpty && searchRoute.isNotEmpty &&
+                                   (studentRoute.replaceAll(' ', '') == searchRoute.replaceAll(' ', ''));
+          final flexibleBusIdMatch = studentBusId.isNotEmpty && searchRoute.isNotEmpty &&
+                                   (studentBusId.replaceAll(' ', '') == searchRoute.replaceAll(' ', ''));
 
-          final isMatch = exactRouteMatch || exactBusIdMatch || partialRouteMatch || partialBusIdMatch;
+          final isMatch = exactRouteMatch || exactBusIdMatch || flexibleRouteMatch || flexibleBusIdMatch;
 
           if (isMatch) {
             debugPrint('✅ Match found: ${student.name} - route:"${student.busRoute}" busId:"${student.busId}"');
@@ -164,20 +168,16 @@ class _StudentsListScreenState extends State<StudentsListScreen> {
         debugPrint('👥 Found ${students.length} students with flexible matching');
       }
 
-      // الطريقة الرابعة: إذا لم نجد أي طلاب، اعرض جميع الطلاب المسكنين للمراجعة
+      // إذا لم نجد أي طلاب، اطبع معلومات تشخيصية فقط
       if (students.isEmpty) {
-        debugPrint('⚠️ No students found with any method, showing all assigned students for debugging...');
+        debugPrint('⚠️ No students found for this supervisor route');
         final allAssigned = await _databaseService.getAssignedStudents();
-        debugPrint('📊 All assigned students in database:');
+        debugPrint('📊 All assigned students in database for comparison:');
         for (final student in allAssigned) {
           debugPrint('   - ${student.name}: route="${student.busRoute}" busId="${student.busId}"');
         }
-
-        // للتطوير: اعرض أول 5 طلاب مسكنين لمساعدة المطور في فهم البيانات
-        if (allAssigned.isNotEmpty) {
-          students = allAssigned.take(5).toList();
-          debugPrint('🔧 Showing first 5 assigned students for debugging');
-        }
+        debugPrint('🔍 Search route was: "$route"');
+        debugPrint('❌ No matching students found - this supervisor has no assigned students');
       }
 
       debugPrint('👥 Final result: ${students.length} students for route "$route"');
@@ -246,33 +246,47 @@ class _StudentsListScreenState extends State<StudentsListScreen> {
     return _students.where((student) => !student.isActive).length;
   }
 
-  /// دالة تشخيصية لطباعة جميع البيانات المتاحة
+  /// دالة تشخيصية لطباعة البيانات المرتبطة بالمشرف فقط
   Future<void> _printDiagnosticInfo(String supervisorId) async {
     try {
-      debugPrint('🔧 === DIAGNOSTIC INFO START ===');
+      debugPrint('🔧 === SUPERVISOR DIAGNOSTIC INFO START ===');
       debugPrint('🔧 Supervisor ID: $supervisorId');
 
-      // طباعة جميع الطلاب المسكنين
-      final allAssigned = await _databaseService.getAssignedStudents();
-      debugPrint('🔧 Total assigned students: ${allAssigned.length}');
+      // طباعة تعيينات المشرف
+      final assignments = await _databaseService.getSupervisorAssignmentsSimple(supervisorId);
+      debugPrint('🔧 Supervisor assignments: ${assignments.length}');
 
-      if (allAssigned.isNotEmpty) {
-        debugPrint('🔧 Sample assigned students:');
-        for (int i = 0; i < (allAssigned.length > 10 ? 10 : allAssigned.length); i++) {
-          final student = allAssigned[i];
-          debugPrint('   ${i+1}. ${student.name} - Route:"${student.busRoute}" BusId:"${student.busId}"');
+      if (assignments.isEmpty) {
+        debugPrint('❌ No assignments found for this supervisor');
+        return;
+      }
+
+      for (final assignment in assignments) {
+        debugPrint('   - BusRoute:"${assignment.busRoute}" BusId:"${assignment.busId}" Status:"${assignment.status}"');
+
+        // لكل تعيين، ابحث عن الطلاب المرتبطين
+        final route = assignment.busRoute.isNotEmpty ? assignment.busRoute : assignment.busId;
+        if (route.isNotEmpty) {
+          final routeStudents = await _databaseService.getStudentsByRouteSimple(route);
+          final busIdStudents = await _databaseService.getStudentsByBusIdSimple(assignment.busId);
+
+          debugPrint('     → Students by route "$route": ${routeStudents.length}');
+          debugPrint('     → Students by busId "${assignment.busId}": ${busIdStudents.length}');
+
+          // اطبع أسماء الطلاب المرتبطين
+          final allRelatedStudents = <StudentModel>{...routeStudents, ...busIdStudents}.toList();
+          if (allRelatedStudents.isNotEmpty) {
+            debugPrint('     → Related students:');
+            for (final student in allRelatedStudents) {
+              debugPrint('        - ${student.name} (Route:"${student.busRoute}" BusId:"${student.busId}")');
+            }
+          } else {
+            debugPrint('     → No students found for this assignment');
+          }
         }
       }
 
-      // طباعة جميع التعيينات
-      final allAssignments = await _databaseService.getSupervisorAssignmentsSimple(supervisorId);
-      debugPrint('🔧 Supervisor assignments: ${allAssignments.length}');
-
-      for (final assignment in allAssignments) {
-        debugPrint('   - BusRoute:"${assignment.busRoute}" BusId:"${assignment.busId}" Status:"${assignment.status}"');
-      }
-
-      debugPrint('🔧 === DIAGNOSTIC INFO END ===');
+      debugPrint('🔧 === SUPERVISOR DIAGNOSTIC INFO END ===');
     } catch (e) {
       debugPrint('🔧 Error in diagnostic info: $e');
     }
