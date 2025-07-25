@@ -512,14 +512,7 @@ class _StudentsListScreenState extends State<StudentsListScreen> {
               const SizedBox(height: 16),
               ElevatedButton.icon(
                 onPressed: () {
-                  if (_supervisorRoute.isNotEmpty) {
-                    setState(() {
-                      _isLoading = true;
-                    });
-                    _loadStudentsForRoute(_supervisorRoute);
-                  } else {
-                    _loadStudents();
-                  }
+                  _loadStudents();
                 },
                 icon: const Icon(Icons.refresh),
                 label: const Text('إعادة تحميل'),
