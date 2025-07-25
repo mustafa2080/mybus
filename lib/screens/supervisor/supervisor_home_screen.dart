@@ -130,16 +130,17 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
         debugPrint('👥 Found ${students.length} students by busId "$busId"');
       }
 
-      // الطريقة الثالثة: البحث في جميع الطلاب النشطين إذا لم نجد أي طلاب
+      // الطريقة الثالثة: البحث في جميع الطلاب (نشطين وغير نشطين) إذا لم نجد أي طلاب
       if (students.isEmpty) {
-        debugPrint('🔍 No students found by route or busId, checking all active students...');
-        final allStudents = await _databaseService.getAllActiveStudents();
-        debugPrint('👥 Total active students in database: ${allStudents.length}');
+        debugPrint('🔍 No students found by route or busId, checking all students...');
+        final allStudents = await _databaseService.getAllStudents();
+        debugPrint('👥 Total students in database: ${allStudents.length}');
 
         // فلترة الطلاب حسب busRoute أو busId
         students = allStudents.where((student) {
           final matchesRoute = busRoute.isNotEmpty && student.busRoute == busRoute;
           final matchesBusId = busId.isNotEmpty && student.busId == busId;
+          debugPrint('🔍 Checking student ${student.name}: route="${student.busRoute}", busId="${student.busId}", active=${student.isActive}');
           return matchesRoute || matchesBusId;
         }).toList();
 
