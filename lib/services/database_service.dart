@@ -555,9 +555,10 @@ class DatabaseService {
 
       if (changes.isNotEmpty) {
         // إرسال إشعار لولي الأمر فقط (بدون إشعار الأدمن)
-        await EnhancedNotificationService().sendNotificationToUser(
+        final notificationService = EnhancedNotificationService();
+        await notificationService.sendNotificationToUser(
           userId: parentId,
-          title: 'تم تحديث معلومات ${studentName}',
+          title: 'تم تحديث معلومات $studentName',
           body: 'تم تحديث المعلومات التالية:\n• ${changes.join('\n• ')}',
           type: 'student',
           data: {
