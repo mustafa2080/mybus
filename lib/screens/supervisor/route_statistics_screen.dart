@@ -477,36 +477,37 @@ class _RouteStatisticsScreenState extends State<RouteStatisticsScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: _buildStatCard(
-                'الطلاب النشطين',
-                activeStudents.toString(),
-                Icons.person_add_alt_1,
-                Colors.green,
+                  'الطلاب النشطين',
+                  activeStudents.toString(),
+                  Icons.person_add_alt_1,
+                  Colors.green,
+                ),
               ),
-            ),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _buildStatCard(
-                'في الباص',
-                studentsOnBus.toString(),
-                Icons.directions_bus,
-                Colors.orange,
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatCard(
+                  'في الباص',
+                  studentsOnBus.toString(),
+                  Icons.directions_bus,
+                  Colors.orange,
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildStatCard(
-                'في المدرسة',
-                studentsAtSchool.toString(),
-                Icons.school,
-                Colors.blue,
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildStatCard(
+                  'في المدرسة',
+                  studentsAtSchool.toString(),
+                  Icons.school,
+                  Colors.blue,
+                ),
               ),
-            ),
-          ],
-        ),
+            ],
+          ),
+        ],
       ],
     );
   }
