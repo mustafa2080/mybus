@@ -116,8 +116,16 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
       }
 
       // جلب الطلاب باستخدام الطريقة البسيطة
-      final students = await _databaseService.getStudentsByRouteSimple(busRoute);
+      var students = await _databaseService.getStudentsByRouteSimple(busRoute);
       debugPrint('👥 Found ${students.length} students in route $busRoute');
+
+      // إذا لم نجد طلاب بالـ route، جرب بالـ busId
+      if (students.isEmpty && assignment.busId.isNotEmpty) {
+        debugPrint('🔍 No students found by route, trying busId: ${assignment.busId}');
+        students = await _databaseService.getStudentsByBusId(assignment.busId);
+        debugPrint('👥 Found ${students.length} students in busId ${assignment.busId}');
+      }
+
       return students;
     } catch (e) {
       debugPrint('❌ Error loading supervisor students: $e');

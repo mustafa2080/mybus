@@ -2191,16 +2191,44 @@ class DatabaseService {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) return Stream.value(0);
 
-    return _firestore
-        .collection('notifications')
-        .where('recipientId', isEqualTo: currentUser.uid)
-        .where('isRead', isEqualTo: false)
-        .snapshots()
-        .map((snapshot) {
-          final count = snapshot.docs.length;
-          debugPrint('🔔 Admin notifications count for ${currentUser.uid}: $count');
-          return count;
-        });
+    // دمج عدة أنواع من الإشعارات للإدمن
+    return Stream.periodic(const Duration(seconds: 2)).asyncMap((_) async {
+      try {
+        int totalCount = 0;
+
+        // 1. الإشعارات العامة
+        final notificationsSnapshot = await _firestore
+            .collection('notifications')
+            .where('recipientId', isEqualTo: currentUser.uid)
+            .where('isRead', isEqualTo: false)
+            .get();
+        totalCount += notificationsSnapshot.docs.length;
+
+        // 2. طلبات الغياب المعلقة
+        final absencesSnapshot = await _firestore
+            .collection('absences')
+            .where('status', isEqualTo: 'pending')
+            .get();
+        totalCount += absencesSnapshot.docs.length;
+
+        // 3. الشكاوى الجديدة
+        final complaintsSnapshot = await _firestore
+            .collection('complaints')
+            .where('status', isEqualTo: 'pending')
+            .get();
+        totalCount += complaintsSnapshot.docs.length;
+
+        debugPrint('🔔 Total admin notifications count for ${currentUser.uid}: $totalCount');
+        debugPrint('   - General notifications: ${notificationsSnapshot.docs.length}');
+        debugPrint('   - Pending absences: ${absencesSnapshot.docs.length}');
+        debugPrint('   - Pending complaints: ${complaintsSnapshot.docs.length}');
+
+        return totalCount;
+      } catch (e) {
+        debugPrint('❌ Error getting admin notifications count: $e');
+        return 0;
+      }
+    });
   }
 
   // Get supervisor notifications count (for supervisor home screen)
@@ -3621,6 +3649,12 @@ class DatabaseService {
     try {
       debugPrint('🔍 Getting students for route: $busRoute');
 
+      if (busRoute.isEmpty) {
+        debugPrint('⚠️ Bus route is empty');
+        return [];
+      }
+
+      // البحث الأساسي باستخدام busRoute
       final snapshot = await _firestore
           .collection('students')
           .where('busRoute', isEqualTo: busRoute)
@@ -3635,9 +3669,47 @@ class DatabaseService {
       students.sort((a, b) => a.name.compareTo(b.name));
 
       debugPrint('👥 Found ${students.length} students for route $busRoute');
+
+      // إذا لم نجد طلاب، جرب البحث باستخدام busId
+      if (students.isEmpty) {
+        debugPrint('🔍 No students found by route, trying to find by busId...');
+        return await getStudentsByBusId(busRoute); // قد يكون busRoute هو في الواقع busId
+      }
+
       return students;
     } catch (e) {
       debugPrint('❌ Error getting students for route: $e');
+      return [];
+    }
+  }
+
+  /// Get students by bus ID
+  Future<List<StudentModel>> getStudentsByBusId(String busId) async {
+    try {
+      debugPrint('🔍 Getting students for busId: $busId');
+
+      if (busId.isEmpty) {
+        debugPrint('⚠️ Bus ID is empty');
+        return [];
+      }
+
+      final snapshot = await _firestore
+          .collection('students')
+          .where('busId', isEqualTo: busId)
+          .where('isActive', isEqualTo: true)
+          .get();
+
+      final students = snapshot.docs
+          .map((doc) => StudentModel.fromMap(doc.data()))
+          .toList();
+
+      // Sort manually by name
+      students.sort((a, b) => a.name.compareTo(b.name));
+
+      debugPrint('👥 Found ${students.length} students for busId $busId');
+      return students;
+    } catch (e) {
+      debugPrint('❌ Error getting students for busId: $e');
       return [];
     }
   }

@@ -1370,13 +1370,9 @@ class EnhancedNotificationService {
         );
       }
 
-      // إشعار الإدارة الأخرى (باستثناء الإدمن الذي قام بالتحديث)
-      await _notifyAdminsOfStudentUpdate(
-        studentName: studentName,
-        updatedFields: updatedFieldsText,
-        adminName: adminName,
-        adminId: adminId, // استبعاد الإدمن الحالي
-      );
+      // لا نرسل إشعارات للإدمن الآخرين لتجنب الإزعاج
+      // فقط ولي الأمر والمشرف يحتاجون للإشعار
+      debugPrint('✅ Student data update notifications sent to parent and supervisor only');
 
       debugPrint('✅ Student data update notifications sent successfully');
     } catch (e) {
