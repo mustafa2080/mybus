@@ -18,7 +18,7 @@ import '../models/supervisor_evaluation_model.dart';
 import '../models/parent_student_link_model.dart';
 import 'rate_limit_service.dart';
 import 'cache_service.dart';
-import 'notification_service.dart';
+import 'enhanced_notification_service.dart';
 
 
 class DatabaseService {
@@ -554,12 +554,20 @@ class DatabaseService {
       }
 
       if (changes.isNotEmpty) {
-        await NotificationService().sendStudentInfoUpdateNotification(
-          studentId: studentId,
-          studentName: studentName,
-          parentId: parentId,
-          changes: changes,
+        // إرسال إشعار لولي الأمر فقط (بدون إشعار الأدمن)
+        await EnhancedNotificationService().sendNotificationToUser(
+          userId: parentId,
+          title: 'تم تحديث معلومات ${studentName}',
+          body: 'تم تحديث المعلومات التالية:\n• ${changes.join('\n• ')}',
+          type: 'student',
+          data: {
+            'type': 'student_info_update',
+            'changes': changes,
+            'studentId': studentId,
+            'timestamp': DateTime.now().toIso8601String(),
+          },
         );
+        debugPrint('✅ Parent notification sent for student info update (no admin notification)');
       }
 
     } catch (e) {

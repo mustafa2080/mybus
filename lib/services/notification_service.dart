@@ -915,50 +915,17 @@ class NotificationService {
     }
   }
 
-  // إشعار تحديث معلومات الطالب
+  // إشعار تحديث معلومات الطالب - تم إيقافه لتجنب إرسال إشعارات للأدمن
+  @Deprecated('Use EnhancedNotificationService instead - this sends unwanted admin notifications')
   Future<void> sendStudentInfoUpdateNotification({
     required String studentId,
     required String studentName,
     required String parentId,
     required List<String> changes,
   }) async {
-    try {
-      final changesText = changes.join('\n• ');
-
-      final notification = NotificationModel(
-        id: _uuid.v4(),
-        title: 'تم تحديث معلومات $studentName',
-        body: 'تم تحديث المعلومات التالية:\n• $changesText',
-        recipientId: parentId,
-        studentId: studentId,
-        studentName: studentName,
-        type: NotificationType.general,
-        timestamp: DateTime.now(),
-        data: {
-          'type': 'student_info_update',
-          'changes': changes,
-          'studentId': studentId,
-        },
-      );
-
-      await _saveNotification(notification);
-      await _sendPushNotification(notification);
-
-      // إشعار للإدمن
-      await _sendAdminNotification(
-        title: 'تم تحديث معلومات طالب',
-        body: 'تم تحديث معلومات الطالب $studentName',
-        data: {
-          'type': 'student_info_updated',
-          'studentId': studentId,
-          'studentName': studentName,
-          'changesCount': changes.length.toString(),
-        },
-      );
-
-    } catch (e) {
-      throw Exception('خطأ في إرسال إشعار تحديث معلومات الطالب: $e');
-    }
+    debugPrint('⚠️ DEPRECATED: sendStudentInfoUpdateNotification called - use EnhancedNotificationService instead');
+    // لا نفعل شيء هنا لتجنب إرسال إشعارات للأدمن
+    return;
   }
 
   // ==================== دوال مساعدة للإشعارات ====================
