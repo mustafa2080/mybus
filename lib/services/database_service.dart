@@ -392,6 +392,35 @@ class DatabaseService {
             .toList());
   }
 
+  // Get all active students (Future version for better error handling)
+  Future<List<StudentModel>> getAllActiveStudents() async {
+    try {
+      debugPrint('🔍 Getting all active students...');
+
+      final snapshot = await _firestore
+          .collection('students')
+          .where('isActive', isEqualTo: true)
+          .get();
+
+      debugPrint('📊 Found ${snapshot.docs.length} active students in database');
+
+      final students = snapshot.docs
+          .map((doc) {
+            final data = doc.data();
+            return StudentModel.fromMap(data);
+          })
+          .toList();
+
+      // Sort manually by name
+      students.sort((a, b) => a.name.compareTo(b.name));
+
+      return students;
+    } catch (e) {
+      debugPrint('❌ Error getting all active students: $e');
+      return [];
+    }
+  }
+
   // Get students by bus ID (simplified to avoid index issues)
   Stream<List<StudentModel>> getStudentsByBusId(String busId) {
     return _firestore

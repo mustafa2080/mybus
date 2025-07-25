@@ -68,9 +68,12 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
     final supervisorId = _authService.currentUser?.uid ?? '';
     debugPrint('🔄 Initializing streams for supervisor: $supervisorId');
 
-    // استخدام الطريقة البسيطة لتجنب مشاكل الفهارس
-    _studentsOnBusStream = Stream.periodic(const Duration(seconds: 5))
+    // استخدام الطريقة المحسنة لجلب الطلاب
+    _studentsOnBusStream = Stream.periodic(const Duration(seconds: 3))
         .asyncMap((_) => _loadSupervisorStudents(supervisorId))
+        .distinct((previous, next) =>
+            previous.length == next.length &&
+            previous.map((s) => s.id).join(',') == next.map((s) => s.id).join(','))
         .asBroadcastStream();
 
     _checkSupervisorAssignments();
@@ -91,42 +94,61 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
 
       final assignment = assignments.first;
       var busRoute = assignment.busRoute;
+      var busId = assignment.busId;
       debugPrint('🚌 Assignment busRoute: "$busRoute"');
-      debugPrint('🚌 Assignment busId: "${assignment.busId}"');
+      debugPrint('🚌 Assignment busId: "$busId"');
 
       // إذا كان busRoute فارغ، احصل عليه من بيانات الباص
-      if (busRoute.isEmpty) {
+      if (busRoute.isEmpty && busId.isNotEmpty) {
         debugPrint('⚠️ busRoute is empty, fetching from bus data...');
         try {
-          final bus = await _databaseService.getBusById(assignment.busId);
+          final bus = await _databaseService.getBusById(busId);
           if (bus != null) {
             busRoute = bus.route;
             debugPrint('✅ Got busRoute from bus: "$busRoute"');
           } else {
-            debugPrint('❌ Bus not found for ID: ${assignment.busId}');
+            debugPrint('❌ Bus not found for ID: $busId');
           }
         } catch (e) {
           debugPrint('❌ Error getting bus data: $e');
         }
       }
 
-      if (busRoute.isEmpty) {
-        debugPrint('❌ Still no busRoute available');
-        return <StudentModel>[];
+      // جلب الطلاب بطرق متعددة للتأكد من الحصول على البيانات
+      List<StudentModel> students = [];
+
+      // الطريقة الأولى: البحث بـ busRoute
+      if (busRoute.isNotEmpty) {
+        students = await _databaseService.getStudentsByRouteSimple(busRoute);
+        debugPrint('👥 Found ${students.length} students by route "$busRoute"');
       }
 
-      // أولاً، دعنا نفحص جميع الطلاب في قاعدة البيانات
-      await _debugAllStudents();
+      // الطريقة الثانية: البحث بـ busId إذا لم نجد طلاب بـ busRoute
+      if (students.isEmpty && busId.isNotEmpty) {
+        debugPrint('🔍 No students found by route, trying busId: $busId');
+        students = await _databaseService.getStudentsByBusIdSimple(busId);
+        debugPrint('👥 Found ${students.length} students by busId "$busId"');
+      }
 
-      // جلب الطلاب باستخدام الطريقة البسيطة
-      var students = await _databaseService.getStudentsByRouteSimple(busRoute);
-      debugPrint('👥 Found ${students.length} students in route $busRoute');
+      // الطريقة الثالثة: البحث في جميع الطلاب النشطين إذا لم نجد أي طلاب
+      if (students.isEmpty) {
+        debugPrint('🔍 No students found by route or busId, checking all active students...');
+        final allStudents = await _databaseService.getAllActiveStudents();
+        debugPrint('👥 Total active students in database: ${allStudents.length}');
 
-      // إذا لم نجد طلاب بالـ route، جرب بالـ busId
-      if (students.isEmpty && assignment.busId.isNotEmpty) {
-        debugPrint('🔍 No students found by route, trying busId: ${assignment.busId}');
-        students = await _databaseService.getStudentsByBusIdSimple(assignment.busId);
-        debugPrint('👥 Found ${students.length} students in busId ${assignment.busId}');
+        // فلترة الطلاب حسب busRoute أو busId
+        students = allStudents.where((student) {
+          final matchesRoute = busRoute.isNotEmpty && student.busRoute == busRoute;
+          final matchesBusId = busId.isNotEmpty && student.busId == busId;
+          return matchesRoute || matchesBusId;
+        }).toList();
+
+        debugPrint('👥 Found ${students.length} students after filtering all students');
+      }
+
+      // طباعة تفاصيل الطلاب الموجودين
+      for (final student in students) {
+        debugPrint('   - ${student.name} (Route: "${student.busRoute}", BusId: "${student.busId}", Active: ${student.isActive})');
       }
 
       return students;
@@ -1115,11 +1137,24 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
                 );
               }
 
+              if (snapshot.hasError) {
+                debugPrint('❌ Error in students stream: ${snapshot.error}');
+                return _buildStatCard(
+                  'طلاب الخط',
+                  'خطأ',
+                  Icons.error,
+                  Colors.red,
+                );
+              }
+
               final students = snapshot.data ?? [];
-              final count = students.length;
+              final activeStudents = students.where((s) => s.isActive).toList();
+              final count = activeStudents.length;
+
+              debugPrint('📊 Main stats - Total students: ${students.length}, Active: $count');
 
               return GestureDetector(
-                onTap: () => _showRouteStudentsDialog(students),
+                onTap: () => _showRouteStudentsDialog(activeStudents),
                 child: Container(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
@@ -1231,33 +1266,32 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
   }
 
   Widget _buildRouteStatsWithData(String busRoute) {
-    if (busRoute.isEmpty) {
-      return _buildRouteStatsCard('0', '0', 'لا يوجد خط سير');
-    }
+    final supervisorId = _authService.currentUser?.uid ?? '';
 
     return FutureBuilder<List<StudentModel>>(
-      future: _databaseService.getStudentsByRouteSimple(busRoute),
+      future: _loadSupervisorStudents(supervisorId),
       builder: (context, studentsSnapshot) {
         if (studentsSnapshot.connectionState == ConnectionState.waiting) {
-          return _buildRouteStatsCard('...', '...', busRoute);
+          return _buildRouteStatsCard('...', '...', busRoute.isEmpty ? 'جاري التحميل...' : busRoute);
         }
 
         if (studentsSnapshot.hasError) {
           debugPrint('❌ Error loading route stats: ${studentsSnapshot.error}');
-          return _buildRouteStatsCard('خطأ', 'خطأ', busRoute);
+          return _buildRouteStatsCard('خطأ', 'خطأ', busRoute.isEmpty ? 'خطأ في التحميل' : busRoute);
         }
 
         final allStudents = studentsSnapshot.data ?? [];
         final activeStudents = allStudents.where((s) => s.isActive).length;
+        final routeDisplayName = busRoute.isEmpty ? 'خط السير' : busRoute;
 
-        debugPrint('📊 Route stats - Total: ${allStudents.length}, Active: $activeStudents, Route: $busRoute');
+        debugPrint('📊 Route stats - Total: ${allStudents.length}, Active: $activeStudents, Route: $routeDisplayName');
 
         return GestureDetector(
           onTap: () => context.push('/supervisor/route-statistics'),
           child: _buildRouteStatsCard(
             allStudents.length.toString(),
             activeStudents.toString(),
-            busRoute,
+            routeDisplayName,
           ),
         );
       },

@@ -77,10 +77,15 @@ class _StudentsListScreenState extends State<StudentsListScreen> {
           // احصل على الطلاب في خط السير الخاص بالمشرف فقط
           debugPrint('🔍 Getting students for route: $_supervisorRoute');
 
-          // استخدم طريقة مباشرة لتجنب مشاكل الفهارس
+          // استخدم طريقة محسنة لتجنب مشاكل الفهارس
           _loadStudentsForRoute(_supervisorRoute);
+        } else if (assignments.isNotEmpty) {
+          // جرب استخدام busId إذا لم يكن هناك busRoute
+          final busId = assignments.first.busId;
+          debugPrint('🔍 No route found, trying busId: $busId');
+          _loadStudentsForRoute(busId);
         } else {
-          debugPrint('❌ No valid route found for supervisor');
+          debugPrint('❌ No valid route or busId found for supervisor');
           setState(() {
             _students = [];
             _filteredStudents = [];
@@ -108,12 +113,41 @@ class _StudentsListScreenState extends State<StudentsListScreen> {
     try {
       debugPrint('🔍 Loading students for route: $route');
 
-      // استخدم طريقة مباشرة لتجنب مشاكل الفهارس
-      final students = await _databaseService.getStudentsByRouteSimple(route);
+      // جلب الطلاب بطرق متعددة للتأكد من الحصول على البيانات
+      List<StudentModel> students = [];
 
-      debugPrint('👥 Received ${students.length} students for route $route');
+      // الطريقة الأولى: البحث بـ busRoute
+      if (route.isNotEmpty) {
+        students = await _databaseService.getStudentsByRouteSimple(route);
+        debugPrint('👥 Found ${students.length} students by route "$route"');
+      }
+
+      // الطريقة الثانية: البحث بـ busId إذا لم نجد طلاب بـ busRoute
+      if (students.isEmpty) {
+        debugPrint('🔍 No students found by route, trying busId: $route');
+        students = await _databaseService.getStudentsByBusIdSimple(route);
+        debugPrint('👥 Found ${students.length} students by busId "$route"');
+      }
+
+      // الطريقة الثالثة: البحث في جميع الطلاب النشطين إذا لم نجد أي طلاب
+      if (students.isEmpty) {
+        debugPrint('🔍 No students found by route or busId, checking all active students...');
+        final allStudents = await _databaseService.getAllActiveStudents();
+        debugPrint('👥 Total active students in database: ${allStudents.length}');
+
+        // فلترة الطلاب حسب busRoute أو busId
+        students = allStudents.where((student) {
+          final matchesRoute = student.busRoute == route;
+          final matchesBusId = student.busId == route;
+          return matchesRoute || matchesBusId;
+        }).toList();
+
+        debugPrint('👥 Found ${students.length} students after filtering all students');
+      }
+
+      debugPrint('👥 Final result: ${students.length} students for route $route');
       for (final student in students) {
-        debugPrint('   - ${student.name} (Route: ${student.busRoute}, Status: ${student.currentStatus})');
+        debugPrint('   - ${student.name} (Route: "${student.busRoute}", BusId: "${student.busId}", Status: ${student.currentStatus})');
       }
 
       if (mounted) {
@@ -173,6 +207,15 @@ class _StudentsListScreenState extends State<StudentsListScreen> {
     return _students.where((student) =>
       student.currentStatus == StudentStatus.home
     ).length;
+  }
+
+  int _getActiveStudentsCount() {
+    return _students.where((student) => student.isActive).length;
+  }
+
+  int _getAbsentStudentsCount() {
+    // يمكن تحسين هذا لاحقاً بناءً على بيانات الغياب الفعلية
+    return _students.where((student) => !student.isActive).length;
   }
 
   @override
@@ -287,21 +330,56 @@ class _StudentsListScreenState extends State<StudentsListScreen> {
               const SizedBox(height: 16),
               
               // Stats Row - More Compact
-              Row(
-                children: [
-                  Expanded(child: _buildStatCard('إجمالي', _students.length.toString(), Icons.people)),
-                  const SizedBox(width: 6),
-                  Expanded(child: _buildStatCard('في الباص', _getStudentsOnBusCount().toString(), Icons.directions_bus, Colors.blue)),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(child: _buildStatCard('في المدرسة', _getStudentsAtSchoolCount().toString(), Icons.school, Colors.green)),
-                  const SizedBox(width: 6),
-                  Expanded(child: _buildStatCard('في المنزل', _getStudentsAtHomeCount().toString(), Icons.home, Colors.orange)),
-                ],
-              ),
+              if (_students.isEmpty && !_isLoading) ...[
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withAlpha(25),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.orange.withAlpha(76)),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.info_outline, color: Colors.orange, size: 24),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'لا يوجد طلاب مسجلين في هذا الخط حالياً',
+                          style: TextStyle(
+                            color: Colors.orange[800],
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ] else ...[
+                Row(
+                  children: [
+                    Expanded(child: _buildStatCard('إجمالي', _students.length.toString(), Icons.people)),
+                    const SizedBox(width: 6),
+                    Expanded(child: _buildStatCard('نشط', _getActiveStudentsCount().toString(), Icons.check_circle, Colors.green)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(child: _buildStatCard('في الباص', _getStudentsOnBusCount().toString(), Icons.directions_bus, Colors.blue)),
+                    const SizedBox(width: 6),
+                    Expanded(child: _buildStatCard('في المدرسة', _getStudentsAtSchoolCount().toString(), Icons.school, Colors.green)),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(child: _buildStatCard('في المنزل', _getStudentsAtHomeCount().toString(), Icons.home, Colors.orange)),
+                    const SizedBox(width: 6),
+                    Expanded(child: _buildStatCard('غائب', _getAbsentStudentsCount().toString(), Icons.event_busy, Colors.red)),
+                  ],
+                ),
+              ],
             ],
           ),
         ),

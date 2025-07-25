@@ -77,34 +77,57 @@ class _RouteStatisticsScreenState extends State<RouteStatisticsScreen> {
           }
         }
 
+        // تحميل الطلاب بطرق متعددة للتأكد من الحصول على البيانات
+        List<StudentModel> students = [];
+
+        // الطريقة الأولى: البحث بـ busRoute
         if (busRoute.isNotEmpty) {
-          // تحميل الطلاب باستخدام الطريقة البسيطة
-          final students = await _databaseService.getStudentsByRouteSimple(busRoute);
-          debugPrint('👥 Loaded ${students.length} students for route $busRoute');
-
-          // تحميل غيابات اليوم
-          final todayAbsences = await _databaseService.getTodayAbsencesForSupervisorSimple(supervisorId);
-          debugPrint('📅 Loaded ${todayAbsences.length} today absences');
-
-          // تحميل غيابات الأسبوع
-          final weekStart = DateTime.now().subtract(Duration(days: DateTime.now().weekday - 1));
-          final weekAbsences = await _databaseService.getAbsencesInDateRangeSimple(
-            supervisorId,
-            weekStart,
-            DateTime.now(),
-          );
-          debugPrint('📅 Loaded ${weekAbsences.length} week absences');
-
-          setState(() {
-            _students = students;
-            _todayAbsences = todayAbsences;
-            _weekAbsences = weekAbsences;
-            _isLoading = false;
-          });
-        } else {
-          debugPrint('❌ No valid busRoute found');
-          setState(() => _isLoading = false);
+          students = await _databaseService.getStudentsByRouteSimple(busRoute);
+          debugPrint('👥 Found ${students.length} students by route "$busRoute"');
         }
+
+        // الطريقة الثانية: البحث بـ busId إذا لم نجد طلاب بـ busRoute
+        if (students.isEmpty && _assignment!.busId.isNotEmpty) {
+          debugPrint('🔍 No students found by route, trying busId: ${_assignment!.busId}');
+          students = await _databaseService.getStudentsByBusIdSimple(_assignment!.busId);
+          debugPrint('👥 Found ${students.length} students by busId "${_assignment!.busId}"');
+        }
+
+        // الطريقة الثالثة: البحث في جميع الطلاب النشطين إذا لم نجد أي طلاب
+        if (students.isEmpty) {
+          debugPrint('🔍 No students found by route or busId, checking all active students...');
+          final allStudents = await _databaseService.getAllActiveStudents();
+          debugPrint('👥 Total active students in database: ${allStudents.length}');
+
+          // فلترة الطلاب حسب busRoute أو busId
+          students = allStudents.where((student) {
+            final matchesRoute = busRoute.isNotEmpty && student.busRoute == busRoute;
+            final matchesBusId = _assignment!.busId.isNotEmpty && student.busId == _assignment!.busId;
+            return matchesRoute || matchesBusId;
+          }).toList();
+
+          debugPrint('👥 Found ${students.length} students after filtering all students');
+        }
+
+        // تحميل غيابات اليوم
+        final todayAbsences = await _databaseService.getTodayAbsencesForSupervisorSimple(supervisorId);
+        debugPrint('📅 Loaded ${todayAbsences.length} today absences');
+
+        // تحميل غيابات الأسبوع
+        final weekStart = DateTime.now().subtract(Duration(days: DateTime.now().weekday - 1));
+        final weekAbsences = await _databaseService.getAbsencesInDateRangeSimple(
+          supervisorId,
+          weekStart,
+          DateTime.now(),
+        );
+        debugPrint('📅 Loaded ${weekAbsences.length} week absences');
+
+        setState(() {
+          _students = students;
+          _todayAbsences = todayAbsences;
+          _weekAbsences = weekAbsences;
+          _isLoading = false;
+        });
       } else {
         debugPrint('⚠️ No assignments found for supervisor');
         setState(() => _isLoading = false);
@@ -395,10 +418,13 @@ class _RouteStatisticsScreenState extends State<RouteStatisticsScreen> {
   }
 
   Widget _buildQuickStatsGrid() {
+    final totalStudents = _students.length;
     final activeStudents = _students.where((s) => s.isActive).length;
     final studentsOnBus = _students.where((s) => s.currentStatus == StudentStatus.onBus).length;
     final studentsAtSchool = _students.where((s) => s.currentStatus == StudentStatus.atSchool).length;
     final studentsAtHome = _students.where((s) => s.currentStatus == StudentStatus.home).length;
+
+    debugPrint('📊 Quick Stats - Total: $totalStudents, Active: $activeStudents, OnBus: $studentsOnBus, AtSchool: $studentsAtSchool, AtHome: $studentsAtHome');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -412,19 +438,45 @@ class _RouteStatisticsScreenState extends State<RouteStatisticsScreen> {
           ),
         ),
         const SizedBox(height: 12),
-        Row(
-          children: [
-            Expanded(
-              child: _buildStatCard(
-                'إجمالي الطلاب',
-                _students.length.toString(),
-                Icons.group,
-                const Color(0xFF1E88E5),
-              ),
+        if (totalStudents == 0) ...[
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.orange.withAlpha(25),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.orange.withAlpha(76)),
             ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _buildStatCard(
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: Colors.orange, size: 24),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'لا يوجد طلاب مسجلين في هذا الخط حالياً',
+                    style: TextStyle(
+                      color: Colors.orange[800],
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ] else ...[
+          Row(
+            children: [
+              Expanded(
+                child: _buildStatCard(
+                  'إجمالي الطلاب',
+                  totalStudents.toString(),
+                  Icons.group,
+                  const Color(0xFF1E88E5),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildStatCard(
                 'الطلاب النشطين',
                 activeStudents.toString(),
                 Icons.person_add_alt_1,
