@@ -422,7 +422,7 @@ class DatabaseService {
   }
 
   // Get all students (active and inactive) - Future version
-  Future<List<StudentModel>> getAllStudents() async {
+  Future<List<StudentModel>> getAllStudentsFuture() async {
     try {
       debugPrint('🔍 Getting all students (active and inactive)...');
 
@@ -455,7 +455,7 @@ class DatabaseService {
     try {
       debugPrint('🔍 Getting only assigned students...');
 
-      final allStudents = await getAllStudents();
+      final allStudents = await getAllStudentsFuture();
 
       final assignedStudents = allStudents.where((student) {
         final isAssigned = student.busRoute.isNotEmpty || student.busId.isNotEmpty;
