@@ -3392,13 +3392,21 @@ class DatabaseService {
           .get();
 
       final assignments = snapshot.docs
-          .map((doc) => SupervisorAssignmentModel.fromMap(doc.data()))
+          .map((doc) {
+            final data = doc.data();
+            debugPrint('📄 Assignment data: $data');
+            return SupervisorAssignmentModel.fromMap(data);
+          })
           .toList();
 
       // Sort manually to avoid index requirement
       assignments.sort((a, b) => b.assignedAt.compareTo(a.assignedAt));
 
       debugPrint('📋 Found ${assignments.length} assignments for supervisor $supervisorId');
+      for (final assignment in assignments) {
+        debugPrint('   - Assignment: busId=${assignment.busId}, busRoute="${assignment.busRoute}", busPlate=${assignment.busPlateNumber}');
+      }
+
       return assignments;
     } catch (e) {
       debugPrint('❌ Error getting supervisor assignments: $e');
@@ -3647,7 +3655,7 @@ class DatabaseService {
   /// Get students by bus route (simple version to avoid index issues)
   Future<List<StudentModel>> getStudentsByRouteSimple(String busRoute) async {
     try {
-      debugPrint('🔍 Getting students for route: $busRoute');
+      debugPrint('🔍 Getting students for route: "$busRoute"');
 
       if (busRoute.isEmpty) {
         debugPrint('⚠️ Bus route is empty');
@@ -3661,14 +3669,20 @@ class DatabaseService {
           .where('isActive', isEqualTo: true)
           .get();
 
+      debugPrint('📊 Query result: ${snapshot.docs.length} documents found');
+
       final students = snapshot.docs
-          .map((doc) => StudentModel.fromMap(doc.data()))
+          .map((doc) {
+            final data = doc.data();
+            debugPrint('👤 Student: ${data['name']} - busRoute: "${data['busRoute']}" - busId: "${data['busId']}" - isActive: ${data['isActive']}');
+            return StudentModel.fromMap(data);
+          })
           .toList();
 
       // Sort manually by name
       students.sort((a, b) => a.name.compareTo(b.name));
 
-      debugPrint('👥 Found ${students.length} students for route $busRoute');
+      debugPrint('👥 Found ${students.length} students for route "$busRoute"');
 
       // إذا لم نجد طلاب، جرب البحث باستخدام busId
       if (students.isEmpty) {
@@ -3686,7 +3700,7 @@ class DatabaseService {
   /// Get students by bus ID (Future version)
   Future<List<StudentModel>> getStudentsByBusIdSimple(String busId) async {
     try {
-      debugPrint('🔍 Getting students for busId: $busId');
+      debugPrint('🔍 Getting students for busId: "$busId"');
 
       if (busId.isEmpty) {
         debugPrint('⚠️ Bus ID is empty');
@@ -3699,14 +3713,20 @@ class DatabaseService {
           .where('isActive', isEqualTo: true)
           .get();
 
+      debugPrint('📊 Query result for busId: ${snapshot.docs.length} documents found');
+
       final students = snapshot.docs
-          .map((doc) => StudentModel.fromMap(doc.data()))
+          .map((doc) {
+            final data = doc.data();
+            debugPrint('👤 Student: ${data['name']} - busRoute: "${data['busRoute']}" - busId: "${data['busId']}" - isActive: ${data['isActive']}');
+            return StudentModel.fromMap(data);
+          })
           .toList();
 
       // Sort manually by name
       students.sort((a, b) => a.name.compareTo(b.name));
 
-      debugPrint('👥 Found ${students.length} students for busId $busId');
+      debugPrint('👥 Found ${students.length} students for busId "$busId"');
       return students;
     } catch (e) {
       debugPrint('❌ Error getting students for busId: $e');

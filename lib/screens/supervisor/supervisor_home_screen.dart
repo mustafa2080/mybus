@@ -115,6 +115,9 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
         return <StudentModel>[];
       }
 
+      // أولاً، دعنا نفحص جميع الطلاب في قاعدة البيانات
+      await _debugAllStudents();
+
       // جلب الطلاب باستخدام الطريقة البسيطة
       var students = await _databaseService.getStudentsByRouteSimple(busRoute);
       debugPrint('👥 Found ${students.length} students in route $busRoute');
@@ -140,6 +143,35 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
     if (!hasAssignments && mounted) {
       debugPrint('⚠️ Supervisor has no active assignments');
       // Could show a message or handle this case
+    }
+  }
+
+  /// Debug function to check all students in database
+  Future<void> _debugAllStudents() async {
+    try {
+      debugPrint('🔍 DEBUG: Checking all students in database...');
+
+      final snapshot = await FirebaseFirestore.instance
+          .collection('students')
+          .get();
+
+      debugPrint('📊 Total students in database: ${snapshot.docs.length}');
+
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        debugPrint('👤 Student: ${data['name']} - busRoute: "${data['busRoute']}" - busId: "${data['busId']}" - isActive: ${data['isActive']}');
+      }
+
+      // فحص الطلاب النشطين فقط
+      final activeSnapshot = await FirebaseFirestore.instance
+          .collection('students')
+          .where('isActive', isEqualTo: true)
+          .get();
+
+      debugPrint('📊 Active students: ${activeSnapshot.docs.length}');
+
+    } catch (e) {
+      debugPrint('❌ Error debugging students: $e');
     }
   }
 
