@@ -728,22 +728,8 @@ class EnhancedNotificationService {
       );
     }
 
-    // إشعار الإدارة (باستثناء الإدمن الذي قام بالعملية)
-    await sendNotificationToUserTypeExcluding(
-      userType: UserRole.admin,
-      excludeUserId: excludeAdminId,
-      title: '📋 تم تسكين طالب',
-      body: 'تم تسكين $studentName في الباص $busId\nالمشرف تم إشعاره بالتفاصيل',
-      type: 'admin',
-      data: {
-        'studentId': studentId,
-        'busId': busId,
-        'supervisorId': supervisorId,
-        'action': 'student_assigned',
-      },
-    );
-
-    debugPrint('✅ Student assignment notifications sent to parent, supervisor, and admins');
+    // لا نرسل إشعارات للإدارة عند التسكين - فقط ولي الأمر والمشرف
+    debugPrint('✅ Student assignment notifications sent to parent and supervisor only');
   }
 
   /// إشعار إلغاء تسكين الطالب
@@ -791,21 +777,8 @@ class EnhancedNotificationService {
       debugPrint('⚠️ Supervisor ID is empty or same as admin, skipping supervisor notification');
     }
 
-    // إشعار الإدارة (باستثناء الإدمن الذي قام بالعملية)
-    await sendNotificationToUserTypeExcluding(
-      userType: UserRole.admin,
-      excludeUserId: excludeAdminId,
-      title: '📋 تم إلغاء تسكين طالب',
-      body: 'تم إلغاء تسكين $studentName من الباص $busId',
-      type: 'admin',
-      data: {
-        'studentId': studentId,
-        'busId': busId,
-        'action': 'student_unassigned',
-      },
-    );
-
-    debugPrint('✅ Student unassignment notifications sent successfully');
+    // لا نرسل إشعارات للإدارة عند إلغاء التسكين - فقط ولي الأمر والمشرف
+    debugPrint('✅ Student unassignment notifications sent to parent and supervisor only');
   }
 
   /// إشعار ركوب الطالب الباص
@@ -1147,6 +1120,58 @@ class EnhancedNotificationService {
         'action': 'complaint_responded',
       },
     );
+  }
+
+  /// إشعار تقييم المشرف للإدارة
+  Future<void> notifySupervisorEvaluation({
+    required String supervisorId,
+    required String supervisorName,
+    required String parentId,
+    required String parentName,
+    required String studentName,
+    required double averageRating,
+    String? comments,
+  }) async {
+    // تحديد مستوى التقييم
+    String ratingText;
+    String emoji;
+    if (averageRating >= 4.5) {
+      ratingText = 'ممتاز';
+      emoji = '⭐';
+    } else if (averageRating >= 3.5) {
+      ratingText = 'جيد جداً';
+      emoji = '👍';
+    } else if (averageRating >= 2.5) {
+      ratingText = 'جيد';
+      emoji = '👌';
+    } else if (averageRating >= 1.5) {
+      ratingText = 'مقبول';
+      emoji = '⚠️';
+    } else {
+      ratingText = 'ضعيف';
+      emoji = '❌';
+    }
+
+    // إشعار الإدارة
+    await sendNotificationToUserType(
+      userType: UserRole.admin,
+      title: '$emoji تقييم جديد للمشرف',
+      body: 'تقييم جديد للمشرف $supervisorName من $parentName\nالطالب: $studentName\nالتقييم: $ratingText (${averageRating.toStringAsFixed(1)}/5.0)${comments != null ? '\nتعليقات: $comments' : ''}',
+      type: 'admin',
+      data: {
+        'supervisorId': supervisorId,
+        'supervisorName': supervisorName,
+        'parentId': parentId,
+        'parentName': parentName,
+        'studentName': studentName,
+        'averageRating': averageRating,
+        'ratingText': ratingText,
+        'comments': comments,
+        'action': 'supervisor_evaluation',
+      },
+    );
+
+    debugPrint('✅ Supervisor evaluation notification sent to admins');
   }
 
   /// إشعار تحديث حالة الرحلة

@@ -1349,6 +1349,27 @@ class NotificationService {
     );
   }
 
+  /// إشعار تقييم المشرف مع الصوت
+  Future<void> notifySupervisorEvaluationWithSound({
+    required String supervisorId,
+    required String supervisorName,
+    required String parentId,
+    required String parentName,
+    required String studentName,
+    required double averageRating,
+    String? comments,
+  }) async {
+    await _enhancedService.notifySupervisorEvaluation(
+      supervisorId: supervisorId,
+      supervisorName: supervisorName,
+      parentId: parentId,
+      parentName: parentName,
+      studentName: studentName,
+      averageRating: averageRating,
+      comments: comments,
+    );
+  }
+
   /// إشعار تسجيل ولي أمر جديد مع الصوت
   Future<void> notifyNewParentRegistrationWithSound({
     required String parentId,
