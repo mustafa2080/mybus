@@ -185,10 +185,7 @@ class _StudentsListScreenState extends State<StudentsListScreen> {
   }
 
   int _getActiveStudentsCount() {
-    return _students.where((student) =>
-      student.currentStatus == StudentStatus.onBus ||
-      student.currentStatus == StudentStatus.atSchool
-    ).length;
+    return _students.where((student) => student.isActive).length;
   }
 
   int _getStudentsOnBusCount() {
@@ -207,10 +204,6 @@ class _StudentsListScreenState extends State<StudentsListScreen> {
     return _students.where((student) =>
       student.currentStatus == StudentStatus.home
     ).length;
-  }
-
-  int _getActiveStudentsCount() {
-    return _students.where((student) => student.isActive).length;
   }
 
   int _getAbsentStudentsCount() {
