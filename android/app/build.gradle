@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.kidsbus"
+    namespace = "com.example.mybus"
     compileSdk = 35
 
     compileOptions {

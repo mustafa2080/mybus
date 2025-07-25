@@ -1,4 +1,4 @@
-package com.example.kidsbus
+package com.example.mybus
 
 import androidx.multidex.MultiDexApplication
 import io.flutter.app.FlutterApplication

@@ -1,4 +1,4 @@
-package com.example.kidsbus
+package com.example.mybus
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
