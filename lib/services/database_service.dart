@@ -450,6 +450,27 @@ class DatabaseService {
     }
   }
 
+  // Get only assigned students (students who have busRoute or busId)
+  Future<List<StudentModel>> getAssignedStudents() async {
+    try {
+      debugPrint('🔍 Getting only assigned students...');
+
+      final allStudents = await getAllStudents();
+
+      final assignedStudents = allStudents.where((student) {
+        final isAssigned = student.busRoute.isNotEmpty || student.busId.isNotEmpty;
+        return isAssigned;
+      }).toList();
+
+      debugPrint('📊 Found ${assignedStudents.length} assigned students out of ${allStudents.length} total');
+
+      return assignedStudents;
+    } catch (e) {
+      debugPrint('❌ Error getting assigned students: $e');
+      return [];
+    }
+  }
+
   // Get students by bus ID (simplified to avoid index issues)
   Stream<List<StudentModel>> getStudentsByBusId(String busId) {
     return _firestore
@@ -3711,16 +3732,17 @@ class DatabaseService {
   }
 
   /// Get students by bus route (simple version to avoid index issues)
+  /// Returns only students who are assigned to a bus (have busRoute or busId)
   Future<List<StudentModel>> getStudentsByRouteSimple(String busRoute) async {
     try {
-      debugPrint('🔍 Getting students for route: "$busRoute"');
+      debugPrint('🔍 Getting assigned students for route: "$busRoute"');
 
       if (busRoute.isEmpty) {
         debugPrint('⚠️ Bus route is empty');
         return [];
       }
 
-      // البحث الأساسي باستخدام busRoute (جميع الطلاب، نشطين وغير نشطين)
+      // البحث الأساسي باستخدام busRoute (فقط الطلاب المسكنين)
       final snapshot = await _firestore
           .collection('students')
           .where('busRoute', isEqualTo: busRoute)
@@ -3734,12 +3756,20 @@ class DatabaseService {
             debugPrint('👤 Student: ${data['name']} - busRoute: "${data['busRoute']}" - busId: "${data['busId']}" - isActive: ${data['isActive']}');
             return StudentModel.fromMap(data);
           })
+          .where((student) {
+            // فقط الطلاب المسكنين في خط سير (لديهم busRoute أو busId)
+            final isAssigned = student.busRoute.isNotEmpty || student.busId.isNotEmpty;
+            if (!isAssigned) {
+              debugPrint('⚠️ Student ${student.name} is not assigned to any bus');
+            }
+            return isAssigned;
+          })
           .toList();
 
       // Sort manually by name
       students.sort((a, b) => a.name.compareTo(b.name));
 
-      debugPrint('👥 Found ${students.length} students for route "$busRoute"');
+      debugPrint('👥 Found ${students.length} assigned students for route "$busRoute"');
 
       // إذا لم نجد طلاب، جرب البحث باستخدام busId
       if (students.isEmpty) {
@@ -3755,9 +3785,10 @@ class DatabaseService {
   }
 
   /// Get students by bus ID (Future version)
+  /// Returns only students who are assigned to a bus (have busRoute or busId)
   Future<List<StudentModel>> getStudentsByBusIdSimple(String busId) async {
     try {
-      debugPrint('🔍 Getting students for busId: "$busId"');
+      debugPrint('🔍 Getting assigned students for busId: "$busId"');
 
       if (busId.isEmpty) {
         debugPrint('⚠️ Bus ID is empty');
@@ -3777,12 +3808,20 @@ class DatabaseService {
             debugPrint('👤 Student: ${data['name']} - busRoute: "${data['busRoute']}" - busId: "${data['busId']}" - isActive: ${data['isActive']}');
             return StudentModel.fromMap(data);
           })
+          .where((student) {
+            // فقط الطلاب المسكنين في خط سير (لديهم busRoute أو busId)
+            final isAssigned = student.busRoute.isNotEmpty || student.busId.isNotEmpty;
+            if (!isAssigned) {
+              debugPrint('⚠️ Student ${student.name} is not assigned to any bus');
+            }
+            return isAssigned;
+          })
           .toList();
 
       // Sort manually by name
       students.sort((a, b) => a.name.compareTo(b.name));
 
-      debugPrint('👥 Found ${students.length} students for busId "$busId"');
+      debugPrint('👥 Found ${students.length} assigned students for busId "$busId"');
       return students;
     } catch (e) {
       debugPrint('❌ Error getting students for busId: $e');

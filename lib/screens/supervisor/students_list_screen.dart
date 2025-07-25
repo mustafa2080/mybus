@@ -129,21 +129,22 @@ class _StudentsListScreenState extends State<StudentsListScreen> {
         debugPrint('👥 Found ${students.length} students by busId "$route"');
       }
 
-      // الطريقة الثالثة: البحث في جميع الطلاب (نشطين وغير نشطين) إذا لم نجد أي طلاب
+      // الطريقة الثالثة: البحث في الطلاب المسكنين فقط إذا لم نجد أي طلاب
       if (students.isEmpty) {
-        debugPrint('🔍 No students found by route or busId, checking all students...');
-        final allStudents = await _databaseService.getAllStudents();
-        debugPrint('👥 Total students in database: ${allStudents.length}');
+        debugPrint('🔍 No students found by route or busId, checking assigned students...');
+        final assignedStudents = await _databaseService.getAssignedStudents();
+        debugPrint('👥 Total assigned students in database: ${assignedStudents.length}');
 
         // فلترة الطلاب حسب busRoute أو busId
-        students = allStudents.where((student) {
+        students = assignedStudents.where((student) {
           final matchesRoute = student.busRoute == route;
           final matchesBusId = student.busId == route;
-          debugPrint('🔍 Checking student ${student.name}: route="${student.busRoute}", busId="${student.busId}", active=${student.isActive}');
+
+          debugPrint('🔍 Checking assigned student ${student.name}: route="${student.busRoute}", busId="${student.busId}"');
           return matchesRoute || matchesBusId;
         }).toList();
 
-        debugPrint('👥 Found ${students.length} students after filtering all students');
+        debugPrint('👥 Found ${students.length} matching assigned students');
       }
 
       debugPrint('👥 Final result: ${students.length} students for route $route');
