@@ -33,6 +33,7 @@ import '../screens/supervisor/qr_scanner_screen.dart';
 import '../screens/supervisor/students_list_screen.dart';
 import '../screens/supervisor/supervisor_profile_screen.dart';
 import '../screens/supervisor/emergency_contact_screen.dart';
+import '../screens/supervisor/route_statistics_screen.dart';
 import '../screens/admin/student_management_screen.dart';
 import '../screens/admin/add_student_screen.dart' as AdminAddStudent;
 import '../screens/admin/edit_student_screen.dart';
@@ -279,6 +280,11 @@ class AppRoutes {
             path: 'emergency-contact',
             name: 'supervisor-emergency-contact',
             builder: (context, state) => const EmergencyContactScreen(),
+          ),
+          GoRoute(
+            path: 'route-statistics',
+            name: 'supervisor-route-statistics',
+            builder: (context, state) => const RouteStatisticsScreen(),
           ),
         ],
       ),
