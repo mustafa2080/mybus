@@ -911,23 +911,25 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
       case TripAction.boardBusToSchool:
       case TripAction.boardBusToHome:
         // await _notificationService.notifyStudentBoardedWithSound(
-          studentId: student.id,
-          studentName: student.name,
-          busId: student.busRoute,
-          parentId: student.parentId,
-          supervisorId: supervisorId,
-        );
+        //   studentId: student.id,
+        //   studentName: student.name,
+        //   busId: student.busRoute,
+        //   parentId: student.parentId,
+        //   supervisorId: supervisorId,
+        // );
+        debugPrint('✅ Student boarded notification (disabled)');
         break;
       case TripAction.leaveBus:
       case TripAction.arriveAtSchool:
       case TripAction.arriveAtHome:
         // await _notificationService.notifyStudentAlightedWithSound(
-          studentId: student.id,
-          studentName: student.name,
-          busId: student.busRoute,
-          parentId: student.parentId,
-          supervisorId: supervisorId,
-        );
+        //   studentId: student.id,
+        //   studentName: student.name,
+        //   busId: student.busRoute,
+        //   parentId: student.parentId,
+        //   supervisorId: supervisorId,
+        // );
+        debugPrint('✅ Student alighted notification (disabled)');
         break;
     }
   }
@@ -959,33 +961,36 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
 
         case TripAction.arriveAtSchool:
           // await _notificationService.sendStudentArrivedAtSchoolNotification(
-            student: student,
-            supervisorName: supervisorName,
-            timestamp: timestamp,
-          );
+          //   student: student,
+          //   supervisorName: supervisorName,
+          //   timestamp: timestamp,
+          // );
+          debugPrint('✅ Student arrived at school notification (disabled)');
           break;
 
         case TripAction.boardBusToHome:
           // await _notificationService.sendStudentBoardedNotification(
-            student: student,
-            supervisorName: supervisorName,
-            timestamp: timestamp,
-          );
+          //   student: student,
+          //   supervisorName: supervisorName,
+          //   timestamp: timestamp,
+          // );
           // إشعار إضافي أن الطالب في الباص متوجه للمنزل
           // await _notificationService.sendStudentOnBusNotification(
-            student: student,
-            supervisorName: supervisorName,
-            timestamp: timestamp,
-            busRoute: student.busRoute,
-          );
+          //   student: student,
+          //   supervisorName: supervisorName,
+          //   timestamp: timestamp,
+          //   busRoute: student.busRoute,
+          // );
+          debugPrint('✅ Student boarded bus to home notification (disabled)');
           break;
 
         case TripAction.arriveAtHome:
           // await _notificationService.sendStudentArrivedAtHomeNotification(
-            student: student,
-            supervisorName: supervisorName,
-            timestamp: timestamp,
-          );
+          //   student: student,
+          //   supervisorName: supervisorName,
+          //   timestamp: timestamp,
+          // );
+          debugPrint('✅ Student arrived at home notification (disabled)');
           break;
 
         default:
@@ -1052,10 +1057,11 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
 
         if (parentId != null && parentId.isNotEmpty) {
           // await _notificationService.sendTripStartedNotification(
-            recipientId: parentId,
-            studentName: studentData['name'] ?? 'الطالب',
-            timestamp: DateTime.now(),
-          );
+          //   recipientId: parentId,
+          //   studentName: studentData['name'] ?? 'الطالب',
+          //   timestamp: DateTime.now(),
+          // );
+          debugPrint('✅ Trip started notification (disabled)');
         }
       }
 

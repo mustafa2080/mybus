@@ -911,14 +911,15 @@ class _EditStudentScreenState extends State<EditStudentScreen> {
 
       // إرسال الإشعارات (باستثناء الإدمن الحالي)
       // await _notificationService.notifyStudentDataUpdate(
-        studentId: updatedStudent.id,
-        studentName: updatedStudent.name,
-        parentId: updatedStudent.parentId,
-        busId: updatedStudent.busId,
-        updatedFields: updatedFields,
-        adminName: adminName,
-        adminId: currentUser.uid, // استبعاد الإدمن الحالي من الإشعارات
-      );
+      //   studentId: updatedStudent.id,
+      //   studentName: updatedStudent.name,
+      //   parentId: updatedStudent.parentId,
+      //   busId: updatedStudent.busId,
+      //   updatedFields: updatedFields,
+      //   adminName: adminName,
+      //   adminId: currentUser.uid, // استبعاد الإدمن الحالي من الإشعارات
+      // );
+      debugPrint('✅ Student data update notification (disabled)');
 
       debugPrint('✅ Update notifications sent successfully');
     } catch (e) {

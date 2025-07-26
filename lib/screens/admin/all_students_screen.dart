@@ -1790,7 +1790,6 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
     }
 
     try {
-
       // Validate input data
       if (busId != null && busId.isEmpty) {
         throw Exception('معرف الباص غير صحيح');

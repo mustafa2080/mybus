@@ -348,15 +348,16 @@ class AuthService extends ChangeNotifier {
     return user?.userType == UserType.parent;
   }
 
-  /// الحصول على خدمة الإشعارات
-  NotificationService get notificationService =>
-      NotificationSystemHelper.initializer.notificationService;
+  // تم تعطيل خدمات الإشعارات مؤقتاً
+  // /// الحصول على خدمة الإشعارات
+  // NotificationService get notificationService =>
+  //     NotificationSystemHelper.initializer.notificationService;
 
-  /// الحصول على خدمة Firebase Messaging
-  FirebaseMessagingService get messagingService =>
-      NotificationSystemHelper.initializer.messagingService;
+  // /// الحصول على خدمة Firebase Messaging
+  // FirebaseMessagingService get messagingService =>
+  //     NotificationSystemHelper.initializer.messagingService;
 
-  /// الحصول على خدمة مراقبة الأحداث
-  EventTriggerService get eventTriggerService =>
-      NotificationSystemHelper.initializer.eventTriggerService;
+  // /// الحصول على خدمة مراقبة الأحداث
+  // EventTriggerService get eventTriggerService =>
+  //     NotificationSystemHelper.initializer.eventTriggerService;
 }
