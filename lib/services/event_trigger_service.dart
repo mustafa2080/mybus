@@ -570,7 +570,7 @@ class EventTriggerService {
     }
   }
 
-  /// مراقبة تحديث بيانات الطلاب للمشرفين
+  /// مراقبة تحديث بيانات الطلاب للمشرفين وأولياء الأمور
   void _monitorStudentDataUpdatesForSupervisors() {
     final subscription = _firestore
         .collection('students')
@@ -578,50 +578,89 @@ class EventTriggerService {
         .listen((snapshot) {
       for (final change in snapshot.docChanges) {
         if (change.type == DocumentChangeType.modified) {
-          _handleStudentDataUpdateForSupervisor(change.doc);
+          _handleStudentDataUpdate(change.doc);
         }
       }
     });
 
     _subscriptions.add(subscription);
-    debugPrint('🔍 بدء مراقبة تحديث بيانات الطلاب للمشرفين');
+    debugPrint('🔍 بدء مراقبة تحديث بيانات الطلاب');
   }
 
-  /// معالجة تحديث بيانات طالب للمشرف
-  Future<void> _handleStudentDataUpdateForSupervisor(DocumentSnapshot doc) async {
+  /// معالجة تحديث بيانات طالب (للمشرف وولي الأمر)
+  Future<void> _handleStudentDataUpdate(DocumentSnapshot doc) async {
     try {
       final data = doc.data() as Map<String, dynamic>?;
       if (data == null) return;
 
       final student = StudentModel.fromMap(data);
 
-      // الحصول على المشرف المسؤول عن هذا الطالب
-      final supervisorQuery = await _firestore
-          .collection('supervisor_assignments')
-          .where('busRoute', isEqualTo: student.busRoute)
-          .where('isActive', isEqualTo: true)
-          .get();
+      debugPrint('📝 تم تحديث بيانات الطالب: ${student.name}');
 
-      if (supervisorQuery.docs.isNotEmpty) {
-        final supervisorId = supervisorQuery.docs.first.data()['supervisorId'];
-
-        // إرسال إشعار للمشرف
+      // إرسال إشعار لولي الأمر
+      if (student.parentId.isNotEmpty) {
         await _notificationService.sendEventNotification(
-          eventId: 'student_data_updated',
+          eventId: 'student_data_updated_parent',
           eventData: {
             'studentId': student.id,
             'studentName': student.name,
+            'parentId': student.parentId,
+            'schoolName': student.schoolName,
+            'grade': student.grade,
             'busRoute': student.busRoute,
             'updatedAt': DateTime.now().toIso8601String(),
-            'supervisorId': supervisorId,
+            'updatedBy': 'admin',
           },
-          specificRecipientId: supervisorId,
+          specificRecipientId: student.parentId,
         );
 
-        debugPrint('✅ تم إرسال إشعار تحديث بيانات الطالب ${student.name} للمشرف');
+        debugPrint('✅ تم إرسال إشعار تحديث البيانات لولي الأمر');
       }
+
+      // إرسال إشعار للمشرف إذا كان الطالب مُعيّن في باص
+      if (student.busRoute.isNotEmpty) {
+        final supervisorQuery = await _firestore
+            .collection('supervisor_assignments')
+            .where('busRoute', isEqualTo: student.busRoute)
+            .where('isActive', isEqualTo: true)
+            .get();
+
+        if (supervisorQuery.docs.isNotEmpty) {
+          final supervisorId = supervisorQuery.docs.first.data()['supervisorId'];
+
+          await _notificationService.sendEventNotification(
+            eventId: 'student_data_updated_supervisor',
+            eventData: {
+              'studentId': student.id,
+              'studentName': student.name,
+              'busRoute': student.busRoute,
+              'supervisorId': supervisorId,
+              'updatedAt': DateTime.now().toIso8601String(),
+              'updatedBy': 'admin',
+            },
+            specificRecipientId: supervisorId,
+          );
+
+          debugPrint('✅ تم إرسال إشعار تحديث البيانات للمشرف');
+        }
+      }
+
+      // إرسال إشعار للأدمن أيضاً (للإحصائيات)
+      await _notificationService.sendEventNotification(
+        eventId: 'student_data_updated_admin',
+        eventData: {
+          'studentId': student.id,
+          'studentName': student.name,
+          'parentId': student.parentId,
+          'updatedAt': DateTime.now().toIso8601String(),
+          'action': 'student_data_modified',
+        },
+      );
+
+      debugPrint('✅ تم إرسال إشعار تحديث البيانات للأدمن');
+
     } catch (e) {
-      debugPrint('❌ خطأ في معالجة تحديث بيانات الطالب للمشرف: $e');
+      debugPrint('❌ خطأ في معالجة تحديث بيانات الطالب: $e');
     }
   }
 

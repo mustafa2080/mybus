@@ -823,6 +823,9 @@ class _EditStudentScreenState extends State<EditStudentScreen> {
         await _sendUpdateNotifications(updatedStudent, updatedFields);
       }
 
+      // إضافة تأخير بسيط للتأكد من تحديث قاعدة البيانات
+      await Future.delayed(const Duration(milliseconds: 500));
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
