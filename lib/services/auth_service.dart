@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
 import 'notification_system_initializer.dart';
+import 'auto_notification_service.dart';
 // تم حذف الخدمات المتكررة واستبدالها بالخدمة الموحدة
 
 class AuthService extends ChangeNotifier {
@@ -161,6 +162,19 @@ class AuthService extends ChangeNotifier {
         }
 
         debugPrint('✅ User logged in successfully');
+
+        // إرسال إشعار الترحيب
+        if (userData != null) {
+          try {
+            final autoNotificationService = AutoNotificationService();
+            await autoNotificationService.sendWelcomeNotification(
+              userData.id,
+              userData.userType.toString().split('.').last,
+            );
+          } catch (e) {
+            debugPrint('❌ خطأ في إرسال إشعار الترحيب: $e');
+          }
+        }
 
         return userData;
       }

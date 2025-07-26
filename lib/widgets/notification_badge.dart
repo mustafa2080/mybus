@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../services/user_notification_service.dart';
 
 /// ويدجت عداد الإشعارات مع أيقونة
 class NotificationBadge extends StatelessWidget {
@@ -17,30 +18,16 @@ class NotificationBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final currentUser = FirebaseAuth.instance.currentUser;
-    
-    if (currentUser == null) {
-      return IconButton(
-        icon: Icon(
-          Icons.notifications_outlined,
-          color: iconColor ?? Colors.white,
-          size: iconSize,
-        ),
-        onPressed: onTap,
-      );
-    }
+    final notificationService = UserNotificationService();
 
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('notifications')
-          .where('recipientId', isEqualTo: currentUser.uid)
-          .where('isRead', isEqualTo: false)
-          .snapshots(),
+    return StreamBuilder<int>(
+      stream: notificationService.getUnreadNotificationsCount(),
       builder: (context, snapshot) {
-        int unreadCount = 0;
-        
-        if (snapshot.hasData && snapshot.data != null) {
-          unreadCount = snapshot.data!.docs.length;
+        int unreadCount = snapshot.data ?? 0;
+
+        // في حالة الخطأ، اعرض رسالة في الكونسول
+        if (snapshot.hasError) {
+          print('خطأ في تحميل الإشعارات: ${snapshot.error}');
         }
 
         return Stack(
@@ -101,22 +88,16 @@ class AdminNotificationBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: FirebaseFirestore.instance
-          .collection('notifications')
-          .where('type', whereIn: [
-            'newComplaint',
-            'newStudent', 
-            'studentAbsence',
-            'newParentAccount'
-          ])
-          .where('isRead', isEqualTo: false)
-          .snapshots(),
+    final notificationService = UserNotificationService();
+
+    return StreamBuilder<int>(
+      stream: notificationService.getAdminUnreadNotificationsCount(),
       builder: (context, snapshot) {
-        int unreadCount = 0;
-        
-        if (snapshot.hasData && snapshot.data != null) {
-          unreadCount = snapshot.data!.docs.length;
+        int unreadCount = snapshot.data ?? 0;
+
+        // في حالة الخطأ، اعرض رسالة في الكونسول
+        if (snapshot.hasError) {
+          print('خطأ في تحميل إشعارات الأدمن: ${snapshot.error}');
         }
 
         return Stack(
