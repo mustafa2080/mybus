@@ -167,23 +167,28 @@ class UserNotificationService {
     ],
   }) async {
     try {
-      final notification = NotificationModel(
-        id: '', // سيتم تعيينه تلقائياً
-        recipientId: recipientId,
-        title: title,
-        body: body,
-        type: type,
-        priority: priority,
-        status: NotificationStatus.pending,
-        channels: channels,
-        data: data ?? {},
-        isRead: false,
-        createdAt: DateTime.now(),
-      );
+      // إنشاء الإشعار مباشرة كـ Map
+      final notificationData = {
+        'recipientId': recipientId,
+        'title': title,
+        'body': body,
+        'type': type.toString().split('.').last,
+        'priority': priority.toString().split('.').last,
+        'status': 'pending',
+        'channels': channels.map((c) => c.toString().split('.').last).toList(),
+        'data': data ?? {},
+        'isRead': false,
+        'createdAt': FieldValue.serverTimestamp(),
+        'requiresSound': false,
+        'requiresVibration': false,
+        'isBackground': true,
+        'retryCount': 0,
+        'isActive': true,
+      };
 
       await _firestore
           .collection('notifications')
-          .add(notification.toMap());
+          .add(notificationData);
 
       print('✅ تم إنشاء إشعار جديد للمستخدم: $recipientId');
     } catch (e) {
@@ -202,24 +207,29 @@ class UserNotificationService {
   }) async {
     try {
       final batch = _firestore.batch();
-      
+
       for (final recipientId in recipientIds) {
-        final notification = NotificationModel(
-          id: '', // سيتم تعيينه تلقائياً
-          recipientId: recipientId,
-          title: title,
-          body: body,
-          type: type,
-          priority: priority,
-          status: NotificationStatus.pending,
-          channels: [NotificationChannel.fcm, NotificationChannel.inApp],
-          data: data ?? {},
-          isRead: false,
-          createdAt: DateTime.now(),
-        );
+        // إنشاء الإشعار مباشرة كـ Map
+        final notificationData = {
+          'recipientId': recipientId,
+          'title': title,
+          'body': body,
+          'type': type.toString().split('.').last,
+          'priority': priority.toString().split('.').last,
+          'status': 'pending',
+          'channels': ['fcm', 'inApp'],
+          'data': data ?? {},
+          'isRead': false,
+          'createdAt': FieldValue.serverTimestamp(),
+          'requiresSound': false,
+          'requiresVibration': false,
+          'isBackground': true,
+          'retryCount': 0,
+          'isActive': true,
+        };
 
         final docRef = _firestore.collection('notifications').doc();
-        batch.set(docRef, notification.toMap());
+        batch.set(docRef, notificationData);
       }
 
       await batch.commit();
@@ -292,8 +302,16 @@ class UserNotificationService {
         'title': title,
         'body': body,
         'type': 'welcome',
+        'priority': 'low',
+        'status': 'pending',
+        'channels': ['fcm', 'inApp'],
         'isRead': false,
         'createdAt': FieldValue.serverTimestamp(),
+        'requiresSound': false,
+        'requiresVibration': false,
+        'isBackground': true,
+        'retryCount': 0,
+        'isActive': true,
         'data': {
           'userType': userType,
           'timestamp': DateTime.now().toIso8601String(),
