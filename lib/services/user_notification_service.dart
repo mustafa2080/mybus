@@ -23,30 +23,40 @@ class UserNotificationService {
       return Stream.value([]);
     }
 
-    Query query = _firestore
-        .collection('notifications')
-        .where('recipientId', isEqualTo: currentUserId)
-        .orderBy('createdAt', descending: true)
-        .limit(limit);
+    try {
+      Query query = _firestore
+          .collection('notifications')
+          .where('recipientId', isEqualTo: currentUserId);
 
-    if (unreadOnly) {
-      query = query.where('isRead', isEqualTo: false);
+      if (unreadOnly) {
+        query = query.where('isRead', isEqualTo: false);
+      }
+
+      // ترتيب بسيط بدون فهرس مركب
+      query = query.limit(limit);
+
+      return query.snapshots().map((snapshot) {
+        final notifications = snapshot.docs.map((doc) {
+          try {
+            final data = doc.data() as Map<String, dynamic>;
+            data['id'] = doc.id;
+            return NotificationModel.fromMap(data);
+          } catch (e) {
+            print('خطأ في تحويل الإشعار: $e');
+            return null;
+          }
+        }).where((notification) => notification != null)
+          .cast<NotificationModel>()
+          .toList();
+
+        // ترتيب في الذاكرة
+        notifications.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+        return notifications;
+      });
+    } catch (e) {
+      print('خطأ في جلب الإشعارات: $e');
+      return Stream.value([]);
     }
-
-    return query.snapshots().map((snapshot) {
-      return snapshot.docs.map((doc) {
-        try {
-          final data = doc.data() as Map<String, dynamic>;
-          data['id'] = doc.id;
-          return NotificationModel.fromMap(data);
-        } catch (e) {
-          print('خطأ في تحويل الإشعار: $e');
-          return null;
-        }
-      }).where((notification) => notification != null)
-        .cast<NotificationModel>()
-        .toList();
-    });
   }
 
   /// عدد الإشعارات غير المقروءة للمستخدم الحالي
@@ -55,28 +65,55 @@ class UserNotificationService {
       return Stream.value(0);
     }
 
-    return _firestore
-        .collection('notifications')
-        .where('recipientId', isEqualTo: currentUserId)
-        .where('isRead', isEqualTo: false)
-        .snapshots()
-        .map((snapshot) => snapshot.docs.length);
+    try {
+      return _firestore
+          .collection('notifications')
+          .where('recipientId', isEqualTo: currentUserId)
+          .where('isRead', isEqualTo: false)
+          .snapshots()
+          .map((snapshot) => snapshot.docs.length)
+          .handleError((error) {
+            print('خطأ في عدد الإشعارات غير المقروءة: $error');
+            return 0;
+          });
+    } catch (e) {
+      print('خطأ في إعداد stream للإشعارات: $e');
+      return Stream.value(0);
+    }
   }
 
   /// عدد إشعارات الأدمن غير المقروءة
   Stream<int> getAdminUnreadNotificationsCount() {
-    return _firestore
-        .collection('notifications')
-        .where('type', whereIn: [
-          'newComplaint',
-          'newStudent',
-          'studentAbsence',
-          'newParentAccount',
-          'studentBehaviorReport'
-        ])
-        .where('isRead', isEqualTo: false)
-        .snapshots()
-        .map((snapshot) => snapshot.docs.length);
+    try {
+      // استعلام مبسط لتجنب مشاكل الفهارس
+      return _firestore
+          .collection('notifications')
+          .where('isRead', isEqualTo: false)
+          .snapshots()
+          .map((snapshot) {
+            // فلترة في الذاكرة للأنواع المطلوبة
+            final adminNotifications = snapshot.docs.where((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              final type = data['type'] as String?;
+              return [
+                'newComplaint',
+                'newStudent',
+                'studentAbsence',
+                'newParentAccount',
+                'studentBehaviorReport'
+              ].contains(type);
+            }).toList();
+
+            return adminNotifications.length;
+          })
+          .handleError((error) {
+            print('خطأ في عدد إشعارات الأدمن: $error');
+            return 0;
+          });
+    } catch (e) {
+      print('خطأ في إعداد stream لإشعارات الأدمن: $e');
+      return Stream.value(0);
+    }
   }
 
   /// تحديد إشعار كمقروء

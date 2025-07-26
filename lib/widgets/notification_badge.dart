@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../services/user_notification_service.dart';
+import '../services/simple_notification_service.dart';
 
 /// ويدجت عداد الإشعارات مع أيقونة
 class NotificationBadge extends StatelessWidget {
@@ -18,7 +18,7 @@ class NotificationBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final notificationService = UserNotificationService();
+    final notificationService = SimpleNotificationService();
 
     return StreamBuilder<int>(
       stream: notificationService.getUnreadNotificationsCount(),
@@ -88,10 +88,10 @@ class AdminNotificationBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final notificationService = UserNotificationService();
+    final notificationService = SimpleNotificationService();
 
     return StreamBuilder<int>(
-      stream: notificationService.getAdminUnreadNotificationsCount(),
+      stream: notificationService.getAdminNotificationsCount(),
       builder: (context, snapshot) {
         int unreadCount = snapshot.data ?? 0;
 
