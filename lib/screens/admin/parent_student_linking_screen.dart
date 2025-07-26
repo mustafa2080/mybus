@@ -371,15 +371,16 @@ class _ParentStudentLinkingScreenState extends State<ParentStudentLinkingScreen>
 
       // إرسال إشعار لولي الأمر
       // await _databaseService.sendNotificationToParent( // تم تعطيل الإشعارات مؤقتاً
-        parentId: parent.id,
-        title: 'تم ربط طفل جديد',
-        message: 'تم ربط الطالب ${student.name} بحسابك بنجاح',
-        data: {
-          'type': 'student_linked',
-          'studentId': student.id,
-          'studentName': student.name,
-        },
-      );
+      //   parentId: parent.id,
+      //   title: 'تم ربط طفل جديد',
+      //   message: 'تم ربط الطالب ${student.name} بحسابك بنجاح',
+      //   data: {
+      //     'type': 'student_linked',
+      //     'studentId': student.id,
+      //     'studentName': student.name,
+      //   },
+      // );
+      debugPrint('✅ Student linked notification (disabled)');
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

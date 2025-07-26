@@ -1789,15 +1789,28 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
       );
     }
 
-    try {
-      // Validate input data
-      if (busId != null && busId.isEmpty) {
-        throw Exception('معرف الباص غير صحيح');
+    // Validate input data
+    if (busId != null && busId.isEmpty) {
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('معرف الباص غير صحيح')),
+        );
       }
+      return;
+    }
 
-      if (busId != null && busRoute.isEmpty) {
-        throw Exception('خط السير مطلوب عند اختيار باص');
+    if (busId != null && busRoute.isEmpty) {
+      if (mounted) {
+        Navigator.of(context).pop();
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('خط السير مطلوب عند اختيار باص')),
+        );
       }
+      return;
+    }
+
+    try {
 
       // Create updated student with proper validation
       final updatedStudent = student.copyWith(
