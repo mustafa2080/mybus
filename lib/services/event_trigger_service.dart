@@ -68,6 +68,18 @@ class EventTriggerService {
     // مراقبة تعيينات المشرفين
     _monitorSupervisorAssignments();
 
+    // مراقبة إكمال البروفايل
+    _monitorProfileCompletion();
+
+    // مراقبة تعيين الطلاب في خطوط السير
+    _monitorStudentBusAssignments();
+
+    // مراقبة حذف الطلاب
+    _monitorStudentDeletion();
+
+    // مراقبة تحديث بيانات الطلاب للمشرفين
+    _monitorStudentDataUpdatesForSupervisors();
+
     debugPrint('🔍 تم بدء مراقبة ${_subscriptions.length} نوع من الأحداث');
   }
 
@@ -405,6 +417,211 @@ class EventTriggerService {
       debugPrint('✅ تم إرسال إشعار تعيين المشرف');
     } catch (e) {
       debugPrint('❌ خطأ في معالجة تعيين المشرف: $e');
+    }
+  }
+
+  /// مراقبة إكمال البروفايل
+  void _monitorProfileCompletion() {
+    final subscription = _firestore
+        .collection('users')
+        .snapshots()
+        .listen((snapshot) {
+      for (final change in snapshot.docChanges) {
+        if (change.type == DocumentChangeType.modified) {
+          _handleProfileCompletion(change.doc);
+        }
+      }
+    });
+
+    _subscriptions.add(subscription);
+    debugPrint('🔍 بدء مراقبة إكمال البروفايل');
+  }
+
+  /// معالجة إكمال البروفايل
+  Future<void> _handleProfileCompletion(DocumentSnapshot doc) async {
+    try {
+      final data = doc.data() as Map<String, dynamic>?;
+      if (data == null) return;
+
+      final user = UserModel.fromMap(data);
+
+      // التحقق من إكمال البروفايل (جميع الحقول المطلوبة مملوءة)
+      final isProfileComplete = _isProfileComplete(user);
+      final wasProfileIncomplete = data['isProfileComplete'] == false;
+
+      if (isProfileComplete && wasProfileIncomplete) {
+        // تحديث حالة البروفايل
+        await doc.reference.update({'isProfileComplete': true});
+
+        // إرسال إشعار للأدمن
+        await _notificationService.sendEventNotification(
+          eventId: 'profile_completed',
+          eventData: {
+            'userId': user.id,
+            'userName': user.name,
+            'userType': user.userType.toString().split('.').last,
+            'completedAt': DateTime.now().toIso8601String(),
+          },
+        );
+
+        debugPrint('✅ تم إرسال إشعار إكمال البروفايل للمستخدم: ${user.name}');
+      }
+    } catch (e) {
+      debugPrint('❌ خطأ في معالجة إكمال البروفايل: $e');
+    }
+  }
+
+  /// التحقق من إكمال البروفايل
+  bool _isProfileComplete(UserModel user) {
+    return user.name.isNotEmpty &&
+           user.email.isNotEmpty &&
+           user.phone.isNotEmpty &&
+           user.userType != null;
+  }
+
+  /// مراقبة تعيين الطلاب في خطوط السير
+  void _monitorStudentBusAssignments() {
+    final subscription = _firestore
+        .collection('students')
+        .snapshots()
+        .listen((snapshot) {
+      for (final change in snapshot.docChanges) {
+        if (change.type == DocumentChangeType.modified) {
+          _handleStudentBusAssignment(change.doc);
+        }
+      }
+    });
+
+    _subscriptions.add(subscription);
+    debugPrint('🔍 بدء مراقبة تعيين الطلاب في خطوط السير');
+  }
+
+  /// معالجة تعيين طالب في خط سير
+  Future<void> _handleStudentBusAssignment(DocumentSnapshot doc) async {
+    try {
+      final data = doc.data() as Map<String, dynamic>?;
+      if (data == null) return;
+
+      final student = StudentModel.fromMap(data);
+
+      // التحقق من تغيير خط السير (مقارنة بسيطة)
+      if (student.busRoute.isNotEmpty) {
+        // إرسال إشعار لولي الأمر
+        await _notificationService.sendEventNotification(
+          eventId: 'student_assigned_to_bus',
+          eventData: {
+            'studentId': student.id,
+            'studentName': student.name,
+            'parentId': student.parentId,
+            'busRoute': student.busRoute,
+            'assignedAt': DateTime.now().toIso8601String(),
+          },
+          specificRecipientId: student.parentId,
+        );
+
+        debugPrint('✅ تم إرسال إشعار تعيين الطالب ${student.name} في خط السير ${student.busRoute}');
+      }
+    } catch (e) {
+      debugPrint('❌ خطأ في معالجة تعيين الطالب في خط السير: $e');
+    }
+  }
+
+  /// مراقبة حذف الطلاب
+  void _monitorStudentDeletion() {
+    final subscription = _firestore
+        .collection('students')
+        .snapshots()
+        .listen((snapshot) {
+      for (final change in snapshot.docChanges) {
+        if (change.type == DocumentChangeType.removed) {
+          _handleStudentDeletion(change.doc);
+        }
+      }
+    });
+
+    _subscriptions.add(subscription);
+    debugPrint('🔍 بدء مراقبة حذف الطلاب');
+  }
+
+  /// معالجة حذف طالب
+  Future<void> _handleStudentDeletion(DocumentSnapshot doc) async {
+    try {
+      final data = doc.data() as Map<String, dynamic>?;
+      if (data == null) return;
+
+      final student = StudentModel.fromMap(data);
+
+      // إرسال إشعار لولي الأمر
+      await _notificationService.sendEventNotification(
+        eventId: 'student_removed',
+        eventData: {
+          'studentId': student.id,
+          'studentName': student.name,
+          'parentId': student.parentId,
+          'removedAt': DateTime.now().toIso8601String(),
+          'reason': 'تم حذف الطالب من النظام',
+        },
+        specificRecipientId: student.parentId,
+      );
+
+      debugPrint('✅ تم إرسال إشعار حذف الطالب ${student.name} لولي الأمر');
+    } catch (e) {
+      debugPrint('❌ خطأ في معالجة حذف الطالب: $e');
+    }
+  }
+
+  /// مراقبة تحديث بيانات الطلاب للمشرفين
+  void _monitorStudentDataUpdatesForSupervisors() {
+    final subscription = _firestore
+        .collection('students')
+        .snapshots()
+        .listen((snapshot) {
+      for (final change in snapshot.docChanges) {
+        if (change.type == DocumentChangeType.modified) {
+          _handleStudentDataUpdateForSupervisor(change.doc);
+        }
+      }
+    });
+
+    _subscriptions.add(subscription);
+    debugPrint('🔍 بدء مراقبة تحديث بيانات الطلاب للمشرفين');
+  }
+
+  /// معالجة تحديث بيانات طالب للمشرف
+  Future<void> _handleStudentDataUpdateForSupervisor(DocumentSnapshot doc) async {
+    try {
+      final data = doc.data() as Map<String, dynamic>?;
+      if (data == null) return;
+
+      final student = StudentModel.fromMap(data);
+
+      // الحصول على المشرف المسؤول عن هذا الطالب
+      final supervisorQuery = await _firestore
+          .collection('supervisor_assignments')
+          .where('busRoute', isEqualTo: student.busRoute)
+          .where('isActive', isEqualTo: true)
+          .get();
+
+      if (supervisorQuery.docs.isNotEmpty) {
+        final supervisorId = supervisorQuery.docs.first.data()['supervisorId'];
+
+        // إرسال إشعار للمشرف
+        await _notificationService.sendEventNotification(
+          eventId: 'student_data_updated',
+          eventData: {
+            'studentId': student.id,
+            'studentName': student.name,
+            'busRoute': student.busRoute,
+            'updatedAt': DateTime.now().toIso8601String(),
+            'supervisorId': supervisorId,
+          },
+          specificRecipientId: supervisorId,
+        );
+
+        debugPrint('✅ تم إرسال إشعار تحديث بيانات الطالب ${student.name} للمشرف');
+      }
+    } catch (e) {
+      debugPrint('❌ خطأ في معالجة تحديث بيانات الطالب للمشرف: $e');
     }
   }
 

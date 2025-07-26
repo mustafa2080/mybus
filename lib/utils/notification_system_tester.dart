@@ -43,6 +43,9 @@ class NotificationSystemTester {
       // اختبار الأداء
       results.performance = await _testPerformance();
 
+      // اختبار الأحداث الجديدة
+      results.newEventsTest = await _testNewEvents();
+
       results.overallSuccess = _calculateOverallSuccess(results);
       
       debugPrint('✅ انتهى الاختبار الشامل - النجاح العام: ${results.overallSuccess}%');
@@ -282,10 +285,90 @@ class NotificationSystemTester {
     }
   }
 
+  /// اختبار الأحداث الجديدة
+  Future<bool> _testNewEvents() async {
+    try {
+      debugPrint('🆕 اختبار الأحداث الجديدة...');
+
+      // اختبار إشعار إكمال البروفايل
+      final profileCompletedSent = await _notificationService.sendEventNotification(
+        eventId: 'profile_completed',
+        eventData: {
+          'userId': 'test_user_id',
+          'userName': 'مستخدم تجريبي',
+          'userType': 'parent',
+          'completedAt': DateTime.now().toIso8601String(),
+        },
+      );
+
+      if (!profileCompletedSent) {
+        debugPrint('❌ فشل في إرسال إشعار إكمال البروفايل');
+        return false;
+      }
+
+      // اختبار إشعار تعيين طالب في باص
+      final studentAssignedSent = await _notificationService.sendEventNotification(
+        eventId: 'student_assigned_to_bus',
+        eventData: {
+          'studentId': 'test_student_id',
+          'studentName': 'طالب تجريبي',
+          'parentId': 'test_parent_id',
+          'busRoute': 'خط تجريبي',
+          'assignedAt': DateTime.now().toIso8601String(),
+        },
+      );
+
+      if (!studentAssignedSent) {
+        debugPrint('❌ فشل في إرسال إشعار تعيين الطالب في الباص');
+        return false;
+      }
+
+      // اختبار إشعار حذف طالب
+      final studentRemovedSent = await _notificationService.sendEventNotification(
+        eventId: 'student_removed',
+        eventData: {
+          'studentId': 'test_student_id',
+          'studentName': 'طالب تجريبي',
+          'parentId': 'test_parent_id',
+          'removedAt': DateTime.now().toIso8601String(),
+          'reason': 'اختبار النظام',
+        },
+      );
+
+      if (!studentRemovedSent) {
+        debugPrint('❌ فشل في إرسال إشعار حذف الطالب');
+        return false;
+      }
+
+      // اختبار إشعار تحديث بيانات طالب للمشرف
+      final studentDataUpdatedSent = await _notificationService.sendEventNotification(
+        eventId: 'student_data_updated',
+        eventData: {
+          'studentId': 'test_student_id',
+          'studentName': 'طالب تجريبي',
+          'busRoute': 'خط تجريبي',
+          'updatedAt': DateTime.now().toIso8601String(),
+          'supervisorId': 'test_supervisor_id',
+        },
+      );
+
+      if (!studentDataUpdatedSent) {
+        debugPrint('❌ فشل في إرسال إشعار تحديث بيانات الطالب للمشرف');
+        return false;
+      }
+
+      debugPrint('✅ جميع الأحداث الجديدة تعمل بشكل صحيح');
+      return true;
+    } catch (e) {
+      debugPrint('❌ خطأ في اختبار الأحداث الجديدة: $e');
+      return false;
+    }
+  }
+
   /// حساب النجاح العام
   int _calculateOverallSuccess(TestResults results) {
     int passedTests = 0;
-    int totalTests = 6;
+    int totalTests = 7; // زيادة العدد لإضافة اختبار الأحداث الجديدة
 
     if (results.serviceInitialization) passedTests++;
     if (results.notificationCreation) passedTests++;
@@ -293,6 +376,7 @@ class NotificationSystemTester {
     if (results.privacySecurity) passedTests++;
     if (results.eventMonitoring) passedTests++;
     if (results.performance) passedTests++;
+    if (results.newEventsTest) passedTests++;
 
     return ((passedTests / totalTests) * 100).round();
   }
@@ -342,6 +426,7 @@ class NotificationSystemTester {
     buffer.writeln('- الخصوصية والأمان: ${results.privacySecurity ? "✅ نجح" : "❌ فشل"}');
     buffer.writeln('- مراقبة الأحداث: ${results.eventMonitoring ? "✅ نجح" : "❌ فشل"}');
     buffer.writeln('- الأداء: ${results.performance ? "✅ نجح" : "❌ فشل"}');
+    buffer.writeln('- الأحداث الجديدة: ${results.newEventsTest ? "✅ نجح" : "❌ فشل"}');
     
     buffer.writeln('');
     buffer.writeln('التوصيات:');
@@ -365,6 +450,7 @@ class TestResults {
   bool privacySecurity = false;
   bool eventMonitoring = false;
   bool performance = false;
+  bool newEventsTest = false;
   int overallSuccess = 0;
 }
 
