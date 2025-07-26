@@ -82,10 +82,10 @@ class UserNotificationService {
     }
   }
 
-  /// عدد إشعارات الأدمن غير المقروءة
+  /// عدد إشعارات الأدمن غير المقروءة (مبسط)
   Stream<int> getAdminUnreadNotificationsCount() {
     try {
-      // استعلام مبسط لتجنب مشاكل الفهارس
+      // استعلام مبسط يعمل مع الفهارس الموجودة
       return _firestore
           .collection('notifications')
           .where('isRead', isEqualTo: false)
@@ -260,6 +260,49 @@ class UserNotificationService {
       await batch.commit();
     } catch (e) {
       print('خطأ في حذف الإشعارات المقروءة: $e');
+    }
+  }
+
+  /// إنشاء إشعار ترحيب بسيط
+  static Future<void> createWelcomeNotification(String userId, String userType) async {
+    try {
+      String title = '';
+      String body = '';
+
+      switch (userType) {
+        case 'parent':
+          title = 'مرحباً بك في MyBus';
+          body = 'يمكنك الآن متابعة رحلات أطفالك والتواصل مع المدرسة';
+          break;
+        case 'admin':
+          title = 'مرحباً بك في لوحة التحكم';
+          body = 'يمكنك الآن إدارة النظام ومتابعة جميع العمليات';
+          break;
+        case 'supervisor':
+          title = 'مرحباً بك كمشرف';
+          body = 'يمكنك الآن متابعة الطلاب وإدارة الرحلات';
+          break;
+        default:
+          title = 'مرحباً بك';
+          body = 'تم تسجيل دخولك بنجاح';
+      }
+
+      await FirebaseFirestore.instance.collection('notifications').add({
+        'recipientId': userId,
+        'title': title,
+        'body': body,
+        'type': 'welcome',
+        'isRead': false,
+        'createdAt': FieldValue.serverTimestamp(),
+        'data': {
+          'userType': userType,
+          'timestamp': DateTime.now().toIso8601String(),
+        },
+      });
+
+      print('✅ تم إنشاء إشعار الترحيب للمستخدم: $userId');
+    } catch (e) {
+      print('❌ خطأ في إنشاء إشعار الترحيب: $e');
     }
   }
 }

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../services/simple_notification_service.dart';
 
 /// ويدجت عداد الإشعارات مع أيقونة
 class NotificationBadge extends StatelessWidget {
@@ -18,12 +17,31 @@ class NotificationBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final notificationService = SimpleNotificationService();
+    final currentUser = FirebaseAuth.instance.currentUser;
 
-    return StreamBuilder<int>(
-      stream: notificationService.getUnreadNotificationsCount(),
+    if (currentUser == null) {
+      return IconButton(
+        icon: Icon(
+          Icons.notifications_outlined,
+          color: iconColor ?? Colors.white,
+          size: iconSize,
+        ),
+        onPressed: onTap,
+      );
+    }
+
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('notifications')
+          .where('recipientId', isEqualTo: currentUser.uid)
+          .where('isRead', isEqualTo: false)
+          .snapshots(),
       builder: (context, snapshot) {
-        int unreadCount = snapshot.data ?? 0;
+        int unreadCount = 0;
+
+        if (snapshot.hasData && snapshot.data != null) {
+          unreadCount = snapshot.data!.docs.length;
+        }
 
         // في حالة الخطأ، اعرض رسالة في الكونسول
         if (snapshot.hasError) {
@@ -88,12 +106,30 @@ class AdminNotificationBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final notificationService = SimpleNotificationService();
-
-    return StreamBuilder<int>(
-      stream: notificationService.getAdminNotificationsCount(),
+    return StreamBuilder<QuerySnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('notifications')
+          .where('isRead', isEqualTo: false)
+          .snapshots(),
       builder: (context, snapshot) {
-        int unreadCount = snapshot.data ?? 0;
+        int unreadCount = 0;
+
+        if (snapshot.hasData && snapshot.data != null) {
+          // فلترة الإشعارات الإدارية في الذاكرة
+          final adminNotifications = snapshot.data!.docs.where((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            final type = data['type'] as String?;
+            return [
+              'newComplaint',
+              'newStudent',
+              'studentAbsence',
+              'newParentAccount',
+              'studentBehaviorReport'
+            ].contains(type);
+          }).toList();
+
+          unreadCount = adminNotifications.length;
+        }
 
         // في حالة الخطأ، اعرض رسالة في الكونسول
         if (snapshot.hasError) {

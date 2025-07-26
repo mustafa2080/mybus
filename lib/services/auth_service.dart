@@ -3,7 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
 import 'notification_system_initializer.dart';
-import 'simple_notification_service.dart';
+import 'user_notification_service.dart';
 // تم حذف الخدمات المتكررة واستبدالها بالخدمة الموحدة
 
 class AuthService extends ChangeNotifier {
@@ -166,8 +166,7 @@ class AuthService extends ChangeNotifier {
         // إرسال إشعار الترحيب
         if (userData != null) {
           try {
-            final notificationService = SimpleNotificationService();
-            await notificationService.sendWelcomeNotification(
+            await UserNotificationService.createWelcomeNotification(
               userData.id,
               userData.userType.toString().split('.').last,
             );
@@ -175,6 +174,8 @@ class AuthService extends ChangeNotifier {
             debugPrint('❌ خطأ في إرسال إشعار الترحيب: $e');
           }
         }
+
+        debugPrint('✅ تم تسجيل الدخول بنجاح للمستخدم: ${userData?.id}');
 
         return userData;
       }
