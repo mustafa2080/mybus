@@ -15,7 +15,9 @@ import '../models/supervisor_assignment_model.dart';
 import '../models/student_behavior_model.dart';
 import '../models/supervisor_evaluation_model.dart';
 import '../models/parent_student_link_model.dart';
+import '../models/notification_model.dart';
 import 'notification_service.dart';
+import 'user_notification_service.dart';
 import 'event_trigger_service.dart';
 import 'rate_limit_service.dart';
 import 'cache_service.dart';
@@ -556,8 +558,9 @@ class DatabaseService {
       }
 
       if (changes.isNotEmpty) {
-        // تم حذف نظام الإشعارات
-        debugPrint('✅ Student info updated (notifications disabled)');
+        // إرسال إشعار لولي الأمر عن التحديثات
+        await _sendStudentInfoUpdateNotification(studentId, changes);
+        debugPrint('✅ Student info updated and notification sent');
       }
 
     } catch (e) {
@@ -599,7 +602,8 @@ class DatabaseService {
         final supervisorName = currentUserDoc.exists ?
           (currentUserDoc.data()?['name'] ?? 'مشرف') : 'مشرف';
 
-        // تم حذف نظام الإشعارات
+        // إرسال إشعار لولي الأمر عن تغيير حالة الطالب
+        await _sendStudentStatusUpdateNotification(studentId, oldStatus, newStatus, supervisorName);
       }
 
       // Invalidate cache for this student
@@ -4629,6 +4633,112 @@ class DatabaseService {
     }
   }
 
-  /// تم حذف نظام الإشعارات
+  /// إرسال إشعار لولي الأمر عن تحديث معلومات الطالب
+  Future<void> _sendStudentInfoUpdateNotification(String studentId, List<String> changes) async {
+    try {
+      final studentDoc = await _firestore.collection('students').doc(studentId).get();
+      if (!studentDoc.exists) return;
+
+      final studentData = studentDoc.data()!;
+      final parentId = studentData['parentId'] as String?;
+      final studentName = studentData['name'] as String? ?? 'الطالب';
+
+      if (parentId == null || parentId.isEmpty) return;
+
+      final changesText = changes.join('\n• ');
+
+      await UserNotificationService().createNotification(
+        recipientId: parentId,
+        title: '📝 تحديث معلومات $studentName',
+        body: 'تم تحديث المعلومات التالية:\n• $changesText',
+        type: NotificationType.studentDataUpdate,
+        priority: NotificationPriority.medium,
+        data: {
+          'studentId': studentId,
+          'studentName': studentName,
+          'changes': changes,
+          'timestamp': DateTime.now().toIso8601String(),
+        },
+      );
+
+      debugPrint('✅ تم إرسال إشعار تحديث المعلومات لولي الأمر: $parentId');
+    } catch (e) {
+      debugPrint('❌ خطأ في إرسال إشعار تحديث المعلومات: $e');
+    }
+  }
+
+  /// إرسال إشعار لولي الأمر عن تغيير حالة الطالب
+  Future<void> _sendStudentStatusUpdateNotification(
+    String studentId,
+    String oldStatus,
+    String newStatus,
+    String supervisorName,
+  ) async {
+    try {
+      final studentDoc = await _firestore.collection('students').doc(studentId).get();
+      if (!studentDoc.exists) return;
+
+      final studentData = studentDoc.data()!;
+      final parentId = studentData['parentId'] as String?;
+      final studentName = studentData['name'] as String? ?? 'الطالب';
+
+      if (parentId == null || parentId.isEmpty) return;
+
+      // تحويل الحالة إلى نص مفهوم
+      String getStatusText(String status) {
+        switch (status) {
+          case 'home': return 'في المنزل';
+          case 'onBus': return 'في الحافلة';
+          case 'atSchool': return 'في المدرسة';
+          case 'absent': return 'غائب';
+          default: return status;
+        }
+      }
+
+      final oldStatusText = getStatusText(oldStatus);
+      final newStatusText = getStatusText(newStatus);
+
+      // تحديد نوع الإشعار حسب الحالة الجديدة
+      NotificationType notificationType;
+      String emoji;
+      switch (newStatus) {
+        case 'onBus':
+          notificationType = NotificationType.studentBoarded;
+          emoji = '🚌';
+          break;
+        case 'atSchool':
+          notificationType = NotificationType.studentAtSchool;
+          emoji = '🏫';
+          break;
+        case 'home':
+          notificationType = NotificationType.studentAtHome;
+          emoji = '🏠';
+          break;
+        default:
+          notificationType = NotificationType.studentStatusUpdate;
+          emoji = '📍';
+      }
+
+      await UserNotificationService().createNotification(
+        recipientId: parentId,
+        title: '$emoji تحديث حالة $studentName',
+        body: 'تم تغيير حالة $studentName من "$oldStatusText" إلى "$newStatusText"\n\nبواسطة: $supervisorName',
+        type: notificationType,
+        priority: NotificationPriority.high,
+        data: {
+          'studentId': studentId,
+          'studentName': studentName,
+          'oldStatus': oldStatus,
+          'newStatus': newStatus,
+          'supervisorName': supervisorName,
+          'timestamp': DateTime.now().toIso8601String(),
+        },
+      );
+
+      debugPrint('✅ تم إرسال إشعار تغيير الحالة لولي الأمر: $parentId');
+    } catch (e) {
+      debugPrint('❌ خطأ في إرسال إشعار تغيير الحالة: $e');
+    }
+  }
 
 }

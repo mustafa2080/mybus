@@ -10,6 +10,8 @@ import '../../utils/permissions_helper.dart';
 import '../../models/student_model.dart';
 import '../../models/trip_model.dart';
 import '../../models/supervisor_assignment_model.dart';
+import '../../models/notification_model.dart';
+import '../../services/user_notification_service.dart';
 import '../../widgets/custom_button.dart';
 
 class QRScannerScreen extends StatefulWidget {
@@ -904,33 +906,64 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
 
   Future<void> _sendCustomNotificationWithSound(StudentModel student, TripAction action) async {
     final currentUser = _authService.currentUser;
-    final supervisorId = currentUser?.uid ?? '';
+    final supervisorName = currentUser?.displayName ??
+                          currentUser?.email?.split('@').first ??
+                          'مشرف النقل';
 
-    switch (action) {
-      case TripAction.boardBus:
-      case TripAction.boardBusToSchool:
-      case TripAction.boardBusToHome:
-        // await _notificationService.notifyStudentBoardedWithSound(
-        //   studentId: student.id,
-        //   studentName: student.name,
-        //   busId: student.busRoute,
-        //   parentId: student.parentId,
-        //   supervisorId: supervisorId,
-        // );
-        debugPrint('✅ Student boarded notification (disabled)');
-        break;
-      case TripAction.leaveBus:
-      case TripAction.arriveAtSchool:
-      case TripAction.arriveAtHome:
-        // await _notificationService.notifyStudentAlightedWithSound(
-        //   studentId: student.id,
-        //   studentName: student.name,
-        //   busId: student.busRoute,
-        //   parentId: student.parentId,
-        //   supervisorId: supervisorId,
-        // );
-        debugPrint('✅ Student alighted notification (disabled)');
-        break;
+    if (student.parentId.isEmpty) {
+      debugPrint('⚠️ لا يوجد ولي أمر مرتبط بالطالب ${student.name}');
+      return;
+    }
+
+    try {
+      String title, body, emoji;
+      NotificationType notificationType;
+
+      switch (action) {
+        case TripAction.boardBus:
+        case TripAction.boardBusToSchool:
+        case TripAction.boardBusToHome:
+          emoji = '🚌';
+          title = '$emoji ${student.name} ركب الحافلة';
+          body = 'ركب ${student.name} الحافلة الآن\n\nالمشرف: $supervisorName\nالوقت: ${DateTime.now().toString().substring(11, 16)}';
+          notificationType = NotificationType.studentBoarded;
+          break;
+
+        case TripAction.leaveBus:
+        case TripAction.arriveAtSchool:
+          emoji = '🏫';
+          title = '$emoji ${student.name} وصل للمدرسة';
+          body = 'وصل ${student.name} للمدرسة بأمان\n\nالمشرف: $supervisorName\nالوقت: ${DateTime.now().toString().substring(11, 16)}';
+          notificationType = NotificationType.studentAtSchool;
+          break;
+
+        case TripAction.arriveAtHome:
+          emoji = '🏠';
+          title = '$emoji ${student.name} وصل للمنزل';
+          body = 'وصل ${student.name} للمنزل بأمان\n\nالمشرف: $supervisorName\nالوقت: ${DateTime.now().toString().substring(11, 16)}';
+          notificationType = NotificationType.studentAtHome;
+          break;
+      }
+
+      await UserNotificationService().createNotification(
+        recipientId: student.parentId,
+        title: title,
+        body: body,
+        type: notificationType,
+        priority: NotificationPriority.high,
+        data: {
+          'studentId': student.id,
+          'studentName': student.name,
+          'action': action.toString(),
+          'supervisorName': supervisorName,
+          'busId': student.busId,
+          'timestamp': DateTime.now().toIso8601String(),
+        },
+      );
+
+      debugPrint('✅ تم إرسال إشعار ${action.toString()} لولي الأمر: ${student.parentId}');
+    } catch (e) {
+      debugPrint('❌ خطأ في إرسال إشعار QR: $e');
     }
   }
 

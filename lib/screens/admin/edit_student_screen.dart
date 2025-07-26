@@ -4,7 +4,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/student_model.dart';
 import '../../models/bus_model.dart';
+import '../../models/notification_model.dart';
 import '../../services/database_service.dart';
+import '../../services/user_notification_service.dart';
 
 import '../../utils/app_constants.dart';
 
@@ -21,6 +23,7 @@ class EditStudentScreen extends StatefulWidget {
 class _EditStudentScreenState extends State<EditStudentScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final DatabaseService _databaseService = DatabaseService();
+  final UserNotificationService _userNotificationService = UserNotificationService();
 
 
   final _formKey = GlobalKey<FormState>();
@@ -909,21 +912,74 @@ class _EditStudentScreenState extends State<EditStudentScreen> {
       final adminDoc = await _firestore.collection('users').doc(currentUser.uid).get();
       final adminName = adminDoc.data()?['name'] ?? 'الإدارة';
 
-      // إرسال الإشعارات (باستثناء الإدمن الحالي)
-      // await _notificationService.notifyStudentDataUpdate(
-      //   studentId: updatedStudent.id,
-      //   studentName: updatedStudent.name,
-      //   parentId: updatedStudent.parentId,
-      //   busId: updatedStudent.busId,
-      //   updatedFields: updatedFields,
-      //   adminName: adminName,
-      //   adminId: currentUser.uid, // استبعاد الإدمن الحالي من الإشعارات
-      // );
-      debugPrint('✅ Student data update notification (disabled)');
+      // إرسال إشعار لولي الأمر عن تحديث بيانات الطالب
+      await _sendParentNotification(updatedStudent, updatedFields, adminName);
+
+      debugPrint('✅ Student data update notification sent');
 
       debugPrint('✅ Update notifications sent successfully');
     } catch (e) {
       debugPrint('❌ Error sending update notifications: $e');
+    }
+  }
+
+  /// إرسال إشعار لولي الأمر عن تحديث بيانات الطالب
+  Future<void> _sendParentNotification(
+    StudentModel student,
+    Map<String, dynamic> updatedFields,
+    String adminName,
+  ) async {
+    try {
+      if (student.parentId.isEmpty) {
+        debugPrint('⚠️ لا يوجد ولي أمر مرتبط بالطالب');
+        return;
+      }
+
+      // تحضير رسالة التحديث
+      final List<String> changes = [];
+      updatedFields.forEach((field, value) {
+        switch (field) {
+          case 'name':
+            changes.add('الاسم: ${value['new']}');
+            break;
+          case 'grade':
+            changes.add('الصف: ${value['new']}');
+            break;
+          case 'busId':
+            changes.add('الحافلة: ${value['new']}');
+            break;
+          case 'address':
+            changes.add('العنوان: تم تحديثه');
+            break;
+          case 'parentPhone':
+            changes.add('رقم الهاتف: تم تحديثه');
+            break;
+          default:
+            changes.add('${field}: تم تحديثه');
+        }
+      });
+
+      final changesText = changes.join('\n• ');
+
+      // إرسال الإشعار
+      await _userNotificationService.createNotification(
+        recipientId: student.parentId,
+        title: '📝 تحديث بيانات ${student.name}',
+        body: 'تم تحديث البيانات التالية:\n• $changesText\n\nبواسطة: $adminName',
+        type: NotificationType.studentDataUpdate,
+        priority: NotificationPriority.medium,
+        data: {
+          'studentId': student.id,
+          'studentName': student.name,
+          'updatedFields': updatedFields,
+          'adminName': adminName,
+          'timestamp': DateTime.now().toIso8601String(),
+        },
+      );
+
+      debugPrint('✅ تم إرسال إشعار التحديث لولي الأمر: ${student.parentId}');
+    } catch (e) {
+      debugPrint('❌ خطأ في إرسال إشعار ولي الأمر: $e');
     }
   }
 

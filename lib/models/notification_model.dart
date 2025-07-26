@@ -21,6 +21,8 @@ enum NotificationType {
   studentAtHome,         // وصل للمنزل
   studentRemoved,        // حذف الطالب
   busRouteChanged,       // تغيير خط السير
+  studentDataUpdate,     // تحديث بيانات الطالب
+  studentStatusUpdate,   // تحديث حالة الطالب
   
   // إشعارات المشرفين
   assignedToBus,         // تعيين في باص
