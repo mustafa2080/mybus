@@ -38,7 +38,8 @@ class UserNotificationService {
             // فلترة في الذاكرة إذا كانت مطلوبة
             if (unreadOnly) {
               notifications = notifications.where((notification) {
-                return notification['isRead'] == false;
+                final status = notification['status'] as String?;
+                return status != null && ['pending', 'sent', 'delivered'].contains(status);
               }).toList();
             }
 
@@ -90,7 +91,8 @@ class UserNotificationService {
             // فلترة في الذاكرة لتجنب مشاكل الفهارس
             return snapshot.docs.where((doc) {
               final data = doc.data() as Map<String, dynamic>;
-              return data['isRead'] == false;
+              final status = data['status'] as String?;
+              return status != null && ['pending', 'sent', 'delivered'].contains(status);
             }).length;
           })
           .handleError((error) {
@@ -115,15 +117,17 @@ class UserNotificationService {
             final adminNotifications = snapshot.docs.where((doc) {
               final data = doc.data() as Map<String, dynamic>;
               final type = data['type'] as String?;
-              final isRead = data['isRead'] as bool? ?? true;
+              final status = data['status'] as String?;
 
-              return !isRead && [
-                'newComplaint',
-                'newStudent',
-                'studentAbsence',
-                'newParentAccount',
-                'studentBehaviorReport'
-              ].contains(type);
+              return status != null &&
+                     ['pending', 'sent', 'delivered'].contains(status) &&
+                     [
+                       'newComplaint',
+                       'newStudent',
+                       'studentAbsence',
+                       'newParentAccount',
+                       'studentBehaviorReport'
+                     ].contains(type);
             }).toList();
 
             return adminNotifications.length;
@@ -144,7 +148,10 @@ class UserNotificationService {
       await _firestore
           .collection('notifications')
           .doc(notificationId)
-          .update({'isRead': true, 'readAt': FieldValue.serverTimestamp()});
+          .update({
+            'status': 'read',
+            'readAt': FieldValue.serverTimestamp()
+          });
     } catch (e) {
       print('خطأ في تحديد الإشعار كمقروء: $e');
     }
@@ -156,20 +163,28 @@ class UserNotificationService {
 
     try {
       final batch = _firestore.batch();
+      // استعلام بسيط بدون فلترة معقدة
       final notifications = await _firestore
           .collection('notifications')
           .where('recipientId', isEqualTo: currentUserId)
-          .where('isRead', isEqualTo: false)
           .get();
 
-      for (final doc in notifications.docs) {
+      // فلترة في الذاكرة للإشعارات غير المقروءة
+      final unreadDocs = notifications.docs.where((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        final status = data['status'] as String?;
+        return status != null && ['pending', 'sent', 'delivered'].contains(status);
+      }).toList();
+
+      for (final doc in unreadDocs) {
         batch.update(doc.reference, {
-          'isRead': true,
+          'status': 'read',
           'readAt': FieldValue.serverTimestamp()
         });
       }
 
       await batch.commit();
+      print('✅ تم تحديد ${unreadDocs.length} إشعار كمقروء');
     } catch (e) {
       print('خطأ في تحديد جميع الإشعارات كمقروءة: $e');
     }
@@ -241,7 +256,6 @@ class UserNotificationService {
           'status': 'pending',
           'channels': ['fcm', 'inApp'],
           'data': data ?? {},
-          'isRead': false,
           'createdAt': FieldValue.serverTimestamp(),
           'requiresSound': false,
           'requiresVibration': false,
@@ -279,17 +293,25 @@ class UserNotificationService {
 
     try {
       final batch = _firestore.batch();
+      // استعلام بسيط بدون فلترة معقدة
       final notifications = await _firestore
           .collection('notifications')
           .where('recipientId', isEqualTo: currentUserId)
-          .where('isRead', isEqualTo: true)
           .get();
 
-      for (final doc in notifications.docs) {
+      // فلترة في الذاكرة للإشعارات المقروءة
+      final readDocs = notifications.docs.where((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        final status = data['status'] as String?;
+        return status == 'read';
+      }).toList();
+
+      for (final doc in readDocs) {
         batch.delete(doc.reference);
       }
 
       await batch.commit();
+      print('✅ تم حذف ${readDocs.length} إشعار مقروء');
     } catch (e) {
       print('خطأ في حذف الإشعارات المقروءة: $e');
     }

@@ -49,5 +49,16 @@
 	<string>يحتاج التطبيق إلى الكاميرا لمسح رموز QR الخاصة بالطلاب</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>يحتاج التطبيق إلى الوصول لمعرض الصور لاختيار صور الطلاب</string>
+
+	<!-- إعدادات الإشعارات في الخلفية -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>background-fetch</string>
+		<string>remote-notification</string>
+	</array>
+
+	<!-- إعدادات Firebase -->
+	<key>FirebaseAppDelegateProxyEnabled</key>
+	<false/>
 </dict>
 </plist>

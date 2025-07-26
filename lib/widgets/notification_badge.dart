@@ -42,7 +42,8 @@ class NotificationBadge extends StatelessWidget {
           // فلترة الإشعارات غير المقروءة في الذاكرة
           unreadCount = snapshot.data!.docs.where((doc) {
             final data = doc.data() as Map<String, dynamic>;
-            return data['isRead'] == false;
+            final status = data['status'] as String?;
+            return status != null && ['pending', 'sent', 'delivered'].contains(status);
           }).length;
         }
 
@@ -123,15 +124,17 @@ class AdminNotificationBadge extends StatelessWidget {
           final adminNotifications = snapshot.data!.docs.where((doc) {
             final data = doc.data() as Map<String, dynamic>;
             final type = data['type'] as String?;
-            final isRead = data['isRead'] as bool? ?? true;
+            final status = data['status'] as String?;
 
-            return !isRead && [
-              'newComplaint',
-              'newStudent',
-              'studentAbsence',
-              'newParentAccount',
-              'studentBehaviorReport'
-            ].contains(type);
+            return status != null &&
+                   ['pending', 'sent', 'delivered'].contains(status) &&
+                   [
+                     'newComplaint',
+                     'newStudent',
+                     'studentAbsence',
+                     'newParentAccount',
+                     'studentBehaviorReport'
+                   ].contains(type);
           }).toList();
 
           unreadCount = adminNotifications.length;

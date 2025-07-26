@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
@@ -8,8 +9,23 @@ import 'services/auth_service.dart';
 import 'services/database_service.dart';
 import 'services/theme_service.dart';
 import 'services/notification_system_initializer.dart';
+import 'services/firebase_messaging_service.dart';
 import 'utils/app_constants.dart';
 import 'utils/app_validator.dart';
+
+/// معالج الإشعارات في الخلفية - يجب أن يكون دالة عامة في المستوى الأعلى
+@pragma('vm:entry-point')
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  // تهيئة Firebase للخلفية
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  print('📱 استلام إشعار في الخلفية: ${message.messageId}');
+  print('📱 العنوان: ${message.notification?.title}');
+  print('📱 المحتوى: ${message.notification?.body}');
+
+  // معالجة الإشعار في الخلفية
+  await FirebaseMessagingService.handleBackgroundMessage(message);
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -20,6 +36,10 @@ void main() async {
       options: DefaultFirebaseOptions.currentPlatform,
     );
     print('✅ Firebase initialized successfully');
+
+    // تسجيل معالج الإشعارات في الخلفية
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+    print('✅ Background message handler registered');
 
     // طباعة معلومات التطبيق
     AppValidator.printAppInfo();

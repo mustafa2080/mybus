@@ -601,9 +601,19 @@ class NotificationService {
     return _firestore
         .collection('notifications')
         .where('recipientId', isEqualTo: userId)
-        .where('status', whereIn: ['pending', 'sent', 'delivered'])
         .snapshots()
-        .map((snapshot) => snapshot.docs.length);
+        .map((snapshot) {
+          // فلترة في الذاكرة لتجنب مشاكل الفهارس
+          return snapshot.docs.where((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            final status = data['status'] as String?;
+            return status != null && ['pending', 'sent', 'delivered'].contains(status);
+          }).length;
+        })
+        .handleError((error) {
+          debugPrint('❌ خطأ في عدد الإشعارات غير المقروءة: $error');
+          return 0;
+        });
   }
 
   /// الحصول على الإشعارات للمستخدم
@@ -611,12 +621,27 @@ class NotificationService {
     return _firestore
         .collection('notifications')
         .where('recipientId', isEqualTo: userId)
-        .orderBy('createdAt', descending: true)
-        .limit(limit)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => NotificationModel.fromMap(doc.data()))
-            .toList());
+        .map((snapshot) {
+          // تحويل البيانات وترتيبها في الذاكرة
+          var notifications = snapshot.docs
+              .map((doc) => NotificationModel.fromMap(doc.data()))
+              .toList();
+
+          // ترتيب حسب التاريخ (الأحدث أولاً)
+          notifications.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+
+          // تحديد العدد المطلوب
+          if (notifications.length > limit) {
+            notifications = notifications.take(limit).toList();
+          }
+
+          return notifications;
+        })
+        .handleError((error) {
+          debugPrint('❌ خطأ في تحميل إشعارات المستخدم: $error');
+          return <NotificationModel>[];
+        });
   }
 
   /// تحديد الإشعار كمقروء
@@ -638,13 +663,20 @@ class NotificationService {
   Future<bool> markAllNotificationsAsRead(String userId) async {
     try {
       final batch = _firestore.batch();
+      // استعلام بسيط بدون whereIn لتجنب مشاكل الفهارس
       final snapshot = await _firestore
           .collection('notifications')
           .where('recipientId', isEqualTo: userId)
-          .where('status', whereIn: ['pending', 'sent', 'delivered'])
           .get();
 
-      for (final doc in snapshot.docs) {
+      // فلترة في الذاكرة للحالات المطلوبة
+      final docsToUpdate = snapshot.docs.where((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        final status = data['status'] as String?;
+        return status != null && ['pending', 'sent', 'delivered'].contains(status);
+      }).toList();
+
+      for (final doc in docsToUpdate) {
         batch.update(doc.reference, {
           'status': 'read',
           'readAt': FieldValue.serverTimestamp(),
@@ -652,6 +684,7 @@ class NotificationService {
       }
 
       await batch.commit();
+      debugPrint('✅ تم تحديد ${docsToUpdate.length} إشعار كمقروء');
       return true;
     } catch (e) {
       debugPrint('❌ خطأ في تحديد جميع الإشعارات كمقروءة: $e');

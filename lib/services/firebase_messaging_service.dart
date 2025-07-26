@@ -205,8 +205,8 @@ class FirebaseMessagingService {
     // معالج الرسائل في المقدمة
     FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
 
-    // معالج الرسائل في الخلفية
-    FirebaseMessaging.onBackgroundMessage(_handleBackgroundMessage);
+    // ملاحظة: معالج الخلفية مسجل في main.dart
+    // FirebaseMessaging.onBackgroundMessage يجب أن يكون في المستوى الأعلى
 
     // معالج فتح التطبيق من الإشعار
     FirebaseMessaging.onMessageOpenedApp.listen(_handleMessageOpenedApp);
@@ -253,24 +253,33 @@ class FirebaseMessagingService {
   }
 
   /// معالج الرسائل في الخلفية (دالة عامة)
-  static Future<void> _handleBackgroundMessage(RemoteMessage message) async {
-    debugPrint('📱 استلام رسالة في الخلفية: ${message.messageId}');
-    
+  static Future<void> handleBackgroundMessage(RemoteMessage message) async {
+    print('📱 معالجة إشعار في الخلفية: ${message.messageId}');
+
     try {
-      // معالجة بسيطة للخلفية - حفظ في قاعدة البيانات فقط
+      // حفظ الإشعار في قاعدة البيانات
       final firestore = FirebaseFirestore.instance;
-      
-      await firestore.collection('notifications').add({
+
+      final notificationData = {
         'messageId': message.messageId,
         'title': message.notification?.title ?? '',
         'body': message.notification?.body ?? '',
         'data': message.data,
         'receivedAt': FieldValue.serverTimestamp(),
         'status': 'delivered_background',
-      });
+        'recipientId': message.data['recipientId'] ?? '',
+        'type': message.data['type'] ?? 'general',
+        'priority': message.data['priority'] ?? 'medium',
+      };
+
+      await firestore.collection('notifications').add(notificationData);
+      print('✅ تم حفظ الإشعار في قاعدة البيانات');
+
+      // ملاحظة: الإشعار سيظهر تلقائياً في شريط الإشعارات
+      // بواسطة Firebase Messaging بدون تدخل إضافي
 
     } catch (e) {
-      debugPrint('❌ خطأ في معالجة رسالة الخلفية: $e');
+      print('❌ خطأ في معالجة رسالة الخلفية: $e');
     }
   }
 
