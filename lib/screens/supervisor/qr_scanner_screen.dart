@@ -3,7 +3,7 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/database_service.dart';
-import '../../services/notification_service.dart';
+
 import '../../services/auth_service.dart';
 import '../../services/connectivity_service.dart';
 import '../../utils/permissions_helper.dart';
@@ -22,7 +22,7 @@ class QRScannerScreen extends StatefulWidget {
 class _QRScannerScreenState extends State<QRScannerScreen> {
   MobileScannerController controller = MobileScannerController();
   final DatabaseService _databaseService = DatabaseService();
-  final NotificationService _notificationService = NotificationService();
+
   final AuthService _authService = AuthService();
   final ConnectivityService _connectivityService = ConnectivityService();
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -988,17 +988,8 @@ class _QRScannerScreenState extends State<QRScannerScreen> {
           break;
 
         default:
-          // إشعار عام للحالات الأخرى
-          await _notificationService.sendGeneralNotification(
-            title: 'تحديث حالة ${student.name}',
-            body: 'تم تحديث حالة ${student.name} بواسطة $supervisorName في ${_formatTime(timestamp)}',
-            recipientId: student.parentId,
-            data: {
-              'studentId': student.id,
-              'action': action.toString().split('.').last,
-              'timestamp': timestamp.toIso8601String(),
-            },
-          );
+          // تم حذف نظام الإشعارات
+          debugPrint('✅ Student status updated (notifications disabled)');
       }
 
       debugPrint('✅ Notification sent for action: $action');

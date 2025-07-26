@@ -211,49 +211,7 @@
                             </button>
                         </div>
 
-                        <!-- Notifications -->
-                        <div class="nav-item me-3 d-none d-md-block">
-                            <div class="dropdown">
-                                <button class="btn btn-outline-secondary position-relative"
-                                        id="notificationsDropdown" data-bs-toggle="dropdown" aria-expanded="false"
-                                        title="الإشعارات">
-                                    <i class="fas fa-bell"></i>
-                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
-                                          id="navNotificationBadge" style="display: none;">
-                                        0
-                                        <span class="visually-hidden">إشعارات جديدة</span>
-                                    </span>
-                                </button>
-                                <ul class="dropdown-menu dropdown-menu-end notifications-dropdown" style="width: 350px; max-height: 400px; overflow-y: auto;">
-                                    <li class="dropdown-header d-flex justify-content-between align-items-center">
-                                        <span>الإشعارات</span>
-                                        <div>
-                                            <button class="btn btn-sm btn-link text-primary p-0 me-2" onclick="markAllNotificationsAsRead()" title="تحديد الكل كمقروء">
-                                                <i class="fas fa-check-double"></i>
-                                            </button>
-                                            <button class="btn btn-sm btn-link text-secondary p-0" onclick="openNotifications()" title="عرض جميع الإشعارات">
-                                                <i class="fas fa-external-link-alt"></i>
-                                            </button>
-                                        </div>
-                                    </li>
-                                    <li><hr class="dropdown-divider"></li>
-                                    <div id="notificationsDropdownContent">
-                                        <li class="text-center py-3">
-                                            <div class="spinner-border spinner-border-sm text-primary" role="status">
-                                                <span class="visually-hidden">جاري التحميل...</span>
-                                            </div>
-                                            <p class="mt-2 mb-0 text-muted small">جاري تحميل الإشعارات...</p>
-                                        </li>
-                                    </div>
-                                    <li><hr class="dropdown-divider"></li>
-                                    <li class="text-center">
-                                        <button class="btn btn-sm btn-primary" onclick="openNotifications()">
-                                            عرض جميع الإشعارات
-                                        </button>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
+                        <!-- تم حذف نظام الإشعارات -->
 
                         <!-- User Dropdown -->
                         <div class="nav-item dropdown">
@@ -289,13 +247,7 @@
                                         <span>الإعدادات</span>
                                     </button>
                                 </li>
-                                <li>
-                                    <button class="dropdown-item" onclick="openNotifications()">
-                                        <i class="fas fa-bell"></i>
-                                        <span>الإشعارات</span>
-                                        <span class="badge bg-danger ms-auto" id="notificationCount">3</span>
-                                    </button>
-                                </li>
+                                <!-- تم حذف نظام الإشعارات -->
                                 <li>
                                     <button class="dropdown-item" onclick="openHelp()">
                                         <i class="fas fa-question-circle"></i>

@@ -465,37 +465,7 @@ const FirebaseService = {
         }
     },
 
-    // Notifications
-    async getNotifications(limit = 50) {
-        try {
-            console.log('🔔 Fetching notifications...');
-            const snapshot = await db.collection('notifications')
-                .orderBy('timestamp', 'desc')
-                .limit(limit)
-                .get();
-
-            const notifications = snapshot.docs.map(doc => {
-                const data = doc.data();
-                return {
-                    id: doc.id,
-                    title: data.title || 'إشعار',
-                    body: data.body || data.message || '',
-                    recipientId: data.recipientId || data.userId || '',
-                    studentId: data.studentId || '',
-                    studentName: data.studentName || '',
-                    type: data.type || 'general',
-                    timestamp: data.timestamp,
-                    isRead: data.isRead || false
-                };
-            });
-
-            console.log('✅ Notifications fetched:', notifications.length);
-            return notifications;
-        } catch (error) {
-            console.error('❌ Error getting notifications:', error);
-            return [];
-        }
-    },
+    // تم حذف نظام الإشعارات
 
     // Buses
     async getBuses() {
@@ -1217,35 +1187,7 @@ const FirebaseService = {
         }
     },
 
-    // Send notification to parent
-    async sendNotificationToParent(parentId, notificationData) {
-        try {
-            console.log('📤 Sending notification to parent:', parentId);
-
-            const notification = {
-                title: notificationData.title,
-                body: notificationData.body,
-                type: notificationData.type || 'general',
-                recipientId: parentId,
-                recipientType: 'parent',
-                senderId: firebase.auth().currentUser?.uid || 'admin',
-                senderEmail: firebase.auth().currentUser?.email || 'admin@mybus.com',
-                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                isRead: false,
-                priority: notificationData.priority || 'normal',
-                data: notificationData.data || {},
-                status: 'sent'
-            };
-
-            const notificationRef = await db.collection('notifications').add(notification);
-            console.log('✅ Notification sent successfully');
-
-            return { success: true, notificationId: notificationRef.id };
-        } catch (error) {
-            console.error('❌ Error sending notification:', error);
-            return { success: false, error: error.message };
-        }
-    },
+    // تم حذف نظام الإشعارات
 
     // Real-time listeners
     onStudentsChange(callback) {
@@ -1442,90 +1384,7 @@ const FirebaseService = {
         }
     },
 
-    // Real notification functions
-    async sendNotification(notificationData) {
-        try {
-            console.log('📤 Sending notification:', notificationData);
-
-            const notification = {
-                title: notificationData.title,
-                body: notificationData.body,
-                type: notificationData.type || 'general',
-                recipientId: notificationData.recipientId,
-                recipientType: notificationData.recipientType || 'user',
-                senderId: firebase.auth().currentUser?.uid || 'system',
-                senderEmail: firebase.auth().currentUser?.email || 'system',
-                timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                isRead: false,
-                priority: notificationData.priority || 'normal',
-                data: notificationData.data || {},
-                status: 'sent'
-            };
-
-            const notificationRef = await db.collection('notifications').add(notification);
-            console.log('✅ Notification sent with ID:', notificationRef.id);
-
-            return { success: true, notificationId: notificationRef.id };
-        } catch (error) {
-            console.error('❌ Error sending notification:', error);
-            return { success: false, error: error.message };
-        }
-    },
-
-    async sendBulkNotifications(recipients, notificationData) {
-        try {
-            console.log('📤 Sending bulk notifications to', recipients.length, 'recipients');
-
-            const batch = db.batch();
-            const notificationIds = [];
-
-            recipients.forEach(recipient => {
-                const notificationRef = db.collection('notifications').doc();
-                notificationIds.push(notificationRef.id);
-
-                const notification = {
-                    title: notificationData.title,
-                    body: notificationData.body,
-                    type: notificationData.type || 'general',
-                    recipientId: recipient.id,
-                    recipientType: recipient.type || 'user',
-                    recipientName: recipient.name || 'مستخدم',
-                    senderId: firebase.auth().currentUser?.uid || 'system',
-                    senderEmail: firebase.auth().currentUser?.email || 'system',
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp(),
-                    isRead: false,
-                    priority: notificationData.priority || 'normal',
-                    data: notificationData.data || {},
-                    status: 'sent'
-                };
-
-                batch.set(notificationRef, notification);
-            });
-
-            await batch.commit();
-            console.log('✅ Bulk notifications sent:', notificationIds.length);
-
-            return { success: true, notificationIds: notificationIds };
-        } catch (error) {
-            console.error('❌ Error sending bulk notifications:', error);
-            return { success: false, error: error.message };
-        }
-    },
-
-    async markNotificationAsRead(notificationId) {
-        try {
-            await db.collection('notifications').doc(notificationId).update({
-                isRead: true,
-                readAt: firebase.firestore.FieldValue.serverTimestamp(),
-                readBy: firebase.auth().currentUser?.uid || 'user'
-            });
-
-            return { success: true };
-        } catch (error) {
-            console.error('❌ Error marking notification as read:', error);
-            return { success: false, error: error.message };
-        }
-    }
+    // تم حذف نظام الإشعارات
 };
 
 // Auth state management

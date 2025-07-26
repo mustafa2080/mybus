@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../services/auth_service.dart';
 import '../../services/database_service.dart';
 import '../../services/storage_service.dart';
-import '../../services/notification_service.dart';
+
 import '../../models/complaint_model.dart';
 import '../../models/student_model.dart';
 import '../../widgets/custom_button.dart';
@@ -572,14 +572,7 @@ class _AddComplaintScreenState extends State<AddComplaintScreen> {
       // Save to database
       await _databaseService.addComplaint(complaint);
 
-      // إرسال إشعار للإدارة مع الصوت
-      await NotificationService().notifyNewComplaintWithSound(
-        complaintId: complaint.id,
-        parentId: currentUser.uid,
-        parentName: parentData['name'] ?? 'ولي أمر',
-        subject: _titleController.text.trim(),
-        category: _selectedType.toString().split('.').last,
-      );
+      // تم حذف نظام الإشعارات
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

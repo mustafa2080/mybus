@@ -35,12 +35,7 @@ class AppConstants {
   static const String boardBusAction = 'boardBus';
   static const String leaveBusAction = 'leaveBus';
 
-  // Notification Types
-  static const String studentBoardedNotification = 'studentBoarded';
-  static const String studentLeftNotification = 'studentLeft';
-  static const String tripStartedNotification = 'tripStarted';
-  static const String tripEndedNotification = 'tripEnded';
-  static const String generalNotification = 'general';
+  // تم حذف أنواع الإشعارات
 
   // Validation
   static const int minPasswordLength = 6;

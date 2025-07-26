@@ -29,10 +29,8 @@ class AppConfig {
   static const Duration cacheTimeout = Duration(minutes: 30);
   static const int maxRetryAttempts = 3;
   
-  // إعدادات الإشعارات
-  static const bool enablePushNotifications = true;
+  // تم حذف إعدادات الإشعارات
   static const bool enableEmailNotifications = true;
-  static const bool enableSMSNotifications = false;
   
   // إعدادات التشفير
   static const String encryptionAlgorithm = 'AES-256';

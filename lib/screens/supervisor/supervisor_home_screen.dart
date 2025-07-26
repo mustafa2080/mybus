@@ -5,7 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import '../../services/auth_service.dart';
 import '../../services/database_service.dart';
-import '../../services/notification_service.dart';
+
 import '../../models/absence_model.dart';
 import '../../models/bus_model.dart';
 import '../../models/student_model.dart';
@@ -28,7 +28,7 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
     with TickerProviderStateMixin {
   final AuthService _authService = AuthService();
   final DatabaseService _databaseService = DatabaseService();
-  final NotificationService _notificationService = NotificationService();
+
 
   final bool _isLoading = false;
   late Stream<List<StudentModel>> _studentsOnBusStream;

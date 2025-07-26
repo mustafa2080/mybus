@@ -1,19 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:provider/provider.dart';
 import 'firebase_options.dart';
 import 'routes/app_routes.dart';
 import 'services/auth_service.dart';
 import 'services/database_service.dart';
-import 'services/notification_service.dart';
-import 'services/enhanced_notification_service.dart';
-import 'services/unified_notification_service.dart';
-// تم حذف الخدمات المتكررة واستبدالها بالخدمة الموحدة
-import 'services/fcm_service.dart';
-import 'services/fcm_background_handler.dart';
 import 'services/theme_service.dart';
+import 'services/notification_system_initializer.dart';
 import 'utils/app_constants.dart';
 import 'utils/app_validator.dart';
 
@@ -27,26 +21,6 @@ void main() async {
     );
     print('✅ Firebase initialized successfully');
 
-    // تسجيل معالج الرسائل في الخلفية
-    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-    print('✅ Background message handler registered');
-
-    // تهيئة خدمة FCM المتكاملة
-    await FCMService().initialize();
-    print('✅ FCM service initialized');
-
-    // تهيئة خدمة الإشعارات
-    await NotificationService().initialize();
-    print('✅ Notification service initialized');
-
-    // تهيئة الخدمة الموحدة للإشعارات
-    await UnifiedNotificationService().initialize();
-    print('✅ Unified notification service initialized');
-
-    // تهيئة خدمة الإشعارات المحسنة
-    await EnhancedNotificationService().initialize();
-    print('✅ Enhanced notification service initialized');
-
     // طباعة معلومات التطبيق
     AppValidator.printAppInfo();
 
@@ -56,6 +30,14 @@ void main() async {
       print('✅ App health check passed');
     } else {
       print('⚠️ App health check failed');
+    }
+
+    // تهيئة نظام الإشعارات
+    try {
+      await initializeNotificationSystem();
+      print('✅ Notification system initialized successfully');
+    } catch (e) {
+      print('❌ Notification system initialization error: $e');
     }
 
   } catch (e) {
@@ -75,10 +57,6 @@ class MyApp extends StatelessWidget {
         // تسجيل جميع الخدمات كـ Providers
         ChangeNotifierProvider(create: (_) => AuthService()),
         Provider(create: (_) => DatabaseService()),
-        Provider(create: (_) => NotificationService()),
-        Provider(create: (_) => EnhancedNotificationService()),
-        Provider(create: (_) => UnifiedNotificationService()),
-        Provider(create: (_) => FCMService()),
         ChangeNotifierProvider(create: (_) => ThemeService()),
       ],
       child: Consumer<ThemeService>(

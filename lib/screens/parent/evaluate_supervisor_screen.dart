@@ -23,7 +23,7 @@ class EvaluateSupervisorScreen extends StatefulWidget {
 class _EvaluateSupervisorScreenState extends State<EvaluateSupervisorScreen> {
   final DatabaseService _databaseService = DatabaseService();
   final AuthService _authService = AuthService();
-  final NotificationService _notificationService = NotificationService();
+
   final TextEditingController _commentsController = TextEditingController();
   final TextEditingController _suggestionsController = TextEditingController();
   
@@ -469,22 +469,8 @@ class _EvaluateSupervisorScreenState extends State<EvaluateSupervisorScreen> {
       await _databaseService.createSupervisorEvaluation(evaluation);
       debugPrint('✅ Evaluation saved successfully');
 
-      // إرسال إشعار للإدارة عن التقييم الجديد
-      try {
-        await _notificationService.notifySupervisorEvaluationWithSound(
-          supervisorId: evaluation.supervisorId,
-          supervisorName: evaluation.supervisorName,
-          parentId: evaluation.parentId,
-          parentName: evaluation.parentName,
-          studentName: evaluation.studentName,
-          averageRating: evaluation.averageRating,
-          comments: evaluation.comments,
-        );
-        debugPrint('✅ Evaluation notification sent to admins');
-      } catch (e) {
-        debugPrint('❌ Error sending evaluation notification: $e');
-        // لا نوقف العملية إذا فشل الإشعار
-      }
+      // تم حذف نظام الإشعارات
+      debugPrint('✅ Evaluation saved (notifications disabled)');
 
       if (mounted) {
         Navigator.pop(context);

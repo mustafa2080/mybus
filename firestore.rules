@@ -99,8 +99,26 @@ service cloud.firestore {
     match /notifications/{notificationId} {
       // الأدمن يمكنه إدارة جميع الإشعارات
       allow read, write: if isAdmin();
-      // المستخدم يمكنه قراءة إشعاراته فقط
-      allow read: if isAuthenticated() && isOwner(resource.data.userId);
+      // المستخدم يمكنه قراءة إشعاراته فقط وتحديث حالة القراءة
+      allow read: if isAuthenticated() && isOwner(resource.data.recipientId);
+      allow update: if isAuthenticated() && isOwner(resource.data.recipientId) &&
+                    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'readAt', 'updatedAt']);
+    }
+
+    // Notification settings collection - إعدادات الإشعارات
+    match /notification_settings/{userId} {
+      allow read, write: if isAuthenticated() && (isAdmin() || isOwner(userId));
+    }
+
+    // Notification events collection - أحداث الإشعارات
+    match /notification_events/{eventId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isAdmin();
+    }
+
+    // User tokens collection - رموز المستخدمين لـ FCM
+    match /user_tokens/{userId} {
+      allow read, write: if isAuthenticated() && (isAdmin() || isOwner(userId));
     }
 
     // Default rule - منع الوصول لأي مجموعة غير محددة

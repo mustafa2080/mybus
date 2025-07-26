@@ -13,13 +13,12 @@ import '../models/user_model.dart';
 import '../models/survey_model.dart';
 import '../models/supervisor_assignment_model.dart';
 import '../models/student_behavior_model.dart';
-import '../models/notification_model.dart';
 import '../models/supervisor_evaluation_model.dart';
 import '../models/parent_student_link_model.dart';
+import 'notification_service.dart';
+import 'event_trigger_service.dart';
 import 'rate_limit_service.dart';
 import 'cache_service.dart';
-import 'notification_service.dart';
-import 'enhanced_notification_service.dart';
 
 
 class DatabaseService {
@@ -28,6 +27,8 @@ class DatabaseService {
   final Uuid _uuid = const Uuid();
   final RateLimitService _rateLimitService = RateLimitService();
   final CacheService _cacheService = CacheService();
+  final NotificationService _notificationService = NotificationService();
+  final EventTriggerService _eventTriggerService = EventTriggerService();
 
   // Initialize Firestore settings for better performance
   DatabaseService() {
@@ -555,21 +556,8 @@ class DatabaseService {
       }
 
       if (changes.isNotEmpty) {
-        // إرسال إشعار لولي الأمر فقط (بدون إشعار الأدمن)
-        final notificationService = EnhancedNotificationService();
-        await notificationService.sendNotificationToUser(
-          userId: parentId,
-          title: 'تم تحديث معلومات $studentName',
-          body: 'تم تحديث المعلومات التالية:\n• ${changes.join('\n• ')}',
-          type: 'student',
-          data: {
-            'type': 'student_info_update',
-            'changes': changes,
-            'studentId': studentId,
-            'timestamp': DateTime.now().toIso8601String(),
-          },
-        );
-        debugPrint('✅ Parent notification sent for student info update (no admin notification)');
+        // تم حذف نظام الإشعارات
+        debugPrint('✅ Student info updated (notifications disabled)');
       }
 
     } catch (e) {
@@ -611,14 +599,7 @@ class DatabaseService {
         final supervisorName = currentUserDoc.exists ?
           (currentUserDoc.data()?['name'] ?? 'مشرف') : 'مشرف';
 
-        await NotificationService().sendStudentStatusChangeNotification(
-          studentId: studentId,
-          studentName: studentData['name'] ?? 'طالب',
-          parentId: studentData['parentId'] ?? '',
-          oldStatus: oldStatus,
-          newStatus: newStatus,
-          supervisorName: supervisorName,
-        );
+        // تم حذف نظام الإشعارات
       }
 
       // Invalidate cache for this student
@@ -1121,18 +1102,7 @@ class DatabaseService {
         final adminName = currentUserDoc.exists ?
           (currentUserDoc.data()?['name'] ?? 'إدمن') : 'إدمن';
 
-        // إرسال إشعار محسن مع الصوت (باستثناء الإدمن الحالي)
-        await NotificationService().notifyStudentAssignmentWithSound(
-          studentId: studentId,
-          studentName: studentData['name'] ?? 'طالب',
-          busId: busId,
-          busRoute: busData['route'] ?? 'غير محدد',
-          parentId: studentData['parentId'] ?? '',
-          supervisorId: busData['supervisorId'] ?? '',
-          parentName: studentData['parentName'] ?? 'ولي الأمر',
-          parentPhone: studentData['parentPhone'] ?? 'غير محدد',
-          excludeAdminId: currentUserId, // استبعاد الإدمن الحالي
-        );
+        // تم حذف نظام الإشعارات
       }
 
       debugPrint('✅ Bus assigned to student successfully');
@@ -1420,15 +1390,7 @@ class DatabaseService {
         'updatedAt': FieldValue.serverTimestamp(),
       });
 
-      // إرسال إشعار تحديث حالة الشكوى
-      await NotificationService().sendComplaintNotification(
-        complaintId: complaintId,
-        title: complaintData['title'] ?? 'شكوى',
-        description: complaintData['description'] ?? '',
-        parentId: complaintData['parentId'] ?? '',
-        parentName: complaintData['parentName'] ?? 'ولي أمر',
-        status: status.toString().split('.').last,
-      );
+      // تم حذف نظام الإشعارات
 
       debugPrint('✅ Complaint status updated successfully');
     } catch (e) {
@@ -2196,83 +2158,20 @@ class DatabaseService {
         });
   }
 
-  // Get recent general notifications (last 24 hours)
-  Stream<List<Map<String, dynamic>>> getRecentGeneralNotifications() {
-    final yesterday = DateTime.now().subtract(const Duration(hours: 24));
+  // تم حذف نظام الإشعارات
 
-    return _firestore
-        .collection('notifications')
-        .where('timestamp', isGreaterThan: Timestamp.fromDate(yesterday))
-        .orderBy('timestamp', descending: true)
-        .snapshots()
-        .map((snapshot) {
-          return snapshot.docs
-              .map((doc) => {
-                    'id': doc.id,
-                    ...doc.data(),
-                  })
-              .toList();
-        });
-  }
-
-  // Get combined recent notifications count
+  // تم حذف نظام الإشعارات - إرجاع قيمة ثابتة
   Stream<int> getRecentNotificationsCount() {
-    final yesterday = DateTime.now().subtract(const Duration(hours: 24));
-
-    // For now, let's just use absence notifications as they are more reliable
-    // We can expand this later when we have more notification data
-    return _firestore
-        .collection('absences')
-        .where('source', isEqualTo: 'parent')
-        .where('createdAt', isGreaterThan: Timestamp.fromDate(yesterday))
-        .snapshots()
-        .map((snapshot) {
-          debugPrint('🔔 Recent absence notifications count: ${snapshot.docs.length}');
-          return snapshot.docs.length;
-        });
+    return Stream.value(0);
   }
 
-  // Alternative method to get all recent notifications count
   Stream<int> getAllRecentNotificationsCount() {
-    final yesterday = DateTime.now().subtract(const Duration(hours: 24));
-
-    return _firestore
-        .collection('absences')
-        .where('source', isEqualTo: 'parent')
-        .where('createdAt', isGreaterThan: Timestamp.fromDate(yesterday))
-        .snapshots()
-        .asyncMap((absenceSnapshot) async {
-          try {
-            // Get general notifications count
-            final notificationSnapshot = await _firestore
-                .collection('notifications')
-                .where('timestamp', isGreaterThan: Timestamp.fromDate(yesterday))
-                .get();
-
-            final totalCount = absenceSnapshot.docs.length + notificationSnapshot.docs.length;
-            debugPrint('🔔 Total notifications count: $totalCount (Absences: ${absenceSnapshot.docs.length}, General: ${notificationSnapshot.docs.length})');
-            return totalCount;
-          } catch (e) {
-            debugPrint('❌ Error getting notifications count: $e');
-            return absenceSnapshot.docs.length; // Fallback to just absence count
-          }
-        });
+    return Stream.value(0);
   }
 
-  // Get parent notifications count (for parent home screen)
+  // تم حذف نظام الإشعارات - إرجاع قيمة ثابتة
   Stream<int> getParentNotificationsCount(String parentId) {
-    if (parentId.isEmpty) return Stream.value(0);
-
-    return _firestore
-        .collection('notifications')
-        .where('recipientId', isEqualTo: parentId)
-        .where('isRead', isEqualTo: false)
-        .snapshots()
-        .map((snapshot) {
-          final count = snapshot.docs.length;
-          debugPrint('🔔 Parent notifications count for $parentId: $count');
-          return count;
-        });
+    return Stream.value(0);
   }
 
   // Get admin notifications count (for admin home screen)
@@ -2280,145 +2179,24 @@ class DatabaseService {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) return Stream.value(0);
 
-    // دمج عدة أنواع من الإشعارات للإدمن
-    return Stream.periodic(const Duration(seconds: 2)).asyncMap((_) async {
-      try {
-        int totalCount = 0;
-
-        // 1. الإشعارات العامة
-        final notificationsSnapshot = await _firestore
-            .collection('notifications')
-            .where('recipientId', isEqualTo: currentUser.uid)
-            .where('isRead', isEqualTo: false)
-            .get();
-        totalCount += notificationsSnapshot.docs.length;
-
-        // 2. طلبات الغياب المعلقة
-        final absencesSnapshot = await _firestore
-            .collection('absences')
-            .where('status', isEqualTo: 'pending')
-            .get();
-        totalCount += absencesSnapshot.docs.length;
-
-        // 3. الشكاوى الجديدة
-        final complaintsSnapshot = await _firestore
-            .collection('complaints')
-            .where('status', isEqualTo: 'pending')
-            .get();
-        totalCount += complaintsSnapshot.docs.length;
-
-        debugPrint('🔔 Total admin notifications count for ${currentUser.uid}: $totalCount');
-        debugPrint('   - General notifications: ${notificationsSnapshot.docs.length}');
-        debugPrint('   - Pending absences: ${absencesSnapshot.docs.length}');
-        debugPrint('   - Pending complaints: ${complaintsSnapshot.docs.length}');
-
-        return totalCount;
-      } catch (e) {
-        debugPrint('❌ Error getting admin notifications count: $e');
-        return 0;
-      }
-    });
+    // تم حذف نظام الإشعارات - إرجاع قيمة ثابتة
+    return Stream.value(0);
   }
 
-  // Get supervisor notifications count (for supervisor home screen)
+  // تم حذف نظام الإشعارات - إرجاع قيم ثابتة
   Stream<int> getSupervisorNotificationsCount(String supervisorId) {
-    if (supervisorId.isEmpty) return Stream.value(0);
-
-    return _firestore
-        .collection('notifications')
-        .where('recipientId', isEqualTo: supervisorId)
-        .where('isRead', isEqualTo: false)
-        .snapshots()
-        .map((snapshot) {
-          final count = snapshot.docs.length;
-          debugPrint('🔔 Supervisor notifications count for $supervisorId: $count');
-          return count;
-        });
+    return Stream.value(0);
   }
 
-  // Mark notification as read
   Future<void> markNotificationAsRead(String notificationId) async {
-    try {
-      await _firestore
-          .collection('notifications')
-          .doc(notificationId)
-          .update({'isRead': true});
-      debugPrint('✅ Notification marked as read: $notificationId');
-    } catch (e) {
-      debugPrint('❌ Error marking notification as read: $e');
-    }
+    // تم حذف نظام الإشعارات
   }
 
-  // Mark all notifications as read for a user
   Future<void> markAllNotificationsAsRead(String userId) async {
-    try {
-      final batch = _firestore.batch();
-      final snapshot = await _firestore
-          .collection('notifications')
-          .where('recipientId', isEqualTo: userId)
-          .where('isRead', isEqualTo: false)
-          .get();
-
-      for (final doc in snapshot.docs) {
-        batch.update(doc.reference, {'isRead': true});
-      }
-
-      await batch.commit();
-      debugPrint('✅ All notifications marked as read for user: $userId');
-    } catch (e) {
-      debugPrint('❌ Error marking all notifications as read: $e');
-    }
+    // تم حذف نظام الإشعارات
   }
 
-  // Get supervisor notifications
-  Stream<List<NotificationModel>> getSupervisorNotifications(String supervisorId) {
-    if (supervisorId.isEmpty) return Stream.value([]);
-
-    return _firestore
-        .collection('notifications')
-        .where('recipientId', isEqualTo: supervisorId)
-        .orderBy('timestamp', descending: true)
-        .limit(50)
-        .snapshots()
-        .map((snapshot) {
-          final notifications = <NotificationModel>[];
-          for (final doc in snapshot.docs) {
-            try {
-              final notification = NotificationModel.fromMap(doc.data());
-              notifications.add(notification);
-            } catch (e) {
-              debugPrint('❌ Error parsing notification ${doc.id}: $e');
-            }
-          }
-          debugPrint('📱 Supervisor notifications loaded: ${notifications.length}');
-          return notifications;
-        });
-  }
-
-  // Get parent notifications
-  Stream<List<NotificationModel>> getParentNotifications(String parentId) {
-    if (parentId.isEmpty) return Stream.value([]);
-
-    return _firestore
-        .collection('notifications')
-        .where('recipientId', isEqualTo: parentId)
-        .orderBy('timestamp', descending: true)
-        .limit(50)
-        .snapshots()
-        .map((snapshot) {
-          final notifications = <NotificationModel>[];
-          for (final doc in snapshot.docs) {
-            try {
-              final notification = NotificationModel.fromMap(doc.data());
-              notifications.add(notification);
-            } catch (e) {
-              debugPrint('❌ Error parsing notification ${doc.id}: $e');
-            }
-          }
-          debugPrint('📱 Parent notifications loaded: ${notifications.length}');
-          return notifications;
-        });
-  }
+  // تم حذف نظام الإشعارات
 
   // Get current supervisor assignment for a bus and direction
   Future<SupervisorAssignmentModel?> getCurrentSupervisorAssignment(String busId, TripDirection direction) async {
@@ -3060,15 +2838,7 @@ class DatabaseService {
         'updatedAt': Timestamp.now(),
       });
 
-      // إرسال إشعار تحديث حالة الغياب
-      await NotificationService().sendStudentAbsenceNotification(
-        studentId: absenceData['studentId'] ?? '',
-        studentName: absenceData['studentName'] ?? 'طالب',
-        parentId: absenceData['parentId'] ?? '',
-        reason: absenceData['reason'] ?? 'غير محدد',
-        date: (absenceData['date'] as Timestamp?)?.toDate() ?? DateTime.now(),
-        status: status.toString().split('.').last,
-      );
+      // تم حذف نظام الإشعارات
 
       debugPrint('✅ Absence status updated successfully: $absenceId');
     } catch (e) {
@@ -4755,14 +4525,7 @@ class DatabaseService {
         final adminName = currentUserDoc.exists ?
           (currentUserDoc.data()?['name'] ?? 'إدمن') : 'إدمن';
 
-        await NotificationService().sendSupervisorAssignmentNotification(
-          supervisorId: supervisorId,
-          supervisorName: supervisorData['name'] ?? 'مشرف',
-          busId: busId,
-          busPlateNumber: busData['plateNumber'] ?? 'غير محدد',
-          adminName: adminName,
-          adminId: currentUserId, // استبعاد الإدمن الحالي
-        );
+        // تم حذف نظام الإشعارات
       }
 
       debugPrint('✅ Supervisor assigned to bus successfully');
@@ -4866,32 +4629,6 @@ class DatabaseService {
     }
   }
 
-  /// Send notification to specific parent only
-  Future<void> sendNotificationToParent({
-    required String parentId,
-    required String title,
-    required String message,
-    Map<String, dynamic>? data,
-  }) async {
-    try {
-      // إرسال إشعار لولي الأمر المحدد فقط
-      await _firestore.collection('notifications').add({
-        'id': _uuid.v4(),
-        'recipientId': parentId, // إرسال لولي الأمر المحدد فقط
-        'title': title,
-        'body': message,
-        'type': 'student_linked',
-        'isRead': false,
-        'timestamp': FieldValue.serverTimestamp(),
-        'createdBy': _getCurrentUserId(),
-        'data': data ?? {},
-      });
-
-      debugPrint('✅ Notification sent to parent $parentId successfully');
-    } catch (e) {
-      debugPrint('❌ Error sending notification to parent: $e');
-      throw Exception('فشل في إرسال الإشعار لولي الأمر: $e');
-    }
-  }
+  /// تم حذف نظام الإشعارات
 
 }

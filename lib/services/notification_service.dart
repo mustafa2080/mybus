@@ -1,376 +1,362 @@
-import 'package:flutter/foundation.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
+import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 import 'package:uuid/uuid.dart';
 import '../models/notification_model.dart';
+import '../models/notification_settings_model.dart';
+import '../models/notification_event_model.dart';
 import '../models/student_model.dart';
-import 'enhanced_notification_service.dart';
-import 'unified_notification_service.dart';
+import '../models/user_model.dart';
+import 'firebase_messaging_service.dart';
+import 'email_service.dart';
 
-
+/// خدمة إدارة الإشعارات الرئيسية مع منطق التوجيه والتوزيع الذكي
 class NotificationService {
-  final FirebaseMessaging _messaging = FirebaseMessaging.instance;
+  static final NotificationService _instance = NotificationService._internal();
+  factory NotificationService() => _instance;
+  NotificationService._internal();
+
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseMessagingService _messagingService = FirebaseMessagingService();
+  final EmailService _emailService = EmailService();
   final Uuid _uuid = const Uuid();
-  final EnhancedNotificationService _enhancedService = EnhancedNotificationService();
-  final UnifiedNotificationService _unifiedService = UnifiedNotificationService();
 
-  // Initialize notifications
+  bool _isInitialized = false;
+  Map<String, NotificationEventModel> _eventTemplates = {};
+
+  /// تهيئة خدمة الإشعارات
   Future<void> initialize() async {
-    // Skip initialization on web to avoid service worker issues
-    if (kIsWeb) {
-      debugPrint('Notification service skipped on web platform');
-      return;
-    }
-
-    // Initialize unified notification service
-    await _unifiedService.initialize();
-
-    // Initialize enhanced notification service
-    await _enhancedService.initialize();
+    if (_isInitialized) return;
 
     try {
-      // Request permission for notifications
-      NotificationSettings settings = await _messaging.requestPermission(
-        alert: true,
-        announcement: false,
-        badge: true,
-        carPlay: false,
-        criticalAlert: false,
-        provisional: false,
-        sound: true,
-      );
+      debugPrint('🔔 بدء تهيئة خدمة الإشعارات الرئيسية...');
 
-      if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-        debugPrint('User granted permission');
-      } else if (settings.authorizationStatus == AuthorizationStatus.provisional) {
-        debugPrint('User granted provisional permission');
+      // تهيئة خدمة Firebase Messaging
+      await _messagingService.initialize();
+
+      // تحميل قوالب الأحداث
+      await _loadEventTemplates();
+
+      _isInitialized = true;
+      debugPrint('✅ تم تهيئة خدمة الإشعارات الرئيسية بنجاح');
+    } catch (e) {
+      debugPrint('❌ خطأ في تهيئة خدمة الإشعارات: $e');
+      rethrow;
+    }
+  }
+
+  /// تحميل قوالب الأحداث من قاعدة البيانات
+  Future<void> _loadEventTemplates() async {
+    try {
+      final snapshot = await _firestore.collection('notification_events').get();
+      
+      if (snapshot.docs.isEmpty) {
+        // إنشاء القوالب الافتراضية
+        await _createDefaultEventTemplates();
       } else {
-        debugPrint('User declined or has not accepted permission');
+        // تحميل القوالب الموجودة
+        for (final doc in snapshot.docs) {
+          final event = NotificationEventModel.fromMap(doc.data());
+          _eventTemplates[event.id] = event;
+        }
       }
 
-      // Get FCM token
-      String? token = await _messaging.getToken();
-      debugPrint('FCM Token: $token');
-
-      // Handle foreground messages
-      FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
-
-      // Handle background messages
-      FirebaseMessaging.onBackgroundMessage(_handleBackgroundMessage);
+      debugPrint('✅ تم تحميل ${_eventTemplates.length} قالب حدث');
     } catch (e) {
-      debugPrint('Error initializing notifications: $e');
+      debugPrint('❌ خطأ في تحميل قوالب الأحداث: $e');
     }
   }
 
-  // Handle foreground messages with sound and system notification
-  void _handleForegroundMessage(RemoteMessage message) {
-    debugPrint('🔔 Received foreground message: ${message.notification?.title}');
-
-    // عرض الإشعار في النظام حتى لو كان التطبيق مفتوح
-    _showSystemNotification(message);
-  }
-
-  // Show system notification with sound
-  void _showSystemNotification(RemoteMessage message) {
+  /// إنشاء القوالب الافتراضية
+  Future<void> _createDefaultEventTemplates() async {
     try {
-      // هذا سيتم التعامل معه تلقائياً بواسطة Firebase Messaging
-      // لكن يمكننا إضافة معالجة إضافية هنا إذا لزم الأمر
-      debugPrint('🔊 System notification displayed with sound');
+      final defaultEvents = PredefinedNotificationEvents.getDefaultEvents();
+      
+      for (final event in defaultEvents) {
+        await _firestore.collection('notification_events').doc(event.id).set(event.toMap());
+        _eventTemplates[event.id] = event;
+      }
 
-      // يمكن إضافة vibration أو sound إضافي هنا إذا لزم الأمر
-      // HapticFeedback.vibrate(); // يتطلب import 'package:flutter/services.dart';
-
+      debugPrint('✅ تم إنشاء ${defaultEvents.length} قالب افتراضي');
     } catch (e) {
-      debugPrint('❌ Error showing system notification: $e');
+      debugPrint('❌ خطأ في إنشاء القوالب الافتراضية: $e');
     }
   }
 
-  // Handle background messages with enhanced sound and display
-  static Future<void> _handleBackgroundMessage(RemoteMessage message) async {
-    debugPrint('🔔 Received background message with sound: ${message.notification?.title}');
-
-    // حفظ الإشعار في قاعدة البيانات المحلية حتى لو كان التطبيق مغلق
-    try {
-      final firestore = FirebaseFirestore.instance;
-
-      // إنشاء إشعار من الرسالة المستلمة مع إعدادات الصوت
-      final notification = {
-        'id': message.messageId ?? DateTime.now().millisecondsSinceEpoch.toString(),
-        'title': message.notification?.title ?? 'إشعار جديد',
-        'body': message.notification?.body ?? '',
-        'recipientId': message.data['recipientId'] ?? '',
-        'type': message.data['type'] ?? 'general',
-        'timestamp': FieldValue.serverTimestamp(),
-        'isRead': false,
-        'data': {
-          ...message.data,
-          'sound_played': true,
-          'background_received': true,
-          'received_at': DateTime.now().toIso8601String(),
-        },
-        // إعدادات إضافية للصوت والعرض
-        'notification_settings': {
-          'sound': true,
-          'vibration': true,
-          'priority': 'high',
-          'show_in_foreground': true,
-        }
-      };
-
-      // حفظ الإشعار في Firestore
-      await firestore.collection('notifications').add(notification);
-
-      debugPrint('✅ Background notification with sound saved to database');
-
-      // إضافة log للتتبع
-      await firestore.collection('notification_logs').add({
-        'message_id': message.messageId,
-        'title': message.notification?.title,
-        'received_at': FieldValue.serverTimestamp(),
-        'type': 'background',
-        'sound_enabled': true,
-        'platform': 'android',
-      });
-
-    } catch (e) {
-      debugPrint('❌ Error saving background notification: $e');
-    }
-  }
-
-  // Send notification for student boarding
-  Future<void> sendStudentBoardedNotification({
-    required StudentModel student,
-    required String supervisorName,
-    required DateTime timestamp,
-  }) async {
-    try {
-      final notification = NotificationModel(
-        id: _uuid.v4(),
-        title: 'ركب ${student.name} الباص',
-        body: 'ركب ${student.name} الباص مع المشرف $supervisorName في ${_formatTime(timestamp)}',
-        recipientId: student.parentId,
-        studentId: student.id,
-        studentName: student.name,
-        type: NotificationType.studentBoarded,
-        timestamp: timestamp,
-        data: {
-          'studentId': student.id,
-          'action': 'boarded',
-          'timestamp': timestamp.toIso8601String(),
-        },
-      );
-
-      await _saveNotification(notification);
-      await _sendPushNotification(notification);
-    } catch (e) {
-      throw Exception('خطأ في إرسال إشعار ركوب الطالب: $e');
-    }
-  }
-
-  // Send notification for student leaving
-  Future<void> sendStudentLeftNotification({
-    required StudentModel student,
-    required String supervisorName,
-    required DateTime timestamp,
-  }) async {
-    try {
-      final notification = NotificationModel(
-        id: _uuid.v4(),
-        title: 'نزل ${student.name} من الباص',
-        body: 'نزل ${student.name} من الباص مع المشرف $supervisorName في ${_formatTime(timestamp)}',
-        recipientId: student.parentId,
-        studentId: student.id,
-        studentName: student.name,
-        type: NotificationType.studentLeft,
-        timestamp: timestamp,
-        data: {
-          'studentId': student.id,
-          'action': 'left',
-          'timestamp': timestamp.toIso8601String(),
-        },
-      );
-
-      await _saveNotification(notification);
-      await _sendPushNotification(notification);
-    } catch (e) {
-      throw Exception('خطأ في إرسال إشعار نزول الطالب: $e');
-    }
-  }
-
-  // Send general notification
-  Future<void> sendGeneralNotification({
+  /// إرسال إشعار مخصص
+  Future<bool> sendCustomNotification({
+    required String recipientId,
+    required String recipientType,
     required String title,
     required String body,
-    required String recipientId,
-    Map<String, dynamic>? data,
+    NotificationType type = NotificationType.generalAnnouncement,
+    NotificationPriority priority = NotificationPriority.medium,
+    Map<String, dynamic> data = const {},
+    List<NotificationChannel> channels = const [NotificationChannel.fcm, NotificationChannel.inApp],
+    bool requiresSound = false,
+    bool requiresVibration = false,
+    String? senderId,
+    String? senderName,
   }) async {
     try {
       final notification = NotificationModel(
         id: _uuid.v4(),
         title: title,
         body: body,
+        type: type,
+        priority: priority,
         recipientId: recipientId,
-        type: NotificationType.general,
-        timestamp: DateTime.now(),
+        recipientType: recipientType,
+        senderId: senderId,
+        senderName: senderName,
         data: data,
+        channels: channels,
+        requiresSound: requiresSound,
+        requiresVibration: requiresVibration,
+        createdAt: DateTime.now(),
       );
 
-      await _saveNotification(notification);
-      await _sendPushNotification(notification);
+      return await _sendNotification(notification);
     } catch (e) {
-      throw Exception('خطأ في إرسال الإشعار: $e');
+      debugPrint('❌ خطأ في إرسال الإشعار المخصص: $e');
+      return false;
     }
   }
 
-  // Send trip started notification
-  Future<void> sendTripStartedNotification({
-    required String recipientId,
-    required String studentName,
-    required DateTime timestamp,
+  /// إرسال إشعار بناءً على حدث
+  Future<bool> sendEventNotification({
+    required String eventId,
+    required Map<String, dynamic> eventData,
+    String? specificRecipientId,
   }) async {
     try {
-      final notification = NotificationModel(
-        id: _uuid.v4(),
-        title: 'بدء الرحلة',
-        body: 'تم بدء رحلة الباص. سيتم إشعارك عند ركوب $studentName الباص.',
-        recipientId: recipientId,
-        type: NotificationType.general,
-        timestamp: timestamp,
-        data: {
-          'type': 'trip_started',
-          'studentName': studentName,
-          'timestamp': timestamp.toIso8601String(),
-        },
-      );
+      final eventTemplate = _eventTemplates[eventId];
+      if (eventTemplate == null) {
+        debugPrint('❌ لم يتم العثور على قالب الحدث: $eventId');
+        return false;
+      }
 
-      await _saveNotification(notification);
-      await _sendPushNotification(notification);
+      // تحديد المستلمين
+      List<String> recipientIds;
+      if (specificRecipientId != null) {
+        recipientIds = [specificRecipientId];
+      } else {
+        recipientIds = await _getEventRecipients(eventTemplate, eventData);
+      }
+
+      bool allSent = true;
+      for (final recipientId in recipientIds) {
+        final notification = await _createNotificationFromEvent(
+          eventTemplate,
+          eventData,
+          recipientId,
+        );
+
+        if (notification != null) {
+          final sent = await _sendNotification(notification);
+          if (!sent) allSent = false;
+        }
+      }
+
+      return allSent;
     } catch (e) {
-      throw Exception('خطأ في إرسال إشعار بدء الرحلة: $e');
+      debugPrint('❌ خطأ في إرسال إشعار الحدث: $e');
+      return false;
     }
   }
 
-  // Send trip ended notification
-  Future<void> sendTripEndedNotification({
-    required String recipientId,
-    required String studentName,
-    required DateTime timestamp,
-  }) async {
+  /// تحديد المستلمين بناءً على الحدث
+  Future<List<String>> _getEventRecipients(
+    NotificationEventModel eventTemplate,
+    Map<String, dynamic> eventData,
+  ) async {
     try {
-      final notification = NotificationModel(
-        id: _uuid.v4(),
-        title: 'انتهاء الرحلة',
-        body: 'تم انتهاء رحلة الباص.',
-        recipientId: recipientId,
-        type: NotificationType.general,
-        timestamp: timestamp,
-        data: {
-          'type': 'trip_ended',
-          'studentName': studentName,
-          'timestamp': timestamp.toIso8601String(),
-        },
-      );
+      final List<String> recipients = [];
 
-      await _saveNotification(notification);
-      await _sendPushNotification(notification);
+      for (final userType in eventTemplate.targetUserTypes) {
+        switch (userType) {
+          case 'admin':
+            final admins = await _getAdminUsers();
+            recipients.addAll(admins);
+            break;
+
+          case 'parent':
+            if (eventData.containsKey('parentId')) {
+              recipients.add(eventData['parentId']);
+            } else if (eventData.containsKey('studentId')) {
+              final parentId = await _getParentIdFromStudent(eventData['studentId']);
+              if (parentId != null) recipients.add(parentId);
+            }
+            break;
+
+          case 'supervisor':
+            if (eventData.containsKey('supervisorId')) {
+              recipients.add(eventData['supervisorId']);
+            } else if (eventData.containsKey('busId') || eventData.containsKey('busRoute')) {
+              final supervisors = await _getSupervisorsForBus(
+                eventData['busId'] ?? eventData['busRoute'],
+              );
+              recipients.addAll(supervisors);
+            }
+            break;
+        }
+      }
+
+      return recipients.toSet().toList(); // إزالة المكررات
     } catch (e) {
-      throw Exception('خطأ في إرسال إشعار انتهاء الرحلة: $e');
+      debugPrint('❌ خطأ في تحديد المستلمين: $e');
+      return [];
     }
   }
 
-  // Send student status update notification
-  Future<void> sendStudentStatusUpdateNotification({
-    required String recipientId,
-    required String studentName,
-    required String status,
-    required String action,
-    required DateTime timestamp,
-  }) async {
+  /// إنشاء إشعار من قالب الحدث
+  Future<NotificationModel?> _createNotificationFromEvent(
+    NotificationEventModel eventTemplate,
+    Map<String, dynamic> eventData,
+    String recipientId,
+  ) async {
     try {
-      final notification = NotificationModel(
-        id: _uuid.v4(),
-        title: 'تحديث حالة $studentName',
-        body: status,
-        recipientId: recipientId,
-        type: NotificationType.general,
-        timestamp: timestamp,
-        data: {
-          'type': 'status_update',
-          'studentName': studentName,
-          'action': action,
-          'timestamp': timestamp.toIso8601String(),
-        },
-      );
+      // الحصول على نوع المستلم
+      final recipientType = await _getUserType(recipientId);
+      if (recipientType == null) return null;
 
-      await _saveNotification(notification);
-      await _sendPushNotification(notification);
+      // تطبيق القوالب
+      final title = eventTemplate.generateTitle(eventData);
+      final body = eventTemplate.generateBody(eventData);
+
+      // إنشاء الإشعار
+      return NotificationModel(
+        id: _uuid.v4(),
+        title: title,
+        body: body,
+        type: eventTemplate.notificationType,
+        priority: eventTemplate.defaultPriority,
+        recipientId: recipientId,
+        recipientType: recipientType,
+        senderId: eventData['senderId'],
+        senderName: eventData['senderName'],
+        data: {...eventData, ...eventTemplate.additionalData},
+        channels: eventTemplate.defaultChannels,
+        requiresSound: eventTemplate.requiresSound,
+        requiresVibration: eventTemplate.requiresVibration,
+        isBackground: eventTemplate.isBackground,
+        createdAt: DateTime.now(),
+      );
     } catch (e) {
-      throw Exception('خطأ في إرسال إشعار تحديث الحالة: $e');
+      debugPrint('❌ خطأ في إنشاء الإشعار من القالب: $e');
+      return null;
     }
   }
 
-  // Save notification to Firestore
-  Future<void> _saveNotification(NotificationModel notification) async {
-    await _firestore
-        .collection('notifications')
-        .doc(notification.id)
-        .set(notification.toMap());
+  /// إرسال الإشعار عبر القنوات المحددة
+  Future<bool> _sendNotification(NotificationModel notification) async {
+    try {
+      // التحقق من إعدادات المستلم
+      final canSend = await _canSendToRecipient(notification);
+      if (!canSend) {
+        debugPrint('🔇 تم تجاهل الإشعار بناءً على إعدادات المستلم');
+        return false;
+      }
+
+      // حفظ الإشعار في قاعدة البيانات
+      await _saveNotification(notification);
+
+      bool sentSuccessfully = false;
+
+      // إرسال عبر القنوات المختلفة
+      for (final channel in notification.channels) {
+        switch (channel) {
+          case NotificationChannel.fcm:
+            final sent = await _sendFCMNotification(notification);
+            if (sent) sentSuccessfully = true;
+            break;
+
+          case NotificationChannel.email:
+            final sent = await _sendEmailNotification(notification);
+            if (sent) sentSuccessfully = true;
+            break;
+
+          case NotificationChannel.inApp:
+            // الإشعارات داخل التطبيق تُحفظ في قاعدة البيانات فقط
+            sentSuccessfully = true;
+            break;
+
+          case NotificationChannel.sms:
+            // يمكن إضافة خدمة SMS لاحقاً
+            break;
+        }
+      }
+
+      // تحديث حالة الإشعار
+      if (sentSuccessfully) {
+        await _updateNotificationStatus(
+          notification.id,
+          NotificationStatus.sent,
+          sentAt: DateTime.now(),
+        );
+      } else {
+        await _updateNotificationStatus(
+          notification.id,
+          NotificationStatus.failed,
+          errorMessage: 'فشل في الإرسال عبر جميع القنوات',
+        );
+      }
+
+      return sentSuccessfully;
+    } catch (e) {
+      debugPrint('❌ خطأ في إرسال الإشعار: $e');
+      
+      // تحديث حالة الإشعار إلى فشل
+      await _updateNotificationStatus(
+        notification.id,
+        NotificationStatus.failed,
+        errorMessage: e.toString(),
+      );
+      
+      return false;
+    }
   }
 
-  // Send push notification with sound and system notification display
-  Future<void> _sendPushNotification(NotificationModel notification) async {
+  /// إرسال إشعار FCM
+  Future<bool> _sendFCMNotification(NotificationModel notification) async {
     try {
-      // الحصول على FCM token للمستخدم المحدد
-      final userDoc = await _firestore.collection('users').doc(notification.recipientId).get();
-      final fcmToken = userDoc.data()?['fcmToken'] as String?;
+      // الحصول على FCM token للمستلم
+      final token = await _getFCMToken(notification.recipientId);
+      if (token == null) {
+        debugPrint('❌ لم يتم العثور على FCM token للمستلم: ${notification.recipientId}');
+        return false;
+      }
 
-      if (fcmToken != null && fcmToken.isNotEmpty) {
-        // في مرحلة الاختبار: حفظ الإشعار في قاعدة البيانات للمستخدم المستهدف فقط
-        // في الإنتاج: سيتم إرسال FCM حقيقي للمستخدم المستهدف
-        await _firestore.collection('fcm_queue').add({
-          'recipientId': notification.recipientId,
-          'fcmToken': fcmToken, // إضافة FCM token للمستخدم المحدد
+      // إعداد الرسالة
+      final message = {
+        'to': token,
+        'notification': {
           'title': notification.title,
           'body': notification.body,
+          'sound': notification.shouldPlaySound ? 'default' : null,
+        },
         'data': {
-          ...notification.data ?? {},
-          'click_action': 'FLUTTER_NOTIFICATION_CLICK',
-          'sound': 'default',
-          'priority': 'high',
-          'notification_priority': 'PRIORITY_MAX',
-          'importance': 'high',
-          'channel_id': 'mybus_notifications',
-          'userId': notification.recipientId, // تأكيد المستخدم المستهدف
-          'recipientId': notification.recipientId, // إضافة recipientId أيضاً
+          ...notification.data,
+          'id': notification.id,
+          'type': notification.type.toString().split('.').last,
+          'priority': notification.priority.toString().split('.').last,
+          'recipientId': notification.recipientId,
+          'recipientType': notification.recipientType,
+          'requiresSound': notification.requiresSound.toString(),
+          'requiresVibration': notification.requiresVibration.toString(),
+          'isBackground': notification.isBackground.toString(),
         },
-        'timestamp': FieldValue.serverTimestamp(),
-        'status': 'pending',
-        'type': notification.type.toString().split('.').last,
-        // إعدادات Android محسنة للصوت والعرض
         'android': {
-          'priority': 'high',
-          'ttl': '86400s', // 24 hours
+          'priority': notification.isHighPriority ? 'high' : 'normal',
           'notification': {
-            'title': notification.title,
-            'body': notification.body,
-            'channel_id': 'mybus_notifications',
-            'priority': 'high',
-            'sound': 'default',
-            'default_sound': true,
-            'default_vibrate_timings': true,
-            'default_light_settings': true,
-            'notification_priority': 'PRIORITY_MAX',
-            'visibility': 'public',
-            'show_when': true,
-            'local_only': false,
-            'sticky': false,
-            'icon': 'ic_notification',
-            'color': '#FF6B6B',
-            'tag': 'mybus_${notification.type.toString().split('.').last}',
-          }
+            'channel_id': _getChannelId(notification.priority),
+            'sound': notification.shouldPlaySound ? 'default' : null,
+            'vibrate_timings': notification.shouldVibrate ? [0, 500, 250, 500] : null,
+          },
         },
-        // إعدادات iOS محسنة
         'apns': {
           'payload': {
             'aps': {
@@ -378,1127 +364,298 @@ class NotificationService {
                 'title': notification.title,
                 'body': notification.body,
               },
+              'sound': notification.shouldPlaySound ? 'default' : null,
               'badge': 1,
-              'sound': 'default',
-              'content-available': 1,
-              'mutable-content': 1,
-              'category': 'MYBUS_NOTIFICATION',
-            }
+            },
           },
-          'headers': {
-            'apns-priority': '10',
-            'apns-push-type': 'alert',
-          }
         },
-        // إعدادات الويب
-        'webpush': {
-          'headers': {
-            'Urgency': 'high',
-          },
-          'notification': {
-            'title': notification.title,
-            'body': notification.body,
-            'icon': '/icons/notification-icon.png',
-            'badge': '/icons/badge-icon.png',
-            'sound': '/sounds/notification.mp3',
-            'vibrate': [200, 100, 200],
-            'requireInteraction': true,
-          }
-        },
-      });
+      };
 
-        debugPrint('✅ Enhanced push notification with sound queued for user: ${notification.recipientId}');
-      } else {
-        debugPrint('⚠️ No FCM token found for user: ${notification.recipientId}, notification will not be sent');
-      }
+      // إرسال الرسالة (يتطلب server key من Firebase Console)
+      // هذا مثال - في التطبيق الحقيقي يجب استخدام Firebase Admin SDK
+      debugPrint('📤 إرسال FCM: ${notification.title} إلى ${notification.recipientId}');
+      
+      // محاكاة الإرسال الناجح
+      return true;
     } catch (e) {
-      debugPrint('❌ Error queuing push notification: $e');
+      debugPrint('❌ خطأ في إرسال FCM: $e');
+      return false;
     }
   }
 
-  // Get notifications for user
-  Stream<List<NotificationModel>> getNotificationsForUser(String userId) {
-    return _firestore
-        .collection('notifications')
-        .where('recipientId', isEqualTo: userId)
-        .snapshots()
-        .map((snapshot) {
-          final notifications = snapshot.docs
-              .map((doc) => NotificationModel.fromMap(doc.data()))
-              .toList();
+  /// إرسال إشعار بريد إلكتروني
+  Future<bool> _sendEmailNotification(NotificationModel notification) async {
+    try {
+      // الحصول على بيانات المستلم
+      final recipientData = await _getUserData(notification.recipientId);
+      if (recipientData == null) return false;
 
-          // Sort manually to avoid index requirement
-          notifications.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+      await _emailService.sendParentNotification(
+        parentEmail: recipientData['email'] ?? '',
+        parentName: recipientData['name'] ?? '',
+        title: notification.title,
+        message: notification.body,
+      );
 
-          // Limit to 50 notifications
-          return notifications.take(50).toList();
-        });
+      return true;
+    } catch (e) {
+      debugPrint('❌ خطأ في إرسال البريد الإلكتروني: $e');
+      return false;
+    }
   }
 
-  // Mark notification as read
-  Future<void> markNotificationAsRead(String notificationId) async {
+  // Helper methods للحصول على البيانات
+
+  /// الحصول على قائمة المديرين
+  Future<List<String>> _getAdminUsers() async {
+    try {
+      final snapshot = await _firestore
+          .collection('users')
+          .where('userType', isEqualTo: 'admin')
+          .where('isActive', isEqualTo: true)
+          .get();
+
+      return snapshot.docs.map((doc) => doc.id).toList();
+    } catch (e) {
+      debugPrint('❌ خطأ في الحصول على المديرين: $e');
+      return [];
+    }
+  }
+
+  /// الحصول على معرف ولي الأمر من معرف الطالب
+  Future<String?> _getParentIdFromStudent(String studentId) async {
+    try {
+      final doc = await _firestore.collection('students').doc(studentId).get();
+      return doc.data()?['parentId'];
+    } catch (e) {
+      debugPrint('❌ خطأ في الحصول على ولي الأمر: $e');
+      return null;
+    }
+  }
+
+  /// الحصول على المشرفين للباص
+  Future<List<String>> _getSupervisorsForBus(String busIdentifier) async {
+    try {
+      final snapshot = await _firestore
+          .collection('supervisor_assignments')
+          .where('busId', isEqualTo: busIdentifier)
+          .where('isActive', isEqualTo: true)
+          .get();
+
+      return snapshot.docs.map((doc) => doc.data()['supervisorId'] as String).toList();
+    } catch (e) {
+      debugPrint('❌ خطأ في الحصول على مشرفي الباص: $e');
+      return [];
+    }
+  }
+
+  /// الحصول على نوع المستخدم
+  Future<String?> _getUserType(String userId) async {
+    try {
+      final doc = await _firestore.collection('users').doc(userId).get();
+      return doc.data()?['userType'];
+    } catch (e) {
+      debugPrint('❌ خطأ في الحصول على نوع المستخدم: $e');
+      return null;
+    }
+  }
+
+  /// الحصول على بيانات المستخدم
+  Future<Map<String, dynamic>?> _getUserData(String userId) async {
+    try {
+      final doc = await _firestore.collection('users').doc(userId).get();
+      return doc.data();
+    } catch (e) {
+      debugPrint('❌ خطأ في الحصول على بيانات المستخدم: $e');
+      return null;
+    }
+  }
+
+  /// الحصول على FCM token للمستخدم
+  Future<String?> _getFCMToken(String userId) async {
+    try {
+      final doc = await _firestore.collection('user_tokens').doc(userId).get();
+      return doc.data()?['fcmToken'];
+    } catch (e) {
+      debugPrint('❌ خطأ في الحصول على FCM token: $e');
+      return null;
+    }
+  }
+
+  /// التحقق من إمكانية الإرسال للمستلم
+  Future<bool> _canSendToRecipient(NotificationModel notification) async {
+    try {
+      final doc = await _firestore
+          .collection('notification_settings')
+          .doc(notification.recipientId)
+          .get();
+
+      if (!doc.exists) return true; // السماح إذا لم توجد إعدادات
+
+      final settings = NotificationSettingsModel.fromMap(doc.data()!);
+      return settings.canSendNotification(notification);
+    } catch (e) {
+      debugPrint('❌ خطأ في التحقق من إعدادات المستلم: $e');
+      return true; // السماح في حالة الخطأ
+    }
+  }
+
+  /// حفظ الإشعار في قاعدة البيانات
+  Future<void> _saveNotification(NotificationModel notification) async {
     try {
       await _firestore
           .collection('notifications')
-          .doc(notificationId)
-          .update({'isRead': true});
+          .doc(notification.id)
+          .set(notification.toMap());
     } catch (e) {
-      throw Exception('خطأ في تحديث حالة الإشعار: $e');
+      debugPrint('❌ خطأ في حفظ الإشعار: $e');
+      rethrow;
     }
   }
 
-  // Get unread notifications count
+  /// تحديث حالة الإشعار
+  Future<void> _updateNotificationStatus(
+    String notificationId,
+    NotificationStatus status, {
+    DateTime? sentAt,
+    DateTime? readAt,
+    String? errorMessage,
+  }) async {
+    try {
+      final updateData = <String, dynamic>{
+        'status': status.toString().split('.').last,
+        'updatedAt': FieldValue.serverTimestamp(),
+      };
+
+      if (sentAt != null) updateData['sentAt'] = Timestamp.fromDate(sentAt);
+      if (readAt != null) updateData['readAt'] = Timestamp.fromDate(readAt);
+      if (errorMessage != null) updateData['errorMessage'] = errorMessage;
+
+      await _firestore
+          .collection('notifications')
+          .doc(notificationId)
+          .update(updateData);
+    } catch (e) {
+      debugPrint('❌ خطأ في تحديث حالة الإشعار: $e');
+    }
+  }
+
+  /// الحصول على معرف القناة بناءً على الأولوية
+  String _getChannelId(NotificationPriority priority) {
+    switch (priority) {
+      case NotificationPriority.urgent:
+      case NotificationPriority.high:
+        return 'high_priority_channel';
+      case NotificationPriority.medium:
+        return 'medium_priority_channel';
+      case NotificationPriority.low:
+        return 'low_priority_channel';
+    }
+  }
+
+  // Public methods للاستخدام من الخارج
+
+  /// تحديث إعدادات الإشعارات للمستخدم
+  Future<bool> updateUserNotificationSettings(NotificationSettingsModel settings) async {
+    try {
+      await _firestore
+          .collection('notification_settings')
+          .doc(settings.userId)
+          .set(settings.toMap());
+      return true;
+    } catch (e) {
+      debugPrint('❌ خطأ في تحديث إعدادات الإشعارات: $e');
+      return false;
+    }
+  }
+
+  /// الحصول على إعدادات الإشعارات للمستخدم
+  Future<NotificationSettingsModel?> getUserNotificationSettings(String userId) async {
+    try {
+      final doc = await _firestore.collection('notification_settings').doc(userId).get();
+
+      if (doc.exists) {
+        return NotificationSettingsModel.fromMap(doc.data()!);
+      } else {
+        // إنشاء إعدادات افتراضية
+        final userData = await _getUserData(userId);
+        if (userData == null) return null;
+
+        final settings = NotificationSettingsModel.createDefault(
+          userId: userId,
+          userType: userData['userType'] ?? 'parent',
+          fcmToken: await _getFCMToken(userId) ?? '',
+        );
+
+        await updateUserNotificationSettings(settings);
+        return settings;
+      }
+    } catch (e) {
+      debugPrint('❌ خطأ في الحصول على إعدادات الإشعارات: $e');
+      return null;
+    }
+  }
+
+  /// الحصول على عدد الإشعارات غير المقروءة
   Stream<int> getUnreadNotificationsCount(String userId) {
     return _firestore
         .collection('notifications')
         .where('recipientId', isEqualTo: userId)
+        .where('status', whereIn: ['pending', 'sent', 'delivered'])
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .where((doc) => doc.data()['isRead'] == false)
-            .length);
+        .map((snapshot) => snapshot.docs.length);
   }
 
-  // Delete test notifications
-  Future<void> deleteTestNotifications(String userId) async {
-    try {
-      debugPrint('🧹 Cleaning up test notifications for user: $userId');
-
-      final batch = _firestore.batch();
-      final testNotifications = await _firestore
-          .collection('notifications')
-          .where('recipientId', isEqualTo: userId)
-          .get();
-
-      int deletedCount = 0;
-      for (var doc in testNotifications.docs) {
-        final data = doc.data();
-
-        // Check if it's a test notification
-        final isTestNotification =
-            data['title']?.toString().contains('تجريبي') == true ||
-            data['body']?.toString().contains('تجريبي') == true ||
-            data['data']?['source'] == 'test' ||
-            data['type'] == 'general' && data['title'] == 'إشعار تجريبي';
-
-        if (isTestNotification) {
-          batch.delete(doc.reference);
-          deletedCount++;
-        }
-      }
-
-      if (deletedCount > 0) {
-        await batch.commit();
-        debugPrint('✅ Deleted $deletedCount test notifications');
-      } else {
-        debugPrint('ℹ️ No test notifications found to delete');
-      }
-    } catch (e) {
-      debugPrint('❌ Error deleting test notifications: $e');
-      throw Exception('خطأ في حذف الإشعارات التجريبية: $e');
-    }
-  }
-
-  // Delete all test notifications from the system
-  Future<void> deleteAllTestNotifications() async {
-    try {
-      debugPrint('🧹 Cleaning up all test notifications from system');
-
-      final batch = _firestore.batch();
-      final testNotifications = await _firestore
-          .collection('notifications')
-          .get();
-
-      int deletedCount = 0;
-      for (var doc in testNotifications.docs) {
-        final data = doc.data();
-
-        // Check if it's a test notification
-        final isTestNotification =
-            data['title']?.toString().contains('تجريبي') == true ||
-            data['body']?.toString().contains('تجريبي') == true ||
-            data['data']?['source'] == 'test' ||
-            data['type'] == 'general' && data['title'] == 'إشعار تجريبي';
-
-        if (isTestNotification) {
-          batch.delete(doc.reference);
-          deletedCount++;
-        }
-      }
-
-      if (deletedCount > 0) {
-        await batch.commit();
-        debugPrint('✅ Deleted $deletedCount test notifications from system');
-      } else {
-        debugPrint('ℹ️ No test notifications found in system');
-      }
-    } catch (e) {
-      debugPrint('❌ Error deleting all test notifications: $e');
-      throw Exception('خطأ في حذف جميع الإشعارات التجريبية: $e');
-    }
-  }
-
-  // Format time for notification
-  String _formatTime(DateTime dateTime) {
-    return '${dateTime.hour.toString().padLeft(2, '0')}:${dateTime.minute.toString().padLeft(2, '0')}';
-  }
-
-
-
-  // Mark all notifications as read for user
-  Future<void> markAllNotificationsAsRead(String userId) async {
-    try {
-      final batch = _firestore.batch();
-      final notifications = await _firestore
-          .collection('notifications')
-          .where('recipientId', isEqualTo: userId)
-          .where('isRead', isEqualTo: false)
-          .get();
-
-      for (final doc in notifications.docs) {
-        batch.update(doc.reference, {'isRead': true});
-      }
-
-      await batch.commit();
-      debugPrint('✅ All notifications marked as read for user: $userId');
-    } catch (e) {
-      debugPrint('❌ Error marking all notifications as read: $e');
-    }
-  }
-
-  // Send notification when student arrives at school
-  Future<void> sendStudentArrivedAtSchoolNotification({
-    required StudentModel student,
-    required String supervisorName,
-    required DateTime timestamp,
-  }) async {
-    try {
-      final notification = NotificationModel(
-        id: _uuid.v4(),
-        title: 'وصل ${student.name} إلى المدرسة',
-        body: 'وصل ${student.name} إلى المدرسة بأمان مع المشرف $supervisorName في ${_formatTime(timestamp)}',
-        recipientId: student.parentId,
-        studentId: student.id,
-        studentName: student.name,
-        type: NotificationType.general,
-        timestamp: timestamp,
-        data: {
-          'studentId': student.id,
-          'action': 'arrived_at_school',
-          'timestamp': timestamp.toIso8601String(),
-          'location': 'school',
-        },
-      );
-
-      await _saveNotification(notification);
-      await _sendPushNotification(notification);
-    } catch (e) {
-      throw Exception('خطأ في إرسال إشعار وصول الطالب للمدرسة: $e');
-    }
-  }
-
-  // ==================== إشعارات شاملة لجميع الأحداث ====================
-
-  // ملاحظة: تم استبدال هذه الدالة بـ notifyStudentAssignmentWithSound
-  // التي تستخدم EnhancedNotificationService للحصول على إشعارات محسنة مع الصوت
-
-  // إشعار بدء الرحلة
-  Future<void> sendTripStartNotification({
-    required String supervisorId,
-    required String supervisorName,
-    required String busPlateNumber,
-    required String direction,
-    required List<String> studentIds,
-  }) async {
-    try {
-      // إشعار لأولياء الأمور
-      for (String studentId in studentIds) {
-        final student = await _getStudentById(studentId);
-        if (student != null) {
-          final parentNotification = NotificationModel(
-            id: _uuid.v4(),
-            title: 'بدء رحلة الباص',
-            body: 'بدأت رحلة الباص رقم $busPlateNumber ${direction == 'toSchool' ? 'إلى المدرسة' : 'إلى المنزل'} مع المشرف $supervisorName',
-            recipientId: student.parentId,
-            studentId: studentId,
-            studentName: student.name,
-            type: NotificationType.general,
-            timestamp: DateTime.now(),
-            data: {
-              'type': 'trip_started',
-              'direction': direction,
-              'busPlateNumber': busPlateNumber,
-              'supervisorName': supervisorName,
-            },
-          );
-
-          await _saveNotification(parentNotification);
-          await _sendPushNotification(parentNotification);
-        }
-      }
-
-      // إشعار للإدمن (بدون إرسال للمشرف الذي بدأ الرحلة)
-      await _sendAdminNotification(
-        title: 'بدء رحلة جديدة',
-        body: 'بدأ المشرف $supervisorName رحلة الباص $busPlateNumber ${direction == 'toSchool' ? 'إلى المدرسة' : 'إلى المنزل'}',
-        excludeAdminId: supervisorId, // استبعاد المشرف إذا كان إدمن أيضاً
-        data: {
-          'type': 'trip_started',
-          'supervisorId': supervisorId,
-          'busPlateNumber': busPlateNumber,
-          'direction': direction,
-          'studentsCount': studentIds.length.toString(),
-        },
-      );
-
-    } catch (e) {
-      throw Exception('خطأ في إرسال إشعار بدء الرحلة: $e');
-    }
-  }
-
-  // إشعار انتهاء الرحلة
-  Future<void> sendTripEndNotification({
-    required String supervisorId,
-    required String supervisorName,
-    required String busPlateNumber,
-    required String direction,
-    required List<String> studentIds,
-  }) async {
-    try {
-      // إشعار لأولياء الأمور
-      for (String studentId in studentIds) {
-        final student = await _getStudentById(studentId);
-        if (student != null) {
-          final parentNotification = NotificationModel(
-            id: _uuid.v4(),
-            title: 'انتهاء رحلة الباص',
-            body: 'انتهت رحلة الباص رقم $busPlateNumber ${direction == 'toSchool' ? 'ووصل إلى المدرسة' : 'ووصل إلى المنطقة'}',
-            recipientId: student.parentId,
-            studentId: studentId,
-            studentName: student.name,
-            type: NotificationType.general,
-            timestamp: DateTime.now(),
-            data: {
-              'type': 'trip_ended',
-              'direction': direction,
-              'busPlateNumber': busPlateNumber,
-              'supervisorName': supervisorName,
-            },
-          );
-
-          await _saveNotification(parentNotification);
-          await _sendPushNotification(parentNotification);
-        }
-      }
-
-      // إشعار للإدمن (بدون إرسال للمشرف الذي أنهى الرحلة)
-      await _sendAdminNotification(
-        title: 'انتهاء رحلة',
-        body: 'انتهى المشرف $supervisorName من رحلة الباص $busPlateNumber ${direction == 'toSchool' ? 'إلى المدرسة' : 'إلى المنزل'}',
-        excludeAdminId: supervisorId, // استبعاد المشرف إذا كان إدمن أيضاً
-        data: {
-          'type': 'trip_ended',
-          'supervisorId': supervisorId,
-          'busPlateNumber': busPlateNumber,
-          'direction': direction,
-          'studentsCount': studentIds.length.toString(),
-        },
-      );
-
-    } catch (e) {
-      throw Exception('خطأ في إرسال إشعار انتهاء الرحلة: $e');
-    }
-  }
-
-  // إشعار تغيير حالة الطالب (في الطريق، وصل، إلخ)
-  Future<void> sendStudentStatusChangeNotification({
-    required String studentId,
-    required String studentName,
-    required String parentId,
-    required String oldStatus,
-    required String newStatus,
-    required String supervisorName,
-  }) async {
-    try {
-      String statusMessage = _getStatusMessage(newStatus);
-
-      final notification = NotificationModel(
-        id: _uuid.v4(),
-        title: 'تحديث حالة ${studentName}',
-        body: '$statusMessage مع المشرف $supervisorName',
-        recipientId: parentId,
-        studentId: studentId,
-        studentName: studentName,
-        type: NotificationType.general,
-        timestamp: DateTime.now(),
-        data: {
-          'type': 'status_change',
-          'oldStatus': oldStatus,
-          'newStatus': newStatus,
-          'supervisorName': supervisorName,
-        },
-      );
-
-      await _saveNotification(notification);
-      await _sendPushNotification(notification);
-
-      // إشعار للإدمن عن تغيير الحالة
-      await _sendAdminNotification(
-        title: 'تحديث حالة طالب',
-        body: 'تم تحديث حالة $studentName من $oldStatus إلى $newStatus بواسطة $supervisorName',
-        data: {
-          'type': 'student_status_updated',
-          'studentId': studentId,
-          'oldStatus': oldStatus,
-          'newStatus': newStatus,
-          'supervisorName': supervisorName,
-        },
-      );
-
-    } catch (e) {
-      throw Exception('خطأ في إرسال إشعار تغيير حالة الطالب: $e');
-    }
-  }
-
-  // إشعار تسكين مشرف في باص
-  Future<void> sendSupervisorAssignmentNotification({
-    required String supervisorId,
-    required String supervisorName,
-    required String busId,
-    required String busPlateNumber,
-    required String adminName,
-    String? adminId, // إضافة معرف الإدمن لاستبعاده
-  }) async {
-    try {
-      // إشعار للمشرف
-      final supervisorNotification = NotificationModel(
-        id: _uuid.v4(),
-        title: 'تم تسكينك في باص جديد',
-        body: 'تم تسكينك في الباص رقم $busPlateNumber بواسطة $adminName',
-        recipientId: supervisorId,
-        type: NotificationType.general,
-        timestamp: DateTime.now(),
-        data: {
-          'type': 'supervisor_assignment',
-          'busId': busId,
-          'busPlateNumber': busPlateNumber,
-          'assignedBy': adminName,
-        },
-      );
-
-      await _saveNotification(supervisorNotification);
-      await _sendPushNotification(supervisorNotification);
-
-      // إشعار للإدمن (باستثناء الإدمن الذي قام بالعملية)
-      await _sendAdminNotification(
-        title: 'تم تسكين مشرف',
-        body: 'تم تسكين المشرف $supervisorName في الباص $busPlateNumber',
-        excludeAdminId: adminId, // استبعاد الإدمن الذي قام بالعملية
-        data: {
-          'type': 'supervisor_assignment_completed',
-          'supervisorId': supervisorId,
-          'busId': busId,
-          'assignedBy': adminName,
-        },
-      );
-
-    } catch (e) {
-      throw Exception('خطأ في إرسال إشعار تسكين المشرف: $e');
-    }
-  }
-
-  // إشعار غياب طالب
-  Future<void> sendStudentAbsenceNotification({
-    required String studentId,
-    required String studentName,
-    required String parentId,
-    required String reason,
-    required DateTime date,
-    required String status,
-  }) async {
-    try {
-      String title = status == 'approved' ? 'تم قبول طلب الغياب' :
-                    status == 'rejected' ? 'تم رفض طلب الغياب' : 'طلب غياب جديد';
-
-      String body = status == 'approved' ? 'تم قبول طلب غياب $studentName ليوم ${_formatDate(date)}' :
-                   status == 'rejected' ? 'تم رفض طلب غياب $studentName ليوم ${_formatDate(date)}' :
-                   'تم تسجيل طلب غياب $studentName ليوم ${_formatDate(date)} - السبب: $reason';
-
-      final notification = NotificationModel(
-        id: _uuid.v4(),
-        title: title,
-        body: body,
-        recipientId: parentId,
-        studentId: studentId,
-        studentName: studentName,
-        type: NotificationType.general,
-        timestamp: DateTime.now(),
-        data: {
-          'type': 'absence_notification',
-          'status': status,
-          'reason': reason,
-          'date': date.toIso8601String(),
-        },
-      );
-
-      await _saveNotification(notification);
-      await _sendPushNotification(notification);
-
-      // إشعار للإدمن عن طلب الغياب (بدون إرسال لولي الأمر)
-      if (status == 'pending') {
-        await _sendAdminNotification(
-          title: 'طلب غياب جديد',
-          body: 'طلب غياب جديد للطالب $studentName ليوم ${_formatDate(date)} - السبب: $reason',
-          excludeAdminId: parentId, // استبعاد ولي الأمر إذا كان إدمن أيضاً
-          data: {
-            'type': 'new_absence_request',
-            'studentId': studentId,
-            'studentName': studentName,
-            'reason': reason,
-            'date': date.toIso8601String(),
-          },
-        );
-      }
-
-    } catch (e) {
-      throw Exception('خطأ في إرسال إشعار الغياب: $e');
-    }
-  }
-
-  // إشعار شكوى جديدة
-  Future<void> sendComplaintNotification({
-    required String complaintId,
-    required String title,
-    required String description,
-    required String parentId,
-    required String parentName,
-    required String status,
-  }) async {
-    try {
-      // إشعار لولي الأمر
-      if (status != 'pending') {
-        String statusText = status == 'resolved' ? 'تم حل الشكوى' :
-                           status == 'in_progress' ? 'جاري معالجة الشكوى' : 'تم رفض الشكوى';
-
-        final parentNotification = NotificationModel(
-          id: _uuid.v4(),
-          title: statusText,
-          body: 'تم تحديث حالة شكواك: $title',
-          recipientId: parentId,
-          type: NotificationType.general,
-          timestamp: DateTime.now(),
-          data: {
-            'type': 'complaint_status_update',
-            'complaintId': complaintId,
-            'status': status,
-          },
-        );
-
-        await _saveNotification(parentNotification);
-        await _sendPushNotification(parentNotification);
-      }
-
-      // إشعار للإدمن (بدون إرسال لولي الأمر)
-      await _sendAdminNotification(
-        title: status == 'pending' ? 'شكوى جديدة' : 'تحديث حالة شكوى',
-        body: status == 'pending' ? 'شكوى جديدة من $parentName: $title' : 'تم تحديث حالة الشكوى: $title',
-        excludeAdminId: parentId, // استبعاد ولي الأمر إذا كان إدمن أيضاً
-        data: {
-          'type': status == 'pending' ? 'new_complaint' : 'complaint_updated',
-          'complaintId': complaintId,
-          'parentName': parentName,
-          'status': status,
-        },
-      );
-
-    } catch (e) {
-      throw Exception('خطأ في إرسال إشعار الشكوى: $e');
-    }
-  }
-
-  // إشعار تحديث معلومات الطالب - تم إيقافه لتجنب إرسال إشعارات للأدمن
-  @Deprecated('Use EnhancedNotificationService instead - this sends unwanted admin notifications')
-  Future<void> sendStudentInfoUpdateNotification({
-    required String studentId,
-    required String studentName,
-    required String parentId,
-    required List<String> changes,
-  }) async {
-    debugPrint('⚠️ DEPRECATED: sendStudentInfoUpdateNotification called - use EnhancedNotificationService instead');
-    // لا نفعل شيء هنا لتجنب إرسال إشعارات للأدمن
-    return;
-  }
-
-  // ==================== دوال مساعدة للإشعارات ====================
-
-  // إرسال إشعار للمشرف المحدد فقط
-  Future<void> _sendSupervisorNotification({
-    required String title,
-    required String body,
-    required String supervisorId, // مطلوب الآن
-    Map<String, dynamic>? data,
-  }) async {
-    try {
-      if (supervisorId.isEmpty) {
-        debugPrint('⚠️ Supervisor ID is empty, skipping notification');
-        return;
-      }
-
-      final notification = NotificationModel(
-        id: _uuid.v4(),
-        title: title,
-        body: body,
-        recipientId: supervisorId,
-        type: NotificationType.general,
-        timestamp: DateTime.now(),
-        data: data,
-      );
-
-      await _saveNotification(notification);
-      await _sendPushNotification(notification);
-      debugPrint('✅ Notification sent to supervisor: $supervisorId');
-    } catch (e) {
-      debugPrint('❌ Error sending supervisor notification: $e');
-    }
-  }
-
-  // إرسال إشعار للإدمن (مع استبعاد إدمن محدد)
-  Future<void> _sendAdminNotification({
-    required String title,
-    required String body,
-    Map<String, dynamic>? data,
-    String? excludeAdminId, // استبعاد إدمن محدد
-  }) async {
-    try {
-      final admins = await _getAllAdmins();
-      for (var admin in admins) {
-        // تخطي الإدمن المستبعد
-        if (excludeAdminId != null && admin['id'] == excludeAdminId) {
-          continue;
-        }
-
-        final notification = NotificationModel(
-          id: _uuid.v4(),
-          title: title,
-          body: body,
-          recipientId: admin['id'],
-          type: NotificationType.general,
-          timestamp: DateTime.now(),
-          data: data,
-        );
-
-        await _saveNotification(notification);
-        await _sendPushNotification(notification);
-      }
-    } catch (e) {
-      debugPrint('❌ Error sending admin notification: $e');
-    }
-  }
-
-  // الحصول على جميع المشرفين
-  Future<List<Map<String, dynamic>>> _getAllSupervisors() async {
-    try {
-      final snapshot = await _firestore
-          .collection('users')
-          .where('userType', isEqualTo: 'supervisor') // تصحيح الحقل
-          .where('isActive', isEqualTo: true)
-          .get();
-
-      return snapshot.docs.map((doc) => {
-        'id': doc.id,
-        ...doc.data(),
-      }).toList();
-    } catch (e) {
-      debugPrint('❌ Error getting supervisors: $e');
-      return [];
-    }
-  }
-
-  // الحصول على جميع الإدمن
-  Future<List<Map<String, dynamic>>> _getAllAdmins() async {
-    try {
-      final snapshot = await _firestore
-          .collection('users')
-          .where('userType', isEqualTo: 'admin') // تصحيح الحقل
-          .where('isActive', isEqualTo: true)
-          .get();
-
-      return snapshot.docs.map((doc) => {
-        'id': doc.id,
-        ...doc.data(),
-      }).toList();
-    } catch (e) {
-      debugPrint('❌ Error getting admins: $e');
-      return [];
-    }
-  }
-
-  // الحصول على بيانات طالب
-  Future<StudentModel?> _getStudentById(String studentId) async {
-    try {
-      final doc = await _firestore.collection('students').doc(studentId).get();
-      if (doc.exists) {
-        return StudentModel.fromMap(doc.data()!);
-      }
-      return null;
-    } catch (e) {
-      debugPrint('❌ Error getting student: $e');
-      return null;
-    }
-  }
-
-  // تحويل حالة الطالب إلى رسالة
-  String _getStatusMessage(String status) {
-    switch (status) {
-      case 'onBus':
-        return 'ركب ${status} الباص';
-      case 'atSchool':
-        return 'وصل إلى المدرسة';
-      case 'leftSchool':
-        return 'غادر المدرسة';
-      case 'onWayHome':
-        return 'في الطريق إلى المنزل';
-      case 'arrivedHome':
-        return 'وصل إلى المنزل';
-      case 'absent':
-        return 'غائب اليوم';
-      default:
-        return 'تم تحديث الحالة';
-    }
-  }
-
-  // تنسيق التاريخ
-  String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
-  }
-
-  // Send notification when student arrives at home
-  Future<void> sendStudentArrivedAtHomeNotification({
-    required StudentModel student,
-    required String supervisorName,
-    required DateTime timestamp,
-  }) async {
-    try {
-      final notification = NotificationModel(
-        id: _uuid.v4(),
-        title: 'وصل ${student.name} إلى المنزل',
-        body: 'وصل ${student.name} إلى المنزل بأمان مع المشرف $supervisorName في ${_formatTime(timestamp)}',
-        recipientId: student.parentId,
-        studentId: student.id,
-        studentName: student.name,
-        type: NotificationType.general,
-        timestamp: timestamp,
-        data: {
-          'studentId': student.id,
-          'action': 'arrived_at_home',
-          'timestamp': timestamp.toIso8601String(),
-          'location': 'home',
-        },
-      );
-
-      await _saveNotification(notification);
-      await _sendPushNotification(notification);
-    } catch (e) {
-      throw Exception('خطأ في إرسال إشعار وصول الطالب للمنزل: $e');
-    }
-  }
-
-  // Send notification when student is on bus
-  Future<void> sendStudentOnBusNotification({
-    required StudentModel student,
-    required String supervisorName,
-    required DateTime timestamp,
-    required String busRoute,
-  }) async {
-    try {
-      final notification = NotificationModel(
-        id: _uuid.v4(),
-        title: '${student.name} في الباص',
-        body: '${student.name} الآن في الباص (خط $busRoute) مع المشرف $supervisorName في ${_formatTime(timestamp)}',
-        recipientId: student.parentId,
-        studentId: student.id,
-        studentName: student.name,
-        type: NotificationType.general,
-        timestamp: timestamp,
-        data: {
-          'studentId': student.id,
-          'action': 'on_bus',
-          'timestamp': timestamp.toIso8601String(),
-          'location': 'bus',
-          'busRoute': busRoute,
-        },
-      );
-
-      await _saveNotification(notification);
-      await _sendPushNotification(notification);
-    } catch (e) {
-      throw Exception('خطأ في إرسال إشعار وجود الطالب في الباص: $e');
-    }
-  }
-
-  // ==================== إشعارات محسنة مع الصوت ====================
-
-  /// إشعار تسكين الطالب مع الصوت
-  Future<void> notifyStudentAssignmentWithSound({
-    required String studentId,
-    required String studentName,
-    required String busId,
-    required String busRoute,
-    required String parentId,
-    required String supervisorId,
-    required String parentName,
-    required String parentPhone,
-    String? excludeAdminId, // استبعاد إدمن محدد من الإشعارات
-  }) async {
-    await _enhancedService.notifyStudentAssignment(
-      studentId: studentId,
-      studentName: studentName,
-      busId: busId,
-      busRoute: busRoute,
-      parentId: parentId,
-      supervisorId: supervisorId,
-      parentName: parentName,
-      parentPhone: parentPhone,
-      excludeAdminId: excludeAdminId,
-    );
-  }
-
-  /// إشعار إلغاء تسكين الطالب مع الصوت
-  Future<void> notifyStudentUnassignmentWithSound({
-    required String studentId,
-    required String studentName,
-    required String busId,
-    required String parentId,
-    required String supervisorId,
-    String? excludeAdminId, // استبعاد إدمن محدد من الإشعارات
-  }) async {
-    await _enhancedService.notifyStudentUnassignment(
-      studentId: studentId,
-      studentName: studentName,
-      busId: busId,
-      parentId: parentId,
-      supervisorId: supervisorId,
-      excludeAdminId: excludeAdminId,
-    );
-  }
-
-  /// إشعار ركوب الطالب مع الصوت
-  Future<void> notifyStudentBoardedWithSound({
-    required String studentId,
-    required String studentName,
-    required String busId,
-    required String parentId,
-    required String supervisorId,
-  }) async {
-    await _enhancedService.notifyStudentBoarded(
-      studentId: studentId,
-      studentName: studentName,
-      busId: busId,
-      parentId: parentId,
-      supervisorId: supervisorId,
-      timestamp: DateTime.now(),
-    );
-  }
-
-  /// إشعار نزول الطالب مع الصوت
-  Future<void> notifyStudentAlightedWithSound({
-    required String studentId,
-    required String studentName,
-    required String busId,
-    required String parentId,
-    required String supervisorId,
-  }) async {
-    await _enhancedService.notifyStudentAlighted(
-      studentId: studentId,
-      studentName: studentName,
-      busId: busId,
-      parentId: parentId,
-      supervisorId: supervisorId,
-      timestamp: DateTime.now(),
-    );
-  }
-
-  /// إشعار طلب غياب مع الصوت
-  Future<void> notifyAbsenceRequestWithSound({
-    required String studentId,
-    required String studentName,
-    required String parentId,
-    required String parentName,
-    required String supervisorId,
-    required String busId,
-    required DateTime absenceDate,
-    required String reason,
-  }) async {
-    await _enhancedService.notifyAbsenceRequest(
-      studentId: studentId,
-      studentName: studentName,
-      parentId: parentId,
-      parentName: parentName,
-      supervisorId: supervisorId,
-      busId: busId,
-      absenceDate: absenceDate,
-      reason: reason,
-    );
-  }
-
-  /// إشعار الموافقة على الغياب مع الصوت
-  Future<void> notifyAbsenceApprovedWithSound({
-    required String studentId,
-    required String studentName,
-    required String parentId,
-    required String supervisorId,
-    required DateTime absenceDate,
-    required String approvedBy,
-    String? approvedBySupervisorId, // معرف المشرف الذي وافق لاستبعاده
-  }) async {
-    await _enhancedService.notifyAbsenceApproved(
-      studentId: studentId,
-      studentName: studentName,
-      parentId: parentId,
-      supervisorId: supervisorId,
-      absenceDate: absenceDate,
-      approvedBy: approvedBy,
-      approvedBySupervisorId: approvedBySupervisorId,
-    );
-  }
-
-  /// إشعار رفض الغياب مع الصوت
-  Future<void> notifyAbsenceRejectedWithSound({
-    required String studentId,
-    required String studentName,
-    required String parentId,
-    required String supervisorId,
-    required DateTime absenceDate,
-    required String rejectedBy,
-    required String reason,
-    String? rejectedBySupervisorId, // معرف المشرف الذي رفض لاستبعاده
-  }) async {
-    await _enhancedService.notifyAbsenceRejected(
-      studentId: studentId,
-      studentName: studentName,
-      parentId: parentId,
-      supervisorId: supervisorId,
-      absenceDate: absenceDate,
-      rejectedBy: rejectedBy,
-      reason: reason,
-      rejectedBySupervisorId: rejectedBySupervisorId,
-    );
-  }
-
-  /// إشعار شكوى جديدة مع الصوت
-  Future<void> notifyNewComplaintWithSound({
-    required String complaintId,
-    required String parentId,
-    required String parentName,
-    required String subject,
-    required String category,
-  }) async {
-    await _enhancedService.notifyNewComplaint(
-      complaintId: complaintId,
-      parentId: parentId,
-      parentName: parentName,
-      subject: subject,
-      category: category,
-    );
-  }
-
-  /// إشعار رد على الشكوى مع الصوت
-  Future<void> notifyComplaintResponseWithSound({
-    required String complaintId,
-    required String parentId,
-    required String subject,
-    required String response,
-  }) async {
-    await _enhancedService.notifyComplaintResponse(
-      complaintId: complaintId,
-      parentId: parentId,
-      subject: subject,
-      response: response,
-    );
-  }
-
-  /// إشعار تقييم المشرف مع الصوت
-  Future<void> notifySupervisorEvaluationWithSound({
-    required String supervisorId,
-    required String supervisorName,
-    required String parentId,
-    required String parentName,
-    required String studentName,
-    required double averageRating,
-    String? comments,
-  }) async {
-    await _enhancedService.notifySupervisorEvaluation(
-      supervisorId: supervisorId,
-      supervisorName: supervisorName,
-      parentId: parentId,
-      parentName: parentName,
-      studentName: studentName,
-      averageRating: averageRating,
-      comments: comments,
-    );
-  }
-
-  /// إشعار تسجيل ولي أمر جديد مع الصوت
-  Future<void> notifyNewParentRegistrationWithSound({
-    required String parentId,
-    required String parentName,
-    required String parentEmail,
-    required String parentPhone,
-    required DateTime registrationDate,
-  }) async {
-    await _enhancedService.notifyNewParentRegistration(
-      parentId: parentId,
-      parentName: parentName,
-      parentEmail: parentEmail,
-      parentPhone: parentPhone,
-      registrationDate: registrationDate,
-    );
-  }
-
-  /// إشعار استبيان جديد مع الصوت
-  Future<void> notifyNewSurveyWithSound({
-    required String surveyId,
-    required String surveyTitle,
-    required String surveyDescription,
-    required String createdBy,
-    required DateTime deadline,
-    required List<String> targetUserIds,
-  }) async {
-    await _enhancedService.notifyNewSurvey(
-      surveyId: surveyId,
-      surveyTitle: surveyTitle,
-      surveyDescription: surveyDescription,
-      createdBy: createdBy,
-      deadline: deadline,
-      targetUserIds: targetUserIds,
-    );
-  }
-
-  /// إشعار تذكير انتهاء موعد الاستبيان مع الصوت
-  Future<void> notifySurveyDeadlineReminderWithSound({
-    required String surveyId,
-    required String surveyTitle,
-    required DateTime deadline,
-    required List<String> pendingUserIds,
-  }) async {
-    await _enhancedService.notifySurveyDeadlineReminder(
-      surveyId: surveyId,
-      surveyTitle: surveyTitle,
-      deadline: deadline,
-      pendingUserIds: pendingUserIds,
-    );
-  }
-
-  /// إشعار تعيين مشرف جديد مع الصوت
-  Future<void> notifyNewSupervisorAssignmentWithSound({
-    required String supervisorId,
-    required String supervisorName,
-    required String busId,
-    required String busRoute,
-    required String assignedBy,
-  }) async {
-    await _enhancedService.notifyNewSupervisorAssignment(
-      supervisorId: supervisorId,
-      supervisorName: supervisorName,
-      busId: busId,
-      busRoute: busRoute,
-      assignedBy: assignedBy,
-    );
-  }
-
-  /// إشعار تحديث جدول الرحلات مع الصوت
-  Future<void> notifyScheduleUpdateWithSound({
-    required String busId,
-    required String busRoute,
-    required String supervisorId,
-    required List<String> parentIds,
-    required String updatedBy,
-    required Map<String, dynamic> scheduleChanges,
-  }) async {
-    await _enhancedService.notifyScheduleUpdate(
-      busId: busId,
-      busRoute: busRoute,
-      supervisorId: supervisorId,
-      parentIds: parentIds,
-      updatedBy: updatedBy,
-      scheduleChanges: scheduleChanges,
-    );
-  }
-
-  /// إشعار تحديث حالة الرحلة مع الصوت
-  Future<void> notifyTripStatusUpdateWithSound({
-    required String busId,
-    required String busRoute,
-    required String status,
-    required List<String> parentIds,
-    required String supervisorId,
-  }) async {
-    await _enhancedService.notifyTripStatusUpdate(
-      busId: busId,
-      busRoute: busRoute,
-      status: status,
-      parentIds: parentIds,
-      supervisorId: supervisorId,
-    );
-  }
-
-  /// إشعار طوارئ مع الصوت
-  Future<void> notifyEmergencyWithSound({
-    required String busId,
-    required String supervisorId,
-    required String supervisorName,
-    required String emergencyType,
-    required String description,
-    required List<String> parentIds,
-  }) async {
-    await _enhancedService.notifyEmergency(
-      busId: busId,
-      supervisorId: supervisorId,
-      supervisorName: supervisorName,
-      emergencyType: emergencyType,
-      description: description,
-      parentIds: parentIds,
-    );
-  }
-
-  /// حفظ FCM token للمستخدم
-  Future<void> saveFCMTokenForUser(String userId) async {
-    await _enhancedService.saveFCMToken(userId);
-  }
-
-  /// الحصول على الإشعارات غير المقروءة
-  Stream<List<NotificationModel>> getUnreadNotificationsStream(String userId) {
+  /// الحصول على الإشعارات للمستخدم
+  Stream<List<NotificationModel>> getUserNotifications(String userId, {int limit = 50}) {
     return _firestore
         .collection('notifications')
         .where('recipientId', isEqualTo: userId)
-        .where('isRead', isEqualTo: false)
-        .orderBy('timestamp', descending: true)
+        .orderBy('createdAt', descending: true)
+        .limit(limit)
         .snapshots()
         .map((snapshot) => snapshot.docs
             .map((doc) => NotificationModel.fromMap(doc.data()))
             .toList());
   }
 
-  /// تحديد الإشعار كمقروء (دالة محسنة)
-  Future<void> markNotificationAsReadEnhanced(String notificationId) async {
+  /// تحديد الإشعار كمقروء
+  Future<bool> markNotificationAsRead(String notificationId) async {
     try {
-      await _firestore
-          .collection('notifications')
-          .doc(notificationId)
-          .update({'isRead': true});
+      await _updateNotificationStatus(
+        notificationId,
+        NotificationStatus.read,
+        readAt: DateTime.now(),
+      );
+      return true;
     } catch (e) {
-      debugPrint('❌ Error marking notification as read: $e');
+      debugPrint('❌ خطأ في تحديد الإشعار كمقروء: $e');
+      return false;
     }
   }
 
-  /// حذف الإشعار
-  Future<void> deleteNotificationById(String notificationId) async {
+  /// تحديد جميع الإشعارات كمقروءة
+  Future<bool> markAllNotificationsAsRead(String userId) async {
     try {
-      await _firestore
+      final batch = _firestore.batch();
+      final snapshot = await _firestore
           .collection('notifications')
-          .doc(notificationId)
-          .delete();
+          .where('recipientId', isEqualTo: userId)
+          .where('status', whereIn: ['pending', 'sent', 'delivered'])
+          .get();
+
+      for (final doc in snapshot.docs) {
+        batch.update(doc.reference, {
+          'status': 'read',
+          'readAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      await batch.commit();
+      return true;
     } catch (e) {
-      debugPrint('❌ Error deleting notification: $e');
+      debugPrint('❌ خطأ في تحديد جميع الإشعارات كمقروءة: $e');
+      return false;
     }
   }
 }

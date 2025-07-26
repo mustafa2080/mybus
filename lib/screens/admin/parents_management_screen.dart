@@ -756,23 +756,7 @@ class _ParentsManagementScreenState extends State<ParentsManagementScreen> {
 
   Future<void> _sendNotification(UserModel parent, String title, String message) async {
     try {
-      // إضافة الإشعار إلى قاعدة البيانات
-      await _firestore.collection('notifications').add({
-        'id': DateTime.now().millisecondsSinceEpoch.toString(),
-        'recipientId': parent.id,
-        'title': title,
-        'body': message,
-        'type': 'general',
-        'isRead': false,
-        'timestamp': FieldValue.serverTimestamp(),
-        'createdBy': _authService.currentUser?.uid,
-        'data': {
-          'source': 'admin',
-          'parentId': parent.id,
-        },
-      });
-
-      // إرسال إيميل
+      // إرسال إيميل فقط (تم حذف نظام الإشعارات)
       await _emailService.sendParentNotification(
         parentEmail: parent.email,
         parentName: parent.name,
@@ -783,7 +767,7 @@ class _ParentsManagementScreenState extends State<ParentsManagementScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('تم إرسال الإشعار بنجاح'),
+            content: Text('تم إرسال الإيميل بنجاح'),
             backgroundColor: Colors.green,
           ),
         );
@@ -792,7 +776,7 @@ class _ParentsManagementScreenState extends State<ParentsManagementScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('خطأ في إرسال الإشعار: $e'),
+            content: Text('خطأ في إرسال الإيميل: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -820,25 +804,8 @@ class _ParentsManagementScreenState extends State<ParentsManagementScreen> {
         },
       ];
 
-      for (var notification in testNotifications) {
-        await _firestore.collection('notifications').add({
-          'id': DateTime.now().millisecondsSinceEpoch.toString() + testNotifications.indexOf(notification).toString(),
-          'recipientId': parent.id,
-          'title': notification['title'],
-          'body': notification['body'],
-          'type': notification['type'],
-          'isRead': false,
-          'timestamp': FieldValue.serverTimestamp(),
-          'createdBy': _authService.currentUser?.uid,
-          'data': {
-            'source': 'test',
-            'parentId': parent.id,
-          },
-        });
-
-        // تأخير بسيط بين الإشعارات
-        await Future.delayed(const Duration(milliseconds: 500));
-      }
+      // تم حذف نظام الإشعارات
+      debugPrint('✅ Test notifications disabled');
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

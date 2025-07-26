@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../services/database_service.dart';
-import '../../services/enhanced_notification_service.dart';
+
 import '../../models/bus_model.dart';
 import '../../widgets/admin_bottom_navigation.dart';
 
@@ -16,7 +16,7 @@ class BusesManagementScreen extends StatefulWidget {
 
 class _BusesManagementScreenState extends State<BusesManagementScreen> {
   final DatabaseService _databaseService = DatabaseService();
-  final EnhancedNotificationService _notificationService = EnhancedNotificationService();
+
   String _searchQuery = '';
 
   @override
@@ -776,51 +776,7 @@ class _BusesManagementScreenState extends State<BusesManagementScreen> {
     }
   }
 
-  /// إرسال إشعارات تفعيل الحافلة
-  Future<void> _sendBusActivationNotifications(BusModel bus) async {
-    try {
-      final currentUser = FirebaseAuth.instance.currentUser;
-      final adminDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(currentUser?.uid)
-          .get();
-      final adminName = adminDoc.data()?['name'] ?? 'الإدارة';
+  /// تم حذف نظام الإشعارات
 
-      await _notificationService.notifyBusActivation(
-        busId: bus.id,
-        busPlateNumber: bus.plateNumber,
-        driverName: bus.driverName,
-        adminName: adminName,
-        adminId: currentUser?.uid,
-      );
-
-      debugPrint('✅ Bus activation notifications sent for: ${bus.plateNumber}');
-    } catch (e) {
-      debugPrint('❌ Error sending bus activation notifications: $e');
-    }
-  }
-
-  /// إرسال إشعارات إيقاف الحافلة
-  Future<void> _sendBusDeactivationNotifications(BusModel bus) async {
-    try {
-      final currentUser = FirebaseAuth.instance.currentUser;
-      final adminDoc = await FirebaseFirestore.instance
-          .collection('users')
-          .doc(currentUser?.uid)
-          .get();
-      final adminName = adminDoc.data()?['name'] ?? 'الإدارة';
-
-      await _notificationService.notifyBusDeactivation(
-        busId: bus.id,
-        busPlateNumber: bus.plateNumber,
-        driverName: bus.driverName,
-        adminName: adminName,
-        adminId: currentUser?.uid,
-      );
-
-      debugPrint('✅ Bus deactivation notifications sent for: ${bus.plateNumber}');
-    } catch (e) {
-      debugPrint('❌ Error sending bus deactivation notifications: $e');
-    }
-  }
+  /// تم حذف نظام الإشعارات
 }

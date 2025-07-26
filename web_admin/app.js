@@ -602,8 +602,7 @@ async function loadPage(page) {
                     return await loadSettingsPage();
                 case 'profile':
                     return await loadProfilePage();
-                case 'notifications':
-                    return await loadNotificationsPage();
+                // تم حذف صفحة الإشعارات
                 case 'help':
                     return await loadHelpPage();
                 default:
@@ -2986,7 +2985,6 @@ async function loadReportsPage() {
     let reportsData = {
         stats: {},
         trips: [],
-        notifications: [],
         students: [],
         parents: [],
         supervisors: []
@@ -2996,10 +2994,9 @@ async function loadReportsPage() {
         console.log('🔄 Fetching reports data from Firebase...');
 
         // Get all data in parallel
-        const [stats, trips, notifications, students, parents, supervisors] = await Promise.all([
+        const [stats, trips, students, parents, supervisors] = await Promise.all([
             FirebaseService.getStatistics(),
             FirebaseService.getTrips(100),
-            FirebaseService.getNotifications(50),
             FirebaseService.getStudents(),
             FirebaseService.getParents(),
             FirebaseService.getSupervisors()
@@ -3008,7 +3005,6 @@ async function loadReportsPage() {
         reportsData = {
             stats: stats || {},
             trips: trips || [],
-            notifications: notifications || [],
             students: students || [],
             parents: parents || [],
             supervisors: supervisors || []
@@ -3017,7 +3013,6 @@ async function loadReportsPage() {
         console.log('✅ Reports data loaded:', {
             stats: Object.keys(reportsData.stats).length,
             trips: reportsData.trips.length,
-            notifications: reportsData.notifications.length,
             students: reportsData.students.length,
             parents: reportsData.parents.length,
             supervisors: reportsData.supervisors.length
@@ -4223,9 +4218,7 @@ async function loadRecentActivities() {
         const trips = await FirebaseService.getTrips(10);
         displayRecentTrips(trips);
 
-        // Load recent notifications
-        const notifications = await FirebaseService.getNotifications(10);
-        displayRecentNotifications(notifications);
+        // تم حذف نظام الإشعارات
     } catch (error) {
         console.error('❌ Error loading recent activities:', error);
 
@@ -4242,14 +4235,7 @@ async function loadRecentActivities() {
             `;
         }
 
-        if (notificationsContainer) {
-            notificationsContainer.innerHTML = `
-                <div class="text-center py-3">
-                    <i class="fas fa-bell-slash text-muted mb-2" style="font-size: 2rem;"></i>
-                    <p class="text-muted">لا توجد إشعارات حديثة</p>
-                </div>
-            `;
-        }
+        // تم حذف نظام الإشعارات
     }
 }
 
@@ -4294,40 +4280,7 @@ function displayRecentTrips(trips) {
     }).join('');
 }
 
-function displayRecentNotifications(notifications) {
-    const container = document.getElementById('recentNotificationsContainer');
-    if (!container) return;
-
-    if (notifications.length === 0) {
-        container.innerHTML = `
-            <div class="text-center py-3">
-                <i class="fas fa-bell-slash text-muted mb-2" style="font-size: 2rem;"></i>
-                <p class="text-muted">لا توجد إشعارات حديثة</p>
-            </div>
-        `;
-        return;
-    }
-
-    container.innerHTML = notifications.map(notification => {
-        const timeAgo = getTimeAgo(notification.timestamp);
-        const typeIcon = getNotificationIcon(notification.type);
-
-        return `
-            <div class="d-flex align-items-start mb-3 pb-3 border-bottom">
-                <div class="flex-shrink-0 me-2">
-                    <div class="notification-icon ${notification.type}">
-                        <i class="fas ${typeIcon}"></i>
-                    </div>
-                </div>
-                <div class="flex-grow-1">
-                    <h6 class="mb-1">${notification.title}</h6>
-                    <p class="mb-1 text-muted small">${notification.body}</p>
-                    <small class="text-muted">${timeAgo}</small>
-                </div>
-            </div>
-        `;
-    }).join('');
-}
+// تم حذف دالة عرض الإشعارات
 
 // Helper functions
 function getTimeAgo(timestamp) {
@@ -4368,17 +4321,7 @@ function getActionIcon(action) {
     return icons[action] || 'fa-circle';
 }
 
-function getNotificationIcon(type) {
-    const icons = {
-        'trip': 'fa-bus',
-        'student': 'fa-user-graduate',
-        'parent': 'fa-user',
-        'supervisor': 'fa-user-tie',
-        'system': 'fa-cog',
-        'general': 'fa-bell'
-    };
-    return icons[type] || 'fa-bell';
-}
+// تم حذف دالة أيقونات الإشعارات
 
 // Initialize page-specific functionality
 function initializePageFunctionality(page) {
@@ -4477,11 +4420,7 @@ function initializePageFunctionality(page) {
             // Load activity log
             loadActivityLog();
         }, 100);
-    } else if (page === 'notifications') {
-        // Set up notifications page
-        setTimeout(() => {
-            loadNotificationsList();
-        }, 100);
+    // تم حذف صفحة الإشعارات
     } else if (page === 'buses') {
         // Set up buses page
         setTimeout(() => {
@@ -5730,84 +5669,7 @@ async function loadProfilePage() {
     `;
 }
 
-async function loadNotificationsPage() {
-    console.log('🔔 Loading Notifications Page...');
-
-    return `
-        <div class="row mb-4">
-            <div class="col-12">
-                <h2 class="text-gradient">
-                    <i class="fas fa-bell me-2"></i>
-                    الإشعارات
-                </h2>
-                <p class="text-muted">إدارة جميع الإشعارات والتنبيهات</p>
-            </div>
-        </div>
-
-        <!-- Notification Controls -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-body">
-                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
-                            <div class="d-flex flex-wrap gap-2">
-                                <button class="btn btn-outline-primary btn-sm" onclick="markAllAsRead()">
-                                    <i class="fas fa-check-double me-1"></i>
-                                    تحديد الكل كمقروء
-                                </button>
-                                <button class="btn btn-outline-danger btn-sm" onclick="deleteAllRead()">
-                                    <i class="fas fa-trash me-1"></i>
-                                    حذف المقروءة
-                                </button>
-                                <button class="btn btn-outline-success btn-sm" onclick="sendTestNotification()">
-                                    <i class="fas fa-paper-plane me-1"></i>
-                                    إرسال إشعار تجريبي
-                                </button>
-                            </div>
-                            <div class="d-flex gap-2">
-                                <select class="form-select form-select-sm" id="notificationFilter" onchange="filterNotifications()">
-                                    <option value="all">جميع الإشعارات</option>
-                                    <option value="unread">غير مقروءة</option>
-                                    <option value="read">مقروءة</option>
-                                    <option value="system">النظام</option>
-                                    <option value="admin">إدارية</option>
-                                    <option value="trip">الرحلات</option>
-                                </select>
-                                <button class="btn btn-outline-secondary btn-sm" onclick="refreshNotifications()">
-                                    <i class="fas fa-sync-alt"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Notifications List -->
-        <div class="row">
-            <div class="col-12">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-header bg-white border-bottom">
-                        <h5 class="mb-0">
-                            <i class="fas fa-list me-2 text-primary"></i>
-                            قائمة الإشعارات
-                        </h5>
-                    </div>
-                    <div class="card-body p-0">
-                        <div id="notificationsContainer">
-                            <div class="text-center py-4">
-                                <div class="spinner-border text-primary" role="status">
-                                    <span class="visually-hidden">جاري التحميل...</span>
-                                </div>
-                                <p class="mt-2 text-muted">جاري تحميل الإشعارات...</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-}
+// تم حذف صفحة الإشعارات
 
 async function loadHelpPage() {
     console.log('❓ Loading Help Page...');

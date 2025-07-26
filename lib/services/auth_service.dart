@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/user_model.dart';
+import 'notification_system_initializer.dart';
 // تم حذف الخدمات المتكررة واستبدالها بالخدمة الموحدة
 
 class AuthService extends ChangeNotifier {
@@ -151,7 +152,14 @@ class AuthService extends ChangeNotifier {
           }
         }
 
-        // تم استبدال خدمات الإشعارات بالخدمة الموحدة
+        // تهيئة نظام الإشعارات للمستخدم
+        try {
+          await NotificationSystemHelper.initializer.initializeForUser(result.user!);
+          debugPrint('✅ Notification system initialized for user');
+        } catch (e) {
+          debugPrint('❌ Error initializing notification system: $e');
+        }
+
         debugPrint('✅ User logged in successfully');
 
         return userData;
@@ -340,6 +348,15 @@ class AuthService extends ChangeNotifier {
     return user?.userType == UserType.parent;
   }
 
-  // تم استبدال خدمات الإشعارات بالخدمة الموحدة
-  // الخدمة الموحدة تعمل تلقائياً بعد تسجيل الدخول
+  /// الحصول على خدمة الإشعارات
+  NotificationService get notificationService =>
+      NotificationSystemHelper.initializer.notificationService;
+
+  /// الحصول على خدمة Firebase Messaging
+  FirebaseMessagingService get messagingService =>
+      NotificationSystemHelper.initializer.messagingService;
+
+  /// الحصول على خدمة مراقبة الأحداث
+  EventTriggerService get eventTriggerService =>
+      NotificationSystemHelper.initializer.eventTriggerService;
 }

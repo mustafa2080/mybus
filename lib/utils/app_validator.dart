@@ -1,7 +1,7 @@
 import 'package:flutter/foundation.dart';
 import '../services/auth_service.dart';
 import '../services/database_service.dart';
-import '../services/notification_service.dart';
+
 import '../models/user_model.dart';
 
 class AppValidator {
@@ -76,9 +76,7 @@ class AppValidator {
       final databaseService = DatabaseService();
       debugPrint('✅ DatabaseService تم إنشاؤه بنجاح');
 
-      // Test NotificationService
-      final notificationService = NotificationService();
-      debugPrint('✅ NotificationService تم إنشاؤه بنجاح');
+      // تم حذف نظام الإشعارات
 
       debugPrint('✅ جميع الخدمات تعمل بشكل صحيح');
       return true;

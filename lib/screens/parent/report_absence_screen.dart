@@ -3,7 +3,7 @@ import 'package:intl/intl.dart';
 import '../../models/absence_model.dart';
 import '../../models/student_model.dart';
 import '../../services/database_service.dart';
-import '../../services/notification_service.dart';
+
 import '../../widgets/curved_app_bar.dart';
 
 class ReportAbsenceScreen extends StatefulWidget {
@@ -23,7 +23,7 @@ class _ReportAbsenceScreenState extends State<ReportAbsenceScreen> {
   final _reasonController = TextEditingController();
   final _notesController = TextEditingController();
   final _databaseService = DatabaseService();
-  final _notificationService = NotificationService();
+
 
   AbsenceType _selectedType = AbsenceType.sick;
   DateTime _startDate = DateTime.now();
@@ -600,42 +600,17 @@ class _ReportAbsenceScreenState extends State<ReportAbsenceScreen> {
     }
   }
 
-  // إرسال إشعارات للمشرفين والإدارة مع الصوت
+  // تم حذف نظام الإشعارات
   Future<void> _sendNotificationsToStaffWithSound(AbsenceModel absence) async {
     try {
-      // الحصول على جميع المشرفين والإدارة
-      final supervisors = await _databaseService.getAllSupervisors();
-      final admins = await _databaseService.getAllAdmins();
+      debugPrint('✅ Absence request saved (notifications disabled)');
+    } catch (e) {
+      debugPrint('❌ Error in absence notification placeholder: $e');
+    }
+  }
 
-      // إرسال إشعار للمشرفين
-      for (final supervisor in supervisors) {
-        await _notificationService.notifyAbsenceRequestWithSound(
-          studentId: absence.studentId,
-          studentName: absence.studentName,
-          parentId: absence.parentId,
-          parentName: 'ولي الأمر', // يمكن الحصول عليه من بيانات المستخدم
-          supervisorId: supervisor.id,
-          busId: widget.student.busRoute,
-          absenceDate: absence.date,
-          reason: absence.reason,
-        );
-      }
-
-      // إرسال إشعار للإدارة
-      for (final admin in admins) {
-        await _notificationService.notifyAbsenceRequestWithSound(
-          studentId: absence.studentId,
-          studentName: absence.studentName,
-          parentId: absence.parentId,
-          parentName: 'ولي الأمر', // يمكن الحصول عليه من بيانات المستخدم
-          supervisorId: admin.id, // استخدام معرف الإدمن كمشرف
-          busId: widget.student.busRoute,
-          absenceDate: absence.date,
-          reason: absence.reason,
-        );
-      }
-
-      debugPrint('✅ Enhanced notifications sent to ${supervisors.length} supervisors and ${admins.length} admins');
+      // تم حذف نظام الإشعارات
+      debugPrint('✅ Absence request saved (notifications disabled)');
     } catch (e) {
       debugPrint('❌ Error sending enhanced notifications to staff: $e');
       // الرجوع للطريقة القديمة في حالة الفشل
@@ -657,43 +632,7 @@ class _ReportAbsenceScreenState extends State<ReportAbsenceScreen> {
       final supervisors = await _databaseService.getAllSupervisors();
       final admins = await _databaseService.getAllAdmins();
 
-      // إرسال إشعار لكل مشرف
-      for (final supervisor in supervisors) {
-        await _notificationService.sendGeneralNotification(
-          title: notificationTitle,
-          body: notificationBody,
-          recipientId: supervisor.id,
-          data: {
-            'type': 'absence_notification',
-            'studentId': absence.studentId,
-            'studentName': absence.studentName,
-            'parentId': absence.parentId,
-            'absenceId': absence.id,
-            'date': absence.date.toIso8601String(),
-            'endDate': absence.endDate?.toIso8601String(),
-            'reason': absence.reason,
-          },
-        );
-      }
-
-      // إرسال إشعار لكل أدمن
-      for (final admin in admins) {
-        await _notificationService.sendGeneralNotification(
-          title: notificationTitle,
-          body: notificationBody,
-          recipientId: admin.id,
-          data: {
-            'type': 'absence_notification',
-            'studentId': absence.studentId,
-            'studentName': absence.studentName,
-            'parentId': absence.parentId,
-            'absenceId': absence.id,
-            'date': absence.date.toIso8601String(),
-            'endDate': absence.endDate?.toIso8601String(),
-            'reason': absence.reason,
-          },
-        );
-      }
+      // تم حذف نظام الإشعارات
 
       debugPrint('âœ… Notifications sent to ${supervisors.length} supervisors and ${admins.length} admins');
     } catch (e) {

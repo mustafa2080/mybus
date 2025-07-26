@@ -1,300 +1,351 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 
+/// أنواع الإشعارات المختلفة في النظام
 enum NotificationType {
-  studentBoarded,
-  studentLeft,
-  tripStarted,
-  tripEnded,
-  general,
-  studentAssigned,
-  studentUnassigned,
-  absenceRequested,
-  absenceApproved,
-  absenceRejected,
-  complaintSubmitted,
-  complaintResponded,
-  emergency,
-  tripDelayed,
-  systemUpdate,
+  // إشعارات الأدمن
+  newComplaint,           // شكوى جديدة
+  newStudent,            // طالب جديد
+  studentAbsence,        // غياب طالب
+  supervisorEvaluation,  // تقييم مشرف
+  profileCompleted,      // إكمال البروفايل
+  newParentAccount,      // حساب ولي أمر جديد
+  studentBehaviorReport, // تقرير سلوك طالب
+  
+  // إشعارات أولياء الأمور
+  studentAssignedToBus,  // تعيين طالب في باص
+  supervisorAssigned,    // تعيين مشرف
+  studentBoarded,        // ركب الطالب الباص
+  studentAtSchool,       // وصل للمدرسة
+  studentLeftSchool,     // غادر المدرسة
+  studentAtHome,         // وصل للمنزل
+  studentRemoved,        // حذف الطالب
+  busRouteChanged,       // تغيير خط السير
+  
+  // إشعارات المشرفين
+  assignedToBus,         // تعيين في باص
+  studentDataUpdated,    // تحديث بيانات طالب
+  newAbsenceReport,      // تقرير غياب جديد
+  
+  // إشعارات عامة
+  systemMaintenance,     // صيانة النظام
+  generalAnnouncement,   // إعلان عام
 }
 
+/// أولوية الإشعار
+enum NotificationPriority {
+  low,      // منخفضة
+  medium,   // متوسطة
+  high,     // عالية
+  urgent,   // عاجلة
+}
+
+/// حالة الإشعار
+enum NotificationStatus {
+  pending,    // في الانتظار
+  sent,       // تم الإرسال
+  delivered,  // تم التسليم
+  read,       // تم القراءة
+  failed,     // فشل الإرسال
+}
+
+/// قنوات توصيل الإشعار
+enum NotificationChannel {
+  fcm,        // Firebase Cloud Messaging
+  inApp,      // داخل التطبيق
+  email,      // البريد الإلكتروني
+  sms,        // رسائل نصية
+}
+
+/// نموذج الإشعار الأساسي
 class NotificationModel {
   final String id;
   final String title;
   final String body;
-  final String recipientId;
-  final String? studentId;
-  final String? studentName;
   final NotificationType type;
-  final DateTime timestamp;
-  final bool isRead;
-  final Map<String, dynamic>? data;
+  final NotificationPriority priority;
+  final NotificationStatus status;
+  final String recipientId;
+  final String recipientType; // admin, parent, supervisor
+  final String? senderId;
+  final String? senderName;
+  final Map<String, dynamic> data; // بيانات إضافية
+  final List<NotificationChannel> channels;
+  final bool requiresSound;
+  final bool requiresVibration;
+  final bool isBackground;
+  final DateTime createdAt;
+  final DateTime? scheduledAt;
+  final DateTime? sentAt;
+  final DateTime? readAt;
+  final int retryCount;
+  final String? errorMessage;
+  final bool isActive;
 
-  NotificationModel({
+  const NotificationModel({
     required this.id,
     required this.title,
     required this.body,
-    required this.recipientId,
-    this.studentId,
-    this.studentName,
     required this.type,
-    required this.timestamp,
-    this.isRead = false,
-    this.data,
+    this.priority = NotificationPriority.medium,
+    this.status = NotificationStatus.pending,
+    required this.recipientId,
+    required this.recipientType,
+    this.senderId,
+    this.senderName,
+    this.data = const {},
+    this.channels = const [NotificationChannel.fcm, NotificationChannel.inApp],
+    this.requiresSound = false,
+    this.requiresVibration = false,
+    this.isBackground = true,
+    required this.createdAt,
+    this.scheduledAt,
+    this.sentAt,
+    this.readAt,
+    this.retryCount = 0,
+    this.errorMessage,
+    this.isActive = true,
   });
 
-  // Convert NotificationModel to Map for Firestore
+  /// تحويل إلى Map لحفظ في Firestore
   Map<String, dynamic> toMap() {
     return {
       'id': id,
       'title': title,
       'body': body,
-      'recipientId': recipientId,
-      'studentId': studentId,
-      'studentName': studentName,
       'type': type.toString().split('.').last,
-      'timestamp': Timestamp.fromDate(timestamp),
-      'isRead': isRead,
+      'priority': priority.toString().split('.').last,
+      'status': status.toString().split('.').last,
+      'recipientId': recipientId,
+      'recipientType': recipientType,
+      'senderId': senderId,
+      'senderName': senderName,
       'data': data,
+      'channels': channels.map((c) => c.toString().split('.').last).toList(),
+      'requiresSound': requiresSound,
+      'requiresVibration': requiresVibration,
+      'isBackground': isBackground,
+      'createdAt': Timestamp.fromDate(createdAt),
+      'scheduledAt': scheduledAt != null ? Timestamp.fromDate(scheduledAt!) : null,
+      'sentAt': sentAt != null ? Timestamp.fromDate(sentAt!) : null,
+      'readAt': readAt != null ? Timestamp.fromDate(readAt!) : null,
+      'retryCount': retryCount,
+      'errorMessage': errorMessage,
+      'isActive': isActive,
     };
   }
 
-  // Create NotificationModel from Firestore document
+  /// إنشاء من Map من Firestore
   factory NotificationModel.fromMap(Map<String, dynamic> map) {
     return NotificationModel(
-      id: map['id'] ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      id: map['id'] ?? '',
       title: map['title'] ?? '',
-      body: map['body'] ?? map['message'] ?? '', // Support both 'body' and 'message'
-      recipientId: map['recipientId'] ?? map['userId'] ?? '', // Support both 'recipientId' and 'userId'
-      studentId: map['studentId'],
-      studentName: map['studentName'],
+      body: map['body'] ?? '',
       type: _parseNotificationType(map['type']),
-      timestamp: map['timestamp'] != null
-          ? (map['timestamp'] as Timestamp).toDate()
-          : DateTime.now(),
-      isRead: map['isRead'] ?? false,
-      data: map['data'] != null ? Map<String, dynamic>.from(map['data']) : null,
+      priority: _parseNotificationPriority(map['priority']),
+      status: _parseNotificationStatus(map['status']),
+      recipientId: map['recipientId'] ?? '',
+      recipientType: map['recipientType'] ?? '',
+      senderId: map['senderId'],
+      senderName: map['senderName'],
+      data: Map<String, dynamic>.from(map['data'] ?? {}),
+      channels: _parseChannels(map['channels']),
+      requiresSound: map['requiresSound'] ?? false,
+      requiresVibration: map['requiresVibration'] ?? false,
+      isBackground: map['isBackground'] ?? true,
+      createdAt: _parseTimestamp(map['createdAt']),
+      scheduledAt: map['scheduledAt'] != null ? _parseTimestamp(map['scheduledAt']) : null,
+      sentAt: map['sentAt'] != null ? _parseTimestamp(map['sentAt']) : null,
+      readAt: map['readAt'] != null ? _parseTimestamp(map['readAt']) : null,
+      retryCount: map['retryCount'] ?? 0,
+      errorMessage: map['errorMessage'],
+      isActive: map['isActive'] ?? true,
     );
   }
 
-  // Helper method to parse NotificationType from string
-  static NotificationType _parseNotificationType(String? typeString) {
-    switch (typeString) {
-      case 'studentBoarded':
-        return NotificationType.studentBoarded;
-      case 'studentLeft':
-        return NotificationType.studentLeft;
-      case 'tripStarted':
-        return NotificationType.tripStarted;
-      case 'tripEnded':
-        return NotificationType.tripEnded;
-      case 'general':
-      case 'admin_message': // Support old admin message type
-        return NotificationType.general;
-      default:
-        return NotificationType.general;
-    }
-  }
-
-  // Create a copy of NotificationModel with updated fields
+  /// نسخ مع تعديل بعض الخصائص
   NotificationModel copyWith({
     String? id,
     String? title,
     String? body,
-    String? recipientId,
-    String? studentId,
-    String? studentName,
     NotificationType? type,
-    DateTime? timestamp,
-    bool? isRead,
+    NotificationPriority? priority,
+    NotificationStatus? status,
+    String? recipientId,
+    String? recipientType,
+    String? senderId,
+    String? senderName,
     Map<String, dynamic>? data,
+    List<NotificationChannel>? channels,
+    bool? requiresSound,
+    bool? requiresVibration,
+    bool? isBackground,
+    DateTime? createdAt,
+    DateTime? scheduledAt,
+    DateTime? sentAt,
+    DateTime? readAt,
+    int? retryCount,
+    String? errorMessage,
+    bool? isActive,
   }) {
     return NotificationModel(
       id: id ?? this.id,
       title: title ?? this.title,
       body: body ?? this.body,
-      recipientId: recipientId ?? this.recipientId,
-      studentId: studentId ?? this.studentId,
-      studentName: studentName ?? this.studentName,
       type: type ?? this.type,
-      timestamp: timestamp ?? this.timestamp,
-      isRead: isRead ?? this.isRead,
+      priority: priority ?? this.priority,
+      status: status ?? this.status,
+      recipientId: recipientId ?? this.recipientId,
+      recipientType: recipientType ?? this.recipientType,
+      senderId: senderId ?? this.senderId,
+      senderName: senderName ?? this.senderName,
       data: data ?? this.data,
+      channels: channels ?? this.channels,
+      requiresSound: requiresSound ?? this.requiresSound,
+      requiresVibration: requiresVibration ?? this.requiresVibration,
+      isBackground: isBackground ?? this.isBackground,
+      createdAt: createdAt ?? this.createdAt,
+      scheduledAt: scheduledAt ?? this.scheduledAt,
+      sentAt: sentAt ?? this.sentAt,
+      readAt: readAt ?? this.readAt,
+      retryCount: retryCount ?? this.retryCount,
+      errorMessage: errorMessage ?? this.errorMessage,
+      isActive: isActive ?? this.isActive,
     );
   }
 
-  // Get formatted timestamp
-  String get formattedTime {
-    return '${timestamp.hour.toString().padLeft(2, '0')}:${timestamp.minute.toString().padLeft(2, '0')}';
-  }
-
-  // Get formatted date
-  String get formattedDate {
-    return '${timestamp.day}/${timestamp.month}/${timestamp.year}';
-  }
-
-  // Get time ago string
-  String get timeAgo {
-    final now = DateTime.now();
-    final difference = now.difference(timestamp);
-
-    if (difference.inDays > 0) {
-      return 'منذ ${difference.inDays} يوم';
-    } else if (difference.inHours > 0) {
-      return 'منذ ${difference.inHours} ساعة';
-    } else if (difference.inMinutes > 0) {
-      return 'منذ ${difference.inMinutes} دقيقة';
-    } else {
-      return 'الآن';
-    }
-  }
-
-  /// الحصول على أيقونة الإشعار
-  String get icon {
+  // Helper methods
+  static NotificationType _parseNotificationType(String? type) {
     switch (type) {
-      case NotificationType.studentBoarded:
-      case NotificationType.studentLeft:
-        return '🚌';
-      case NotificationType.studentAssigned:
-      case NotificationType.studentUnassigned:
-        return '👨‍🎓';
-      case NotificationType.absenceRequested:
-      case NotificationType.absenceApproved:
-      case NotificationType.absenceRejected:
-        return '📝';
-      case NotificationType.complaintSubmitted:
-      case NotificationType.complaintResponded:
-        return '📢';
-      case NotificationType.emergency:
-        return '🚨';
-      case NotificationType.tripStarted:
-      case NotificationType.tripEnded:
-      case NotificationType.tripDelayed:
-        return '🚌';
-      case NotificationType.systemUpdate:
-        return '⚙️';
-      default:
-        return '🔔';
+      case 'newComplaint': return NotificationType.newComplaint;
+      case 'newStudent': return NotificationType.newStudent;
+      case 'studentAbsence': return NotificationType.studentAbsence;
+      case 'supervisorEvaluation': return NotificationType.supervisorEvaluation;
+      case 'profileCompleted': return NotificationType.profileCompleted;
+      case 'newParentAccount': return NotificationType.newParentAccount;
+      case 'studentBehaviorReport': return NotificationType.studentBehaviorReport;
+      case 'studentAssignedToBus': return NotificationType.studentAssignedToBus;
+      case 'supervisorAssigned': return NotificationType.supervisorAssigned;
+      case 'studentBoarded': return NotificationType.studentBoarded;
+      case 'studentAtSchool': return NotificationType.studentAtSchool;
+      case 'studentLeftSchool': return NotificationType.studentLeftSchool;
+      case 'studentAtHome': return NotificationType.studentAtHome;
+      case 'studentRemoved': return NotificationType.studentRemoved;
+      case 'busRouteChanged': return NotificationType.busRouteChanged;
+      case 'assignedToBus': return NotificationType.assignedToBus;
+      case 'studentDataUpdated': return NotificationType.studentDataUpdated;
+      case 'newAbsenceReport': return NotificationType.newAbsenceReport;
+      case 'systemMaintenance': return NotificationType.systemMaintenance;
+      case 'generalAnnouncement': return NotificationType.generalAnnouncement;
+      default: return NotificationType.generalAnnouncement;
     }
   }
 
-  /// تحديد أولوية الإشعار
-  int get priority {
+  static NotificationPriority _parseNotificationPriority(String? priority) {
+    switch (priority) {
+      case 'low': return NotificationPriority.low;
+      case 'medium': return NotificationPriority.medium;
+      case 'high': return NotificationPriority.high;
+      case 'urgent': return NotificationPriority.urgent;
+      default: return NotificationPriority.medium;
+    }
+  }
+
+  static NotificationStatus _parseNotificationStatus(String? status) {
+    switch (status) {
+      case 'pending': return NotificationStatus.pending;
+      case 'sent': return NotificationStatus.sent;
+      case 'delivered': return NotificationStatus.delivered;
+      case 'read': return NotificationStatus.read;
+      case 'failed': return NotificationStatus.failed;
+      default: return NotificationStatus.pending;
+    }
+  }
+
+  static List<NotificationChannel> _parseChannels(dynamic channels) {
+    if (channels == null) return [NotificationChannel.fcm, NotificationChannel.inApp];
+    
+    final List<String> channelStrings = List<String>.from(channels);
+    return channelStrings.map((c) {
+      switch (c) {
+        case 'fcm': return NotificationChannel.fcm;
+        case 'inApp': return NotificationChannel.inApp;
+        case 'email': return NotificationChannel.email;
+        case 'sms': return NotificationChannel.sms;
+        default: return NotificationChannel.inApp;
+      }
+    }).toList();
+  }
+
+  static DateTime _parseTimestamp(dynamic timestamp) {
+    if (timestamp == null) return DateTime.now();
+
+    if (timestamp is Timestamp) {
+      return timestamp.toDate();
+    }
+
+    if (timestamp is DateTime) {
+      return timestamp;
+    }
+
+    if (timestamp is String) {
+      try {
+        return DateTime.parse(timestamp);
+      } catch (e) {
+        return DateTime.now();
+      }
+    }
+
+    return DateTime.now();
+  }
+
+  // UI Helper methods
+  String get typeDisplayName {
     switch (type) {
-      case NotificationType.emergency:
-        return 4; // أولوية قصوى
-      case NotificationType.studentBoarded:
-      case NotificationType.studentLeft:
-      case NotificationType.tripStarted:
-      case NotificationType.tripEnded:
-        return 3; // أولوية عالية
-      case NotificationType.absenceRequested:
-      case NotificationType.absenceApproved:
-      case NotificationType.absenceRejected:
-      case NotificationType.tripDelayed:
-        return 2; // أولوية متوسطة
-      default:
-        return 1; // أولوية منخفضة
+      case NotificationType.newComplaint: return 'شكوى جديدة';
+      case NotificationType.newStudent: return 'طالب جديد';
+      case NotificationType.studentAbsence: return 'غياب طالب';
+      case NotificationType.supervisorEvaluation: return 'تقييم مشرف';
+      case NotificationType.profileCompleted: return 'إكمال البروفايل';
+      case NotificationType.newParentAccount: return 'حساب ولي أمر جديد';
+      case NotificationType.studentBehaviorReport: return 'تقرير سلوك طالب';
+      case NotificationType.studentAssignedToBus: return 'تعيين طالب في باص';
+      case NotificationType.supervisorAssigned: return 'تعيين مشرف';
+      case NotificationType.studentBoarded: return 'ركب الطالب الباص';
+      case NotificationType.studentAtSchool: return 'وصل للمدرسة';
+      case NotificationType.studentLeftSchool: return 'غادر المدرسة';
+      case NotificationType.studentAtHome: return 'وصل للمنزل';
+      case NotificationType.studentRemoved: return 'حذف الطالب';
+      case NotificationType.busRouteChanged: return 'تغيير خط السير';
+      case NotificationType.assignedToBus: return 'تعيين في باص';
+      case NotificationType.studentDataUpdated: return 'تحديث بيانات طالب';
+      case NotificationType.newAbsenceReport: return 'تقرير غياب جديد';
+      case NotificationType.systemMaintenance: return 'صيانة النظام';
+      case NotificationType.generalAnnouncement: return 'إعلان عام';
     }
   }
 
-  /// تحديد ما إذا كان الإشعار يتطلب صوت
-  bool get requiresSound {
-    switch (type) {
-      case NotificationType.emergency:
-      case NotificationType.studentBoarded:
-      case NotificationType.studentLeft:
-      case NotificationType.tripStarted:
-      case NotificationType.tripEnded:
-        return true;
-      default:
-        return false;
+  String get priorityDisplayName {
+    switch (priority) {
+      case NotificationPriority.low: return 'منخفضة';
+      case NotificationPriority.medium: return 'متوسطة';
+      case NotificationPriority.high: return 'عالية';
+      case NotificationPriority.urgent: return 'عاجلة';
     }
   }
 
-  @override
-  String toString() {
-    return 'NotificationModel(id: $id, title: $title, type: $type, isRead: $isRead)';
-  }
-
-  @override
-  bool operator ==(Object other) {
-    if (identical(this, other)) return true;
-    return other is NotificationModel && other.id == id;
-  }
-
-  @override
-  int get hashCode => id.hashCode;
-
-  // خصائص إضافية للواجهة
-  String get relativeTime {
-    final now = DateTime.now();
-    final difference = now.difference(timestamp);
-
-    if (difference.inMinutes < 1) {
-      return 'الآن';
-    } else if (difference.inMinutes < 60) {
-      return 'منذ ${difference.inMinutes} دقيقة';
-    } else if (difference.inHours < 24) {
-      return 'منذ ${difference.inHours} ساعة';
-    } else if (difference.inDays < 7) {
-      return 'منذ ${difference.inDays} يوم';
-    } else {
-      return '${timestamp.day}/${timestamp.month}/${timestamp.year}';
+  String get statusDisplayName {
+    switch (status) {
+      case NotificationStatus.pending: return 'في الانتظار';
+      case NotificationStatus.sent: return 'تم الإرسال';
+      case NotificationStatus.delivered: return 'تم التسليم';
+      case NotificationStatus.read: return 'تم القراءة';
+      case NotificationStatus.failed: return 'فشل الإرسال';
     }
   }
 
-  bool get requiresAction {
-    return type == NotificationType.absenceRequested ||
-           type == NotificationType.complaintSubmitted ||
-           type == NotificationType.emergency;
-  }
-
-  String? get actionText {
-    switch (type) {
-      case NotificationType.absenceRequested:
-        return 'مراجعة الطلب';
-      case NotificationType.complaintSubmitted:
-        return 'الرد على الشكوى';
-      case NotificationType.emergency:
-        return 'اتخاذ إجراء';
-      default:
-        return null;
-    }
-  }
-
-  String get typeDescription {
-    switch (type) {
-      case NotificationType.studentBoarded:
-        return 'ركوب طالب';
-      case NotificationType.studentLeft:
-        return 'نزول طالب';
-      case NotificationType.tripStarted:
-        return 'بداية رحلة';
-      case NotificationType.tripEnded:
-        return 'نهاية رحلة';
-      case NotificationType.absenceRequested:
-        return 'طلب غياب';
-      case NotificationType.absenceApproved:
-        return 'موافقة على غياب';
-      case NotificationType.absenceRejected:
-        return 'رفض غياب';
-      case NotificationType.complaintSubmitted:
-        return 'شكوى جديدة';
-      case NotificationType.complaintResponded:
-        return 'رد على شكوى';
-      case NotificationType.emergency:
-        return 'حالة طوارئ';
-      case NotificationType.systemUpdate:
-        return 'تحديث النظام';
-      case NotificationType.studentAssigned:
-        return 'تسكين طالب';
-      case NotificationType.studentUnassigned:
-        return 'إلغاء تسكين طالب';
-      case NotificationType.tripDelayed:
-        return 'تأخير رحلة';
-      default:
-        return 'إشعار عام';
-    }
-  }
+  bool get isUnread => status != NotificationStatus.read;
+  bool get isHighPriority => priority == NotificationPriority.high || priority == NotificationPriority.urgent;
+  bool get shouldPlaySound => requiresSound && isHighPriority;
+  bool get shouldVibrate => requiresVibration && isHighPriority;
 }

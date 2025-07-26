@@ -5,8 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import '../../models/student_model.dart';
 import '../../models/bus_model.dart';
 import '../../services/database_service.dart';
-import '../../services/notification_service.dart';
-import '../../services/enhanced_notification_service.dart';
+
 import '../../utils/constants.dart';
 
 class AllStudentsScreen extends StatefulWidget {
@@ -18,7 +17,7 @@ class AllStudentsScreen extends StatefulWidget {
 
 class _AllStudentsScreenState extends State<AllStudentsScreen> {
   final DatabaseService _databaseService = DatabaseService();
-  final EnhancedNotificationService _notificationService = EnhancedNotificationService();
+
   String _searchQuery = '';
   String _selectedGrade = 'الكل';
   String _selectedStatus = 'الكل';
@@ -1819,46 +1818,7 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
       // إرسال إشعارات التحديث
       await _sendBusAssignmentNotifications(student, updatedStudent, busId, busRoute);
 
-      // إرسال إشعار التسكين أو إلغاء التسكين مع الصوت (النظام القديم للتوافق)
-      if (busId != null) {
-        // تسكين جديد
-        final busDoc = await FirebaseFirestore.instance
-            .collection('buses')
-            .doc(busId)
-            .get();
-
-        if (busDoc.exists) {
-          final busData = busDoc.data()!;
-          await NotificationService().notifyStudentAssignmentWithSound(
-            studentId: student.id,
-            studentName: student.name,
-            busId: busId,
-            busRoute: busRoute,
-            parentId: student.parentId,
-            supervisorId: busData['supervisorId'] ?? '',
-            parentName: student.parentName ?? 'ولي الأمر',
-            parentPhone: student.parentPhone ?? 'غير محدد',
-            excludeAdminId: currentUser?.uid, // استبعاد الإدمن الحالي
-          );
-        }
-      } else if (student.busId.isNotEmpty) {
-        // إلغاء تسكين
-        final busDoc = await FirebaseFirestore.instance
-            .collection('buses')
-            .doc(student.busId)
-            .get();
-
-        if (busDoc.exists) {
-          final busData = busDoc.data()!;
-          await NotificationService().notifyStudentUnassignmentWithSound(
-            studentId: student.id,
-            studentName: student.name,
-            busId: student.busId,
-            parentId: student.parentId,
-            supervisorId: busData['supervisorId'] ?? '',
-            excludeAdminId: currentUser?.uid, // استبعاد الإدمن الحالي
-          );
-        }
+      // تم حذف نظام الإشعارات
       }
 
       // Close loading dialog and show success message

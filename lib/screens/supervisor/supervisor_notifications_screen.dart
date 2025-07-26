@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import '../../services/database_service.dart';
-import '../../services/auth_service.dart';
-import '../../services/notification_service.dart';
 import '../../models/notification_model.dart';
-import '../../models/absence_model.dart';
+import '../../services/notification_service.dart';
+import '../../services/auth_service.dart';
+import '../../utils/app_constants.dart';
 
+/// شاشة الإشعارات للمشرفين
 class SupervisorNotificationsScreen extends StatefulWidget {
   const SupervisorNotificationsScreen({super.key});
 
@@ -14,556 +14,394 @@ class SupervisorNotificationsScreen extends StatefulWidget {
   State<SupervisorNotificationsScreen> createState() => _SupervisorNotificationsScreenState();
 }
 
-class _SupervisorNotificationsScreenState extends State<SupervisorNotificationsScreen>
-    with SingleTickerProviderStateMixin {
-  final DatabaseService _databaseService = DatabaseService();
-  final AuthService _authService = AuthService();
+class _SupervisorNotificationsScreenState extends State<SupervisorNotificationsScreen> {
   final NotificationService _notificationService = NotificationService();
-  late TabController _tabController;
+  String? _currentUserId;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 3, vsync: this);
-    // Mark all notifications as read when opening the screen
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _markAllAsRead();
-    });
+    _initializeData();
   }
 
-  Future<void> _markAllAsRead() async {
+  Future<void> _initializeData() async {
     try {
-      final userId = _authService.currentUser?.uid;
-      if (userId != null) {
-        await _databaseService.markAllNotificationsAsRead(userId);
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('تم تحديد جميع الإشعارات كمقروءة'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      }
+      final authService = Provider.of<AuthService>(context, listen: false);
+      _currentUserId = authService.currentUser?.uid;
     } catch (e) {
+      debugPrint('❌ خطأ في تحميل البيانات: $e');
+    } finally {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('خطأ في تحديث الإشعارات: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        setState(() {
+          _isLoading = false;
+        });
       }
     }
-  }
-
-  @override
-  void dispose() {
-    _tabController.dispose();
-    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_currentUserId == null) {
+      return const Scaffold(
+        body: Center(child: Text('خطأ في تحميل بيانات المستخدم')),
+      );
+    }
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        title: const Text(
-          'الإشعارات',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
-        ),
-        backgroundColor: const Color(0xFF1E88E5),
-        elevation: 0,
-        iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text('الإشعارات'),
+        backgroundColor: AppConstants.primaryColor,
+        foregroundColor: Colors.white,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.mark_email_read),
-            onPressed: _markAllAsRead,
-            tooltip: 'تحديد الكل كمقروء',
+          StreamBuilder<int>(
+            stream: _notificationService.getUnreadNotificationsCount(_currentUserId!),
+            builder: (context, snapshot) {
+              final count = snapshot.data ?? 0;
+              return Stack(
+                children: [
+                  IconButton(
+                    onPressed: _markAllAsRead,
+                    icon: const Icon(Icons.done_all),
+                    tooltip: 'تحديد الكل كمقروء',
+                  ),
+                  if (count > 0)
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 16,
+                          minHeight: 16,
+                        ),
+                        child: Text(
+                          count > 99 ? '99+' : count.toString(),
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ),
+                ],
+              );
+            },
           ),
         ],
-        bottom: TabBar(
-          controller: _tabController,
-          labelColor: Colors.white,
-          unselectedLabelColor: Colors.white70,
-          indicatorColor: Colors.white,
-          tabs: const [
-            Tab(
-              icon: Icon(Icons.notifications_active, size: 20),
-              text: 'الإشعارات العامة',
-            ),
-            Tab(
-              icon: Icon(Icons.person_off, size: 20),
-              text: 'إشعارات الغياب',
-            ),
-            Tab(
-              icon: Icon(Icons.directions_bus, size: 20),
-              text: 'إشعارات الرحلات',
-            ),
-          ],
-        ),
       ),
-      body: TabBarView(
-        controller: _tabController,
+      body: Column(
         children: [
-          _buildGeneralNotifications(),
-          _buildAbsenceNotifications(),
-          _buildTripNotifications(),
+          // ملخص الإشعارات
+          _buildNotificationSummary(),
+          
+          // قائمة الإشعارات
+          Expanded(
+            child: StreamBuilder<List<NotificationModel>>(
+              stream: _notificationService.getUserNotifications(_currentUserId!),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error, size: 64, color: Colors.red),
+                        const SizedBox(height: 16),
+                        Text('خطأ في تحميل الإشعارات: ${snapshot.error}'),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: () => setState(() {}),
+                          child: const Text('إعادة المحاولة'),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                final notifications = snapshot.data ?? [];
+
+                if (notifications.isEmpty) {
+                  return const Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.notifications_none, size: 64, color: Colors.grey),
+                        SizedBox(height: 16),
+                        Text(
+                          'لا توجد إشعارات',
+                          style: TextStyle(fontSize: 18, color: Colors.grey),
+                        ),
+                        SizedBox(height: 8),
+                        Text(
+                          'ستظهر هنا إشعارات العمل والتحديثات المهمة',
+                          style: TextStyle(fontSize: 14, color: Colors.grey),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: notifications.length,
+                  itemBuilder: (context, index) {
+                    final notification = notifications[index];
+                    return _buildNotificationCard(notification);
+                  },
+                );
+              },
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildGeneralNotifications() {
-    return StreamBuilder<List<NotificationModel>>(
-      stream: _notificationService.getNotificationsForUser(
-        _authService.currentUser?.uid ?? '',
+  /// ملخص الإشعارات
+  Widget _buildNotificationSummary() {
+    return Container(
+      margin: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [AppConstants.primaryColor, AppConstants.primaryColor.withOpacity(0.8)],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: AppConstants.primaryColor.withOpacity(0.3),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (snapshot.hasError) {
-          return _buildErrorState('خطأ في تحميل الإشعارات');
-        }
-
-        final notifications = snapshot.data ?? [];
-        final generalNotifications = notifications
-            .where((n) => n.type == NotificationType.general)
-            .toList();
-
-        if (generalNotifications.isEmpty) {
-          return _buildEmptyState(
-            'لا توجد إشعارات عامة',
-            'لم يتم استلام أي إشعارات عامة',
-            Icons.notifications_off,
-          );
-        }
-
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: generalNotifications.length,
-          itemBuilder: (context, index) {
-            final notification = generalNotifications[index];
-            return _buildNotificationCard(notification);
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildAbsenceNotifications() {
-    return StreamBuilder<List<AbsenceModel>>(
-      stream: _databaseService.getRecentAbsenceNotifications(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (snapshot.hasError) {
-          return _buildErrorState('خطأ في تحميل إشعارات الغياب');
-        }
-
-        final absences = snapshot.data ?? [];
-
-        if (absences.isEmpty) {
-          return _buildEmptyState(
-            'لا توجد إشعارات غياب',
-            'لم يتم استلام أي إشعارات غياب حديثة',
-            Icons.person_off,
-          );
-        }
-
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: absences.length,
-          itemBuilder: (context, index) {
-            final absence = absences[index];
-            return _buildAbsenceCard(absence);
-          },
-        );
-      },
-    );
-  }
-
-  Widget _buildTripNotifications() {
-    return StreamBuilder<List<NotificationModel>>(
-      stream: _notificationService.getNotificationsForUser(
-        _authService.currentUser?.uid ?? '',
+      child: Row(
+        children: [
+          const Icon(Icons.work, color: Colors.white, size: 32),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'تحديثات العمل',
+                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 4),
+                StreamBuilder<int>(
+                  stream: _notificationService.getUnreadNotificationsCount(_currentUserId!),
+                  builder: (context, snapshot) {
+                    final count = snapshot.data ?? 0;
+                    return Text(
+                      count > 0 ? '$count تحديث جديد' : 'لا توجد تحديثات جديدة',
+                      style: const TextStyle(color: Colors.white, fontSize: 14),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+          const Icon(Icons.supervisor_account, color: Colors.white, size: 24),
+        ],
       ),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
-        }
-
-        if (snapshot.hasError) {
-          return _buildErrorState('خطأ في تحميل إشعارات الرحلات');
-        }
-
-        final notifications = snapshot.data ?? [];
-        final tripNotifications = notifications
-            .where((n) => n.type == NotificationType.tripStarted || 
-                         n.type == NotificationType.tripEnded ||
-                         n.type == NotificationType.studentBoarded ||
-                         n.type == NotificationType.studentLeft)
-            .toList();
-
-        if (tripNotifications.isEmpty) {
-          return _buildEmptyState(
-            'لا توجد إشعارات رحلات',
-            'لم يتم استلام أي إشعارات متعلقة بالرحلات',
-            Icons.directions_bus,
-          );
-        }
-
-        return ListView.builder(
-          padding: const EdgeInsets.all(16),
-          itemCount: tripNotifications.length,
-          itemBuilder: (context, index) {
-            final notification = tripNotifications[index];
-            return _buildNotificationCard(notification);
-          },
-        );
-      },
     );
   }
 
+  /// بطاقة الإشعار
   Widget _buildNotificationCard(NotificationModel notification) {
-    return Container(
+    final isUnread = notification.isUnread;
+    final timeAgo = _getTimeAgo(notification.createdAt);
+    final icon = _getNotificationIcon(notification.type);
+    final color = _getNotificationColor(notification.type);
+
+    return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: notification.isRead ? Colors.white : Colors.blue.withAlpha(25),
+      elevation: isUnread ? 4 : 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        onTap: () => _markAsRead(notification),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: notification.isRead ? Colors.grey.withAlpha(76) : Colors.blue.withAlpha(76),
+        child: Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: isUnread ? Border.all(color: color, width: 2) : null,
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // أيقونة الإشعار
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: color.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(icon, color: color, size: 24),
+              ),
+              const SizedBox(width: 12),
+              
+              // محتوى الإشعار
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            notification.title,
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: isUnread ? FontWeight.bold : FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        if (isUnread)
+                          Container(
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: color,
+                              shape: BoxShape.circle,
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      notification.body,
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: color.withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            notification.typeDisplayName,
+                            style: TextStyle(
+                              color: color,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          timeAgo,
+                          style: TextStyle(
+                            color: Colors.grey[500],
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(13),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: _getNotificationTypeColor(notification.type).withAlpha(25),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  _getNotificationTypeIcon(notification.type),
-                  color: _getNotificationTypeColor(notification.type),
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      notification.title,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: notification.isRead ? Colors.grey[700] : const Color(0xFF2D3748),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      DateFormat('yyyy/MM/dd - HH:mm').format(notification.timestamp),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (!notification.isRead)
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: const BoxDecoration(
-                    color: Colors.blue,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            notification.body,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[700],
-              height: 1.4,
-            ),
-          ),
-          if (notification.studentName != null) ...[
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.green.withAlpha(25),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Text(
-                'الطالب: ${notification.studentName}',
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Colors.green,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ],
       ),
     );
   }
 
-  Widget _buildAbsenceCard(AbsenceModel absence) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _getAbsenceStatusColor(absence.status).withAlpha(76)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withAlpha(13),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: _getAbsenceStatusColor(absence.status).withAlpha(25),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Icon(
-                  _getAbsenceTypeIcon(absence.type),
-                  color: _getAbsenceStatusColor(absence.status),
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'طلب غياب - ${absence.studentName}',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF2D3748),
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      DateFormat('yyyy/MM/dd').format(absence.date),
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: _getAbsenceStatusColor(absence.status).withAlpha(25),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  _getAbsenceStatusText(absence.status),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: _getAbsenceStatusColor(absence.status),
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Text(
-            'نوع الغياب: ${_getAbsenceTypeText(absence.type)}',
-            style: const TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          if (absence.reason.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              'السبب: ${absence.reason}',
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey[700],
-                height: 1.4,
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmptyState(String title, String subtitle, IconData icon) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            icon,
-            size: 80,
-            color: Colors.grey[400],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            title,
-            style: TextStyle(
-              fontSize: 18,
-              color: Colors.grey[600],
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            subtitle,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey[500],
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildErrorState(String message) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.error, size: 64, color: Colors.red),
-          const SizedBox(height: 16),
-          Text(
-            message,
-            style: const TextStyle(
-              fontSize: 16,
-              color: Colors.red,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Color _getNotificationTypeColor(NotificationType type) {
+  /// أيقونة نوع الإشعار
+  IconData _getNotificationIcon(NotificationType type) {
     switch (type) {
-      case NotificationType.general:
-        return Colors.blue;
-      case NotificationType.studentBoarded:
-        return Colors.green;
-      case NotificationType.studentLeft:
-        return Colors.orange;
-      case NotificationType.tripStarted:
-        return Colors.purple;
-      case NotificationType.tripEnded:
-        return Colors.indigo;
-    }
-  }
-
-  IconData _getNotificationTypeIcon(NotificationType type) {
-    switch (type) {
-      case NotificationType.general:
-        return Icons.notifications;
-      case NotificationType.studentBoarded:
+      case NotificationType.assignedToBus:
         return Icons.directions_bus;
-      case NotificationType.studentLeft:
-        return Icons.school;
-      case NotificationType.tripStarted:
-        return Icons.play_arrow;
-      case NotificationType.tripEnded:
-        return Icons.stop;
+      case NotificationType.studentDataUpdated:
+        return Icons.update;
+      case NotificationType.newAbsenceReport:
+        return Icons.event_busy;
+      case NotificationType.studentBehaviorReport:
+        return Icons.psychology;
+      default:
+        return Icons.notifications;
     }
   }
 
-  Color _getAbsenceStatusColor(AbsenceStatus status) {
-    switch (status) {
-      case AbsenceStatus.pending:
+  /// لون نوع الإشعار
+  Color _getNotificationColor(NotificationType type) {
+    switch (type) {
+      case NotificationType.assignedToBus:
+        return AppConstants.primaryColor;
+      case NotificationType.studentDataUpdated:
+        return Colors.blue;
+      case NotificationType.newAbsenceReport:
         return Colors.orange;
-      case AbsenceStatus.approved:
-        return Colors.green;
-      case AbsenceStatus.rejected:
-        return Colors.red;
+      case NotificationType.studentBehaviorReport:
+        return Colors.purple;
+      default:
+        return Colors.grey;
     }
   }
 
-  IconData _getAbsenceTypeIcon(AbsenceType type) {
-    switch (type) {
-      case AbsenceType.sick:
-        return Icons.local_hospital;
-      case AbsenceType.family:
-        return Icons.family_restroom;
-      case AbsenceType.travel:
-        return Icons.flight;
-      case AbsenceType.emergency:
-        return Icons.emergency;
-      case AbsenceType.other:
-        return Icons.help;
+  /// حساب الوقت المنقضي
+  String _getTimeAgo(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+
+    if (difference.inMinutes < 1) {
+      return 'الآن';
+    } else if (difference.inHours < 1) {
+      return 'منذ ${difference.inMinutes} دقيقة';
+    } else if (difference.inDays < 1) {
+      return 'منذ ${difference.inHours} ساعة';
+    } else if (difference.inDays < 7) {
+      return 'منذ ${difference.inDays} يوم';
+    } else {
+      return DateFormat('dd/MM/yyyy').format(dateTime);
     }
   }
 
-  String _getAbsenceStatusText(AbsenceStatus status) {
-    switch (status) {
-      case AbsenceStatus.pending:
-        return 'معلق';
-      case AbsenceStatus.approved:
-        return 'مقبول';
-      case AbsenceStatus.rejected:
-        return 'مرفوض';
+  /// تحديد الإشعار كمقروء
+  Future<void> _markAsRead(NotificationModel notification) async {
+    if (notification.isUnread) {
+      await _notificationService.markNotificationAsRead(notification.id);
     }
   }
 
-  String _getAbsenceTypeText(AbsenceType type) {
-    switch (type) {
-      case AbsenceType.sick:
-        return 'مرض';
-      case AbsenceType.family:
-        return 'ظروف عائلية';
-      case AbsenceType.travel:
-        return 'سفر';
-      case AbsenceType.emergency:
-        return 'طوارئ';
-      case AbsenceType.other:
-        return 'أخرى';
+  /// تحديد جميع الإشعارات كمقروءة
+  Future<void> _markAllAsRead() async {
+    if (_currentUserId != null) {
+      final success = await _notificationService.markAllNotificationsAsRead(_currentUserId!);
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم تحديد جميع الإشعارات كمقروءة'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     }
   }
 }
