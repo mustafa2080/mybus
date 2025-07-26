@@ -1830,9 +1830,6 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
       // إرسال إشعارات التحديث
       await _sendBusAssignmentNotifications(student, updatedStudent, busId, busRoute);
 
-      // تم حذف نظام الإشعارات
-      }
-
       // Close loading dialog and show success message
       if (mounted) {
         // Close loading dialog
