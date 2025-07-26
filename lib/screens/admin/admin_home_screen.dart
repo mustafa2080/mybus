@@ -6,7 +6,7 @@ import '../../models/absence_model.dart';
 import '../../widgets/admin_bottom_navigation.dart';
 import '../../widgets/admin_app_bar.dart';
 import '../../widgets/animated_background.dart';
-// import '../../widgets/notification_badge.dart'; // تم حذف هذا الويدجت
+import '../../widgets/notification_badge.dart';
 import '../../widgets/responsive_widgets.dart';
 import '../../utils/background_utils.dart';
 import 'system_settings_screen.dart';
@@ -28,68 +28,11 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
         title: 'لوحة تحكم الإدارة',
         actions: [
           // عداد الإشعارات للإدارة
-          StreamBuilder<int>(
-            stream: _databaseService.getAdminNotificationsCount(),
-            builder: (context, snapshot) {
-              final notificationCount = snapshot.data ?? 0;
-              final hasNotifications = notificationCount > 0;
+          AdminNotificationBadge(
+            onTap: () => context.push('/admin/notifications'),
+            iconColor: Colors.white,
+            iconSize: 26,
 
-              return Container(
-                margin: const EdgeInsets.only(right: 8),
-                child: Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    IconButton(
-                      icon: Icon(
-                        hasNotifications ? Icons.notifications_active : Icons.notifications_outlined,
-                        color: hasNotifications ? Colors.amber : Colors.white,
-                        size: 26,
-                      ),
-                      onPressed: () => context.push('/admin/notifications'),
-                      tooltip: hasNotifications
-                          ? '$notificationCount إشعار جديد'
-                          : 'الإشعارات',
-                      style: IconButton.styleFrom(
-                        backgroundColor: hasNotifications
-                            ? Colors.white.withOpacity(0.2)
-                            : Colors.white.withOpacity(0.1),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.all(8),
-                      ),
-                    ),
-                    if (hasNotifications)
-                      Positioned(
-                        right: 6,
-                        top: 6,
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          constraints: const BoxConstraints(
-                            minWidth: 20,
-                            minHeight: 20,
-                          ),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: Colors.white, width: 2),
-                          ),
-                          child: Center(
-                            child: Text(
-                              notificationCount > 99 ? '99+' : notificationCount.toString(),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                        ),
-                      ),
-                  ],
-                ),
-              );
-            },
-          ),
         ],
       ),
       body: AnimatedBackground(

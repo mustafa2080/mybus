@@ -9,6 +9,7 @@ import '../../services/theme_service.dart';
 import '../../utils/background_utils.dart';
 import '../../widgets/animated_background.dart';
 import '../../widgets/responsive_widgets.dart';
+import '../../widgets/notification_badge.dart';
 
 import '../../models/student_model.dart';
 import '../../models/bus_model.dart';
@@ -164,59 +165,11 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
               foregroundColor: Colors.white,
             ),
           ),
-          StreamBuilder<int>(
-            stream: _databaseService.getParentNotificationsCount(_authService.currentUser?.uid ?? ''),
-            builder: (context, snapshot) {
-              final notificationCount = snapshot.data ?? 0;
-              final hasNotifications = notificationCount > 0;
+          NotificationBadge(
+            onTap: () => context.push('/parent/notifications'),
+            iconColor: Colors.white,
+            iconSize: 24,
 
-              return Stack(
-                children: [
-                  IconButton(
-                    icon: Icon(
-                      hasNotifications ? Icons.notifications_active : Icons.notifications,
-                      size: 24,
-                      color: hasNotifications ? Colors.yellow : Colors.white,
-                    ),
-                    onPressed: () {
-                      context.push('/parent/notifications');
-                    },
-                    tooltip: hasNotifications ? '$notificationCount إشعار جديد' : 'الإشعارات',
-                    style: IconButton.styleFrom(
-                      backgroundColor: Colors.white.withOpacity(0.1),
-                      foregroundColor: Colors.white,
-                    ),
-                  ),
-                  if (hasNotifications)
-                    Positioned(
-                      right: 6,
-                      top: 6,
-                      child: Container(
-                        padding: const EdgeInsets.all(3),
-                        decoration: BoxDecoration(
-                          color: Colors.red,
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.white, width: 1),
-                        ),
-                        constraints: const BoxConstraints(
-                          minWidth: 16,
-                          minHeight: 16,
-                        ),
-                        child: Text(
-                          notificationCount > 99 ? '99+' : notificationCount.toString(),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 9,
-                            fontWeight: FontWeight.bold,
-                          ),
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ),
-                ],
-              );
-            },
-          ),
 
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, size: 24),

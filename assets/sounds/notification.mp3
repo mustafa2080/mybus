@@ -1,0 +1,11 @@
+# ملف صوت الإشعارات
+# يجب استبدال هذا الملف بملف صوتي حقيقي بصيغة MP3
+# يمكن تحميل ملفات صوتية مجانية من:
+# - https://freesound.org/
+# - https://www.zapsplat.com/
+# - https://mixkit.co/free-sound-effects/
+
+# مثال على أصوات الإشعارات:
+# - notification_sound.mp3
+# - alert_sound.mp3
+# - message_tone.mp3
