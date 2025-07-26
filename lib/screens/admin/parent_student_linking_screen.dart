@@ -370,7 +370,7 @@ class _ParentStudentLinkingScreenState extends State<ParentStudentLinkingScreen>
       await _databaseService.linkStudentToParent(student.id, parent.id);
 
       // إرسال إشعار لولي الأمر
-      await _databaseService.sendNotificationToParent(
+      // await _databaseService.sendNotificationToParent( // تم تعطيل الإشعارات مؤقتاً
         parentId: parent.id,
         title: 'تم ربط طفل جديد',
         message: 'تم ربط الطالب ${student.name} بحسابك بنجاح',

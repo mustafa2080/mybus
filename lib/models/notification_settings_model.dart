@@ -149,7 +149,7 @@ class NotificationSettingsModel {
     final Map<String, dynamic> settingsMap = Map<String, dynamic>.from(settings);
     
     settingsMap.forEach((key, value) {
-      final type = NotificationModel._parseNotificationType(key);
+      final type = NotificationModel.parseNotificationType(key);
       result[type] = value ?? true;
     });
     
@@ -163,7 +163,7 @@ class NotificationSettingsModel {
     final Map<String, dynamic> settingsMap = Map<String, dynamic>.from(settings);
     
     settingsMap.forEach((key, value) {
-      final priority = NotificationModel._parseNotificationPriority(key);
+      final priority = NotificationModel.parseNotificationPriority(key);
       result[priority] = value ?? true;
     });
     

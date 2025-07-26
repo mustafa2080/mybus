@@ -910,7 +910,7 @@ class _EditStudentScreenState extends State<EditStudentScreen> {
       final adminName = adminDoc.data()?['name'] ?? 'الإدارة';
 
       // إرسال الإشعارات (باستثناء الإدمن الحالي)
-      await _notificationService.notifyStudentDataUpdate(
+      // await _notificationService.notifyStudentDataUpdate(
         studentId: updatedStudent.id,
         studentName: updatedStudent.name,
         parentId: updatedStudent.parentId,

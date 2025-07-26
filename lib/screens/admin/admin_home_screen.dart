@@ -6,7 +6,7 @@ import '../../models/absence_model.dart';
 import '../../widgets/admin_bottom_navigation.dart';
 import '../../widgets/admin_app_bar.dart';
 import '../../widgets/animated_background.dart';
-import '../../widgets/notification_badge.dart';
+// import '../../widgets/notification_badge.dart'; // تم حذف هذا الويدجت
 import '../../widgets/responsive_widgets.dart';
 import '../../utils/background_utils.dart';
 import 'system_settings_screen.dart';

@@ -1992,15 +1992,8 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
 
       // إرسال الإشعارات إذا كان هناك تغييرات
       if (updatedFields.isNotEmpty) {
-        await _notificationService.notifyStudentDataUpdate(
-          studentId: updatedStudent.id,
-          studentName: updatedStudent.name,
-          parentId: updatedStudent.parentId,
-          busId: updatedStudent.busId,
-          updatedFields: updatedFields,
-          adminName: adminName,
-          adminId: currentUser?.uid, // استبعاد الإدمن الحالي من الإشعارات
-        );
+        // يمكن إضافة إشعارات تحديث بيانات الطالب هنا لاحقاً
+        debugPrint('✅ Student data updated: ${updatedFields.keys.join(', ')}');
       }
 
       debugPrint('✅ Bus assignment notifications sent successfully');

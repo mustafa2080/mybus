@@ -8,16 +8,17 @@ import '../screens/parent/parent_home_screen.dart';
 import '../screens/admin/admin_home_screen.dart';
 import '../screens/supervisor/supervisor_home_screen.dart';
 import '../screens/test_responsive_screen.dart';
-import '../screens/test_notifications_screen.dart';
-import '../screens/test/notification_test_screen.dart';
+// تم حذف شاشات الاختبار القديمة
+// import '../screens/test_notifications_screen.dart';
+// import '../screens/test/notification_test_screen.dart';
 
-import '../screens/common/notifications_screen.dart' as common_notifications;
+// import '../screens/common/notifications_screen.dart' as common_notifications;
 import '../screens/common/error_screen.dart';
 import '../screens/parent/student_activity_screen.dart';
 import '../screens/parent/bus_info_screen.dart';
 import '../screens/parent/complaints_screen.dart';
 import '../screens/parent/add_complaint_screen.dart';
-import '../screens/parent/notifications_screen.dart';
+import '../screens/parent/parent_notifications_screen.dart';
 import '../screens/parent/parent_profile_screen.dart';
 import '../screens/parent/report_absence_screen.dart';
 import '../screens/parent/supervisor_info_screen.dart';
@@ -44,7 +45,7 @@ import '../screens/admin/parents_management_screen.dart';
 import '../screens/admin/complaints_management_screen.dart';
 import '../screens/admin/reports_screen.dart';
 import '../screens/admin/system_settings_screen.dart';
-import '../screens/admin/admin_notifications_screen.dart';
+import '../screens/admin/admin_notifications_management_screen.dart';
 import '../screens/admin/surveys_reports_screen.dart';
 import '../screens/admin/absence_management_screen.dart';
 import '../screens/admin/supervisor_assignments_screen.dart';
@@ -155,7 +156,7 @@ class AppRoutes {
           GoRoute(
             path: 'notifications',
             name: 'parent-notifications',
-            builder: (context, state) => const NotificationsScreen(),
+            builder: (context, state) => const ParentNotificationsScreen(),
           ),
           GoRoute(
             path: 'student-activity/:studentId',
@@ -353,7 +354,7 @@ class AppRoutes {
           GoRoute(
             path: 'notifications',
             name: 'admin-notifications',
-            builder: (context, state) => const AdminNotificationsScreen(),
+            builder: (context, state) => const AdminNotificationsManagementScreen(),
           ),
           GoRoute(
             path: 'surveys-reports',
@@ -391,12 +392,12 @@ class AppRoutes {
       GoRoute(
         path: testNotifications,
         name: 'test-notifications',
-        builder: (context, state) => const TestNotificationsScreen(),
+        builder: (context, state) => const AdminNotificationsManagementScreen(), // تم استبدال شاشة الاختبار
       ),
       GoRoute(
         path: testNotificationSystem,
         name: 'test-notification-system',
-        builder: (context, state) => const NotificationTestScreen(),
+        builder: (context, state) => const AdminNotificationsManagementScreen(), // تم استبدال شاشة الاختبار
       ),
 
 
@@ -404,7 +405,7 @@ class AppRoutes {
       GoRoute(
         path: notifications,
         name: 'notifications',
-        builder: (context, state) => const common_notifications.NotificationsScreen(),
+        builder: (context, state) => const ParentNotificationsScreen(), // تم استبدال الشاشة المشتركة
       ),
     ],
 

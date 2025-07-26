@@ -141,22 +141,22 @@ class NotificationModel {
       id: map['id'] ?? '',
       title: map['title'] ?? '',
       body: map['body'] ?? '',
-      type: _parseNotificationType(map['type']),
-      priority: _parseNotificationPriority(map['priority']),
-      status: _parseNotificationStatus(map['status']),
+      type: parseNotificationType(map['type']),
+      priority: parseNotificationPriority(map['priority']),
+      status: parseNotificationStatus(map['status']),
       recipientId: map['recipientId'] ?? '',
       recipientType: map['recipientType'] ?? '',
       senderId: map['senderId'],
       senderName: map['senderName'],
       data: Map<String, dynamic>.from(map['data'] ?? {}),
-      channels: _parseChannels(map['channels']),
+      channels: parseChannels(map['channels']),
       requiresSound: map['requiresSound'] ?? false,
       requiresVibration: map['requiresVibration'] ?? false,
       isBackground: map['isBackground'] ?? true,
-      createdAt: _parseTimestamp(map['createdAt']),
-      scheduledAt: map['scheduledAt'] != null ? _parseTimestamp(map['scheduledAt']) : null,
-      sentAt: map['sentAt'] != null ? _parseTimestamp(map['sentAt']) : null,
-      readAt: map['readAt'] != null ? _parseTimestamp(map['readAt']) : null,
+      createdAt: parseTimestamp(map['createdAt']),
+      scheduledAt: map['scheduledAt'] != null ? parseTimestamp(map['scheduledAt']) : null,
+      sentAt: map['sentAt'] != null ? parseTimestamp(map['sentAt']) : null,
+      readAt: map['readAt'] != null ? parseTimestamp(map['readAt']) : null,
       retryCount: map['retryCount'] ?? 0,
       errorMessage: map['errorMessage'],
       isActive: map['isActive'] ?? true,
@@ -214,8 +214,8 @@ class NotificationModel {
     );
   }
 
-  // Helper methods
-  static NotificationType _parseNotificationType(String? type) {
+  // Helper methods - جعل الدوال عامة للاستخدام من الملفات الأخرى
+  static NotificationType parseNotificationType(String? type) {
     switch (type) {
       case 'newComplaint': return NotificationType.newComplaint;
       case 'newStudent': return NotificationType.newStudent;
@@ -241,7 +241,7 @@ class NotificationModel {
     }
   }
 
-  static NotificationPriority _parseNotificationPriority(String? priority) {
+  static NotificationPriority parseNotificationPriority(String? priority) {
     switch (priority) {
       case 'low': return NotificationPriority.low;
       case 'medium': return NotificationPriority.medium;
@@ -251,7 +251,7 @@ class NotificationModel {
     }
   }
 
-  static NotificationStatus _parseNotificationStatus(String? status) {
+  static NotificationStatus parseNotificationStatus(String? status) {
     switch (status) {
       case 'pending': return NotificationStatus.pending;
       case 'sent': return NotificationStatus.sent;
@@ -262,9 +262,9 @@ class NotificationModel {
     }
   }
 
-  static List<NotificationChannel> _parseChannels(dynamic channels) {
+  static List<NotificationChannel> parseChannels(dynamic channels) {
     if (channels == null) return [NotificationChannel.fcm, NotificationChannel.inApp];
-    
+
     final List<String> channelStrings = List<String>.from(channels);
     return channelStrings.map((c) {
       switch (c) {
@@ -277,7 +277,7 @@ class NotificationModel {
     }).toList();
   }
 
-  static DateTime _parseTimestamp(dynamic timestamp) {
+  static DateTime parseTimestamp(dynamic timestamp) {
     if (timestamp == null) return DateTime.now();
 
     if (timestamp is Timestamp) {

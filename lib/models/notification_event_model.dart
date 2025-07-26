@@ -70,13 +70,13 @@ class NotificationEventModel {
     return NotificationEventModel(
       id: map['id'] ?? '',
       eventName: map['eventName'] ?? '',
-      notificationType: NotificationModel._parseNotificationType(map['notificationType']),
+      notificationType: NotificationModel.parseNotificationType(map['notificationType']),
       triggerCollection: map['triggerCollection'] ?? '',
       triggerField: map['triggerField'] ?? '',
       triggerValue: map['triggerValue'],
       targetUserTypes: List<String>.from(map['targetUserTypes'] ?? []),
-      defaultPriority: NotificationModel._parseNotificationPriority(map['defaultPriority']),
-      defaultChannels: NotificationModel._parseChannels(map['defaultChannels']),
+      defaultPriority: NotificationModel.parseNotificationPriority(map['defaultPriority']),
+      defaultChannels: NotificationModel.parseChannels(map['defaultChannels']),
       requiresSound: map['requiresSound'] ?? false,
       requiresVibration: map['requiresVibration'] ?? false,
       isBackground: map['isBackground'] ?? true,
@@ -84,8 +84,8 @@ class NotificationEventModel {
       bodyTemplate: map['bodyTemplate'] ?? '',
       additionalData: Map<String, dynamic>.from(map['additionalData'] ?? {}),
       isActive: map['isActive'] ?? true,
-      createdAt: NotificationModel._parseTimestamp(map['createdAt']),
-      updatedAt: NotificationModel._parseTimestamp(map['updatedAt']),
+      createdAt: NotificationModel.parseTimestamp(map['createdAt']),
+      updatedAt: NotificationModel.parseTimestamp(map['updatedAt']),
     );
   }
 

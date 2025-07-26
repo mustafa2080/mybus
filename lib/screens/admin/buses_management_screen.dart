@@ -758,7 +758,7 @@ class _BusesManagementScreenState extends State<BusesManagementScreen> {
   Future<void> _handleBusActivation(BusModel bus) async {
     try {
       // إرسال إشعارات التفعيل
-      await _sendBusActivationNotifications(bus);
+      // await _sendBusActivationNotifications(bus); // تم تعطيل الإشعارات مؤقتاً
       debugPrint('✅ Bus activation notifications sent for: ${bus.plateNumber}');
     } catch (e) {
       debugPrint('❌ Error handling bus activation: $e');
@@ -769,7 +769,7 @@ class _BusesManagementScreenState extends State<BusesManagementScreen> {
   Future<void> _handleBusDeactivation(BusModel bus) async {
     try {
       // إرسال إشعارات الإيقاف
-      await _sendBusDeactivationNotifications(bus);
+      // await _sendBusDeactivationNotifications(bus); // تم تعطيل الإشعارات مؤقتاً
       debugPrint('✅ Bus deactivation notifications sent for: ${bus.plateNumber}');
     } catch (e) {
       debugPrint('❌ Error handling bus deactivation: $e');

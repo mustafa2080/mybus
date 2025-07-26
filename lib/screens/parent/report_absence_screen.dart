@@ -604,17 +604,9 @@ class _ReportAbsenceScreenState extends State<ReportAbsenceScreen> {
   Future<void> _sendNotificationsToStaffWithSound(AbsenceModel absence) async {
     try {
       debugPrint('✅ Absence request saved (notifications disabled)');
+      // يمكن إضافة نظام الإشعارات هنا لاحقاً
     } catch (e) {
       debugPrint('❌ Error in absence notification placeholder: $e');
-    }
-  }
-
-      // تم حذف نظام الإشعارات
-      debugPrint('✅ Absence request saved (notifications disabled)');
-    } catch (e) {
-      debugPrint('❌ Error sending enhanced notifications to staff: $e');
-      // الرجوع للطريقة القديمة في حالة الفشل
-      await _sendNotificationsToStaff(absence);
     }
   }
 
@@ -628,15 +620,15 @@ class _ReportAbsenceScreenState extends State<ReportAbsenceScreen> {
       final notificationTitle = 'إشعار غياب - ${absence.studentName}';
       final notificationBody = 'أبلغ ولي الأمر عن غياب ${absence.studentName} يوم $dateText\nالسبب: ${absence.reason}';
 
-      // الحصول على جميع المشرفين والإدارة
-      final supervisors = await _databaseService.getAllSupervisors();
-      final admins = await _databaseService.getAllAdmins();
+      // يمكن إضافة منطق الإشعارات هنا لاحقاً
+      // final supervisors = await _databaseService.getAllSupervisors();
+      // final admins = await _databaseService.getAllAdmins();
 
       // تم حذف نظام الإشعارات
 
-      debugPrint('âœ… Notifications sent to ${supervisors.length} supervisors and ${admins.length} admins');
+      debugPrint('✅ Absence notification placeholder executed');
     } catch (e) {
-      debugPrint('â‌Œ Error sending notifications to staff: $e');
+      debugPrint('❌ Error sending notifications to staff: $e');
       // لا نريد أن يفشل إنشاء الغياب بسبب فشل الإشعارات
     }
   }

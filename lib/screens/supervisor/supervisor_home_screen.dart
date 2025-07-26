@@ -2797,15 +2797,8 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
 
       // إرسال إشعار لولي الأمر مع الصوت (بدون إشعار للمشرف الحالي)
       final currentUser = FirebaseAuth.instance.currentUser;
-      await _notificationService.notifyAbsenceApprovedWithSound(
-        studentId: student.id,
-        studentName: student.name,
-        parentId: student.parentId,
-        supervisorId: currentUser?.uid ?? '',
-        absenceDate: DateTime.now(),
-        approvedBy: 'المشرف',
-        approvedBySupervisorId: currentUser?.uid, // استبعاد المشرف الحالي
-      );
+      // يمكن إضافة إشعار موافقة الغياب هنا لاحقاً
+      debugPrint('✅ Absence approved for student: ${student.name}');
 
     } catch (e) {
       if (mounted) {
@@ -2991,7 +2984,8 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
                             ),
                             // الإشعارات العامة
                             StreamBuilder<List<Map<String, dynamic>>>(
-                              stream: _databaseService.getRecentGeneralNotifications(),
+                              // stream: _databaseService.getRecentGeneralNotifications(),
+                              stream: Stream.empty(), // مؤقت حتى يتم تطبيق النظام الجديد
                               builder: (context, snapshot) {
                                 if (snapshot.connectionState == ConnectionState.waiting) {
                                   return const Center(child: CircularProgressIndicator());
