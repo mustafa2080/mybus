@@ -34,18 +34,23 @@ class NotificationBadge extends StatelessWidget {
       stream: FirebaseFirestore.instance
           .collection('notifications')
           .where('recipientId', isEqualTo: currentUser.uid)
-          .where('isRead', isEqualTo: false)
           .snapshots(),
       builder: (context, snapshot) {
         int unreadCount = 0;
 
         if (snapshot.hasData && snapshot.data != null) {
-          unreadCount = snapshot.data!.docs.length;
+          // فلترة الإشعارات غير المقروءة في الذاكرة
+          unreadCount = snapshot.data!.docs.where((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            return data['isRead'] == false;
+          }).length;
         }
 
         // في حالة الخطأ، اعرض رسالة في الكونسول
         if (snapshot.hasError) {
           print('خطأ في تحميل الإشعارات: ${snapshot.error}');
+          // في حالة الخطأ، اعرض عداد ثابت
+          unreadCount = 0;
         }
 
         return Stack(
@@ -109,17 +114,18 @@ class AdminNotificationBadge extends StatelessWidget {
     return StreamBuilder<QuerySnapshot>(
       stream: FirebaseFirestore.instance
           .collection('notifications')
-          .where('isRead', isEqualTo: false)
           .snapshots(),
       builder: (context, snapshot) {
         int unreadCount = 0;
 
         if (snapshot.hasData && snapshot.data != null) {
-          // فلترة الإشعارات الإدارية في الذاكرة
+          // فلترة الإشعارات الإدارية غير المقروءة في الذاكرة
           final adminNotifications = snapshot.data!.docs.where((doc) {
             final data = doc.data() as Map<String, dynamic>;
             final type = data['type'] as String?;
-            return [
+            final isRead = data['isRead'] as bool? ?? true;
+
+            return !isRead && [
               'newComplaint',
               'newStudent',
               'studentAbsence',
@@ -134,6 +140,8 @@ class AdminNotificationBadge extends StatelessWidget {
         // في حالة الخطأ، اعرض رسالة في الكونسول
         if (snapshot.hasError) {
           print('خطأ في تحميل إشعارات الأدمن: ${snapshot.error}');
+          // في حالة الخطأ، اعرض عداد ثابت
+          unreadCount = 0;
         }
 
         return Stack(

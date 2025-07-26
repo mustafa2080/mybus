@@ -14,8 +14,8 @@ class UserNotificationService {
   /// الحصول على معرف المستخدم الحالي
   String? get currentUserId => _auth.currentUser?.uid;
 
-  /// الحصول على إشعارات المستخدم الحالي
-  Stream<List<NotificationModel>> getUserNotifications({
+  /// الحصول على إشعارات المستخدم الحالي (مبسط)
+  Stream<List<Map<String, dynamic>>> getUserNotifications({
     int limit = 20,
     bool unreadOnly = false,
   }) {
@@ -24,37 +24,53 @@ class UserNotificationService {
     }
 
     try {
-      Query query = _firestore
+      return _firestore
           .collection('notifications')
-          .where('recipientId', isEqualTo: currentUserId);
+          .where('recipientId', isEqualTo: currentUserId)
+          .snapshots()
+          .map((snapshot) {
+            var notifications = snapshot.docs.map((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              data['id'] = doc.id;
+              return data;
+            }).toList();
 
-      if (unreadOnly) {
-        query = query.where('isRead', isEqualTo: false);
-      }
+            // فلترة في الذاكرة إذا كانت مطلوبة
+            if (unreadOnly) {
+              notifications = notifications.where((notification) {
+                return notification['isRead'] == false;
+              }).toList();
+            }
 
-      // ترتيب بسيط بدون فهرس مركب
-      query = query.limit(limit);
+            // ترتيب في الذاكرة حسب التاريخ
+            notifications.sort((a, b) {
+              final aTime = a['createdAt'];
+              final bTime = b['createdAt'];
 
-      return query.snapshots().map((snapshot) {
-        final notifications = snapshot.docs.map((doc) {
-          try {
-            final data = doc.data() as Map<String, dynamic>;
-            data['id'] = doc.id;
-            return NotificationModel.fromMap(data);
-          } catch (e) {
-            print('خطأ في تحويل الإشعار: $e');
-            return null;
-          }
-        }).where((notification) => notification != null)
-          .cast<NotificationModel>()
-          .toList();
+              if (aTime == null || bTime == null) return 0;
 
-        // ترتيب في الذاكرة
-        notifications.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-        return notifications;
-      });
+              try {
+                final aDate = aTime is DateTime ? aTime : aTime.toDate();
+                final bDate = bTime is DateTime ? bTime : bTime.toDate();
+                return bDate.compareTo(aDate);
+              } catch (e) {
+                return 0;
+              }
+            });
+
+            // تحديد العدد المطلوب
+            if (notifications.length > limit) {
+              notifications = notifications.take(limit).toList();
+            }
+
+            return notifications;
+          })
+          .handleError((error) {
+            print('خطأ في جلب الإشعارات: $error');
+            return <Map<String, dynamic>>[];
+          });
     } catch (e) {
-      print('خطأ في جلب الإشعارات: $e');
+      print('خطأ في إعداد stream للإشعارات: $e');
       return Stream.value([]);
     }
   }
@@ -69,9 +85,14 @@ class UserNotificationService {
       return _firestore
           .collection('notifications')
           .where('recipientId', isEqualTo: currentUserId)
-          .where('isRead', isEqualTo: false)
           .snapshots()
-          .map((snapshot) => snapshot.docs.length)
+          .map((snapshot) {
+            // فلترة في الذاكرة لتجنب مشاكل الفهارس
+            return snapshot.docs.where((doc) {
+              final data = doc.data() as Map<String, dynamic>;
+              return data['isRead'] == false;
+            }).length;
+          })
           .handleError((error) {
             print('خطأ في عدد الإشعارات غير المقروءة: $error');
             return 0;
@@ -85,17 +106,18 @@ class UserNotificationService {
   /// عدد إشعارات الأدمن غير المقروءة (مبسط)
   Stream<int> getAdminUnreadNotificationsCount() {
     try {
-      // استعلام مبسط يعمل مع الفهارس الموجودة
+      // استعلام بسيط بدون فهارس معقدة
       return _firestore
           .collection('notifications')
-          .where('isRead', isEqualTo: false)
           .snapshots()
           .map((snapshot) {
-            // فلترة في الذاكرة للأنواع المطلوبة
+            // فلترة في الذاكرة للأنواع المطلوبة والحالة غير المقروءة
             final adminNotifications = snapshot.docs.where((doc) {
               final data = doc.data() as Map<String, dynamic>;
               final type = data['type'] as String?;
-              return [
+              final isRead = data['isRead'] as bool? ?? true;
+
+              return !isRead && [
                 'newComplaint',
                 'newStudent',
                 'studentAbsence',
