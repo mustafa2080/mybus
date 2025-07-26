@@ -128,7 +128,7 @@ class FirebaseMessagingService {
         enableLights: true,
         showBadge: true,
         ledColor: Color(0xFFFF0000), // أحمر للطوارئ
-        vibrationPattern: Int64List.fromList([0, 1000, 500, 1000]), // نمط اهتزاز قوي
+        // vibrationPattern: Int64List.fromList([0, 1000, 500, 1000]), // نمط اهتزاز قوي
       ),
 
       // قناة الإشعارات عالية الأولوية - مثل WhatsApp للرسائل المهمة
@@ -142,7 +142,7 @@ class FirebaseMessagingService {
         enableLights: true,
         showBadge: true,
         ledColor: Color(0xFFFFD700), // ذهبي للمهم
-        vibrationPattern: Int64List.fromList([0, 500, 250, 500]),
+        // vibrationPattern: Int64List.fromList([0, 500, 250, 500]),
       ),
 
       // قناة الإشعارات المتوسطة - مثل WhatsApp للرسائل العادية
@@ -156,7 +156,7 @@ class FirebaseMessagingService {
         enableLights: true,
         showBadge: true,
         ledColor: Color(0xFF4A90E2), // أزرق للعادي
-        vibrationPattern: Int64List.fromList([0, 300, 200, 300]),
+        // vibrationPattern: Int64List.fromList([0, 300, 200, 300]),
       ),
 
       // قناة الإشعارات المنخفضة - للتحديثات البسيطة
@@ -481,7 +481,7 @@ class FirebaseMessagingService {
         silent: !notification.shouldPlaySound,
         fullScreenIntent: notification.priority == NotificationPriority.urgent,
         shortcutId: 'mybus_shortcut',
-        additionalFlags: Int32List.fromList([4]), // FLAG_INSISTENT للإشعارات العاجلة
+        // additionalFlags: Int32List.fromList([4]), // FLAG_INSISTENT للإشعارات العاجلة
         category: AndroidNotificationCategory.message,
         visibility: NotificationVisibility.public,
         timeoutAfter: notification.priority == NotificationPriority.low ? 10000 : null,
@@ -671,7 +671,7 @@ class FirebaseMessagingService {
         ));
         break;
 
-      case NotificationType.emergencyAlert:
+      case NotificationType.newComplaint:
         actions.add(const AndroidNotificationAction(
           'call_school',
           'اتصال بالمدرسة',
@@ -699,7 +699,7 @@ class FirebaseMessagingService {
         return 'وصل للمدرسة';
       case NotificationType.studentAtHome:
         return 'وصل للمنزل';
-      case NotificationType.emergencyAlert:
+      case NotificationType.newComplaint:
         return 'تنبيه عاجل';
       case NotificationType.studentDataUpdate:
         return 'تحديث البيانات';

@@ -464,7 +464,7 @@ class NotificationService {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
         final idToken = await user.getIdToken();
-        return idToken;
+        return idToken ?? '';
       }
 
       // Fallback: استخدام Server Key (يجب تشفيره في بيئة الإنتاج)
@@ -505,32 +505,7 @@ class NotificationService {
     }
   }
 
-  /// تحديث حالة الإشعار
-  Future<void> _updateNotificationStatus(String notificationId, String status, String? messageId) async {
-    try {
-      await _firestore.collection('notifications').doc(notificationId).update({
-        'status': status,
-        'messageId': messageId,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-    } catch (e) {
-      debugPrint('❌ خطأ في تحديث حالة الإشعار: $e');
-    }
-  }
 
-  /// الحصول على Channel ID حسب الأولوية
-  String _getChannelId(NotificationPriority priority) {
-    switch (priority) {
-      case NotificationPriority.urgent:
-        return 'urgent_channel';
-      case NotificationPriority.high:
-        return 'high_priority_channel';
-      case NotificationPriority.medium:
-        return 'medium_priority_channel';
-      case NotificationPriority.low:
-        return 'low_priority_channel';
-    }
-  }
 
   /// إرسال إشعار بريد إلكتروني
   Future<bool> _sendEmailNotification(NotificationModel notification) async {
