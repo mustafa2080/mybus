@@ -443,11 +443,19 @@ class NotificationService {
         debugPrint('✅ تم إرسال FCM بنجاح: ${responseData['name']}');
 
         // تحديث حالة الإشعار في قاعدة البيانات
-        await _updateNotificationStatus(notification.id, 'sent', responseData['name']);
+        await _updateNotificationStatus(
+          notification.id,
+          NotificationStatus.sent,
+          sentAt: DateTime.now(),
+        );
         return true;
       } else {
         debugPrint('❌ فشل إرسال FCM: ${response.statusCode} - ${response.body}');
-        await _updateNotificationStatus(notification.id, 'failed', response.body);
+        await _updateNotificationStatus(
+          notification.id,
+          NotificationStatus.failed,
+          errorMessage: response.body,
+        );
         return false;
       }
     } catch (e) {
