@@ -169,7 +169,7 @@ class _ParentHomeScreenState extends State<ParentHomeScreen> {
             onTap: () => context.push('/parent/notifications'),
             iconColor: Colors.white,
             iconSize: 24,
-
+          ),
 
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert, size: 24),

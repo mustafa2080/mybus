@@ -32,7 +32,7 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
             onTap: () => context.push('/admin/notifications'),
             iconColor: Colors.white,
             iconSize: 26,
-
+          ),
         ],
       ),
       body: AnimatedBackground(
