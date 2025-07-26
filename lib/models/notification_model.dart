@@ -239,6 +239,8 @@ class NotificationModel {
       case 'newAbsenceReport': return NotificationType.newAbsenceReport;
       case 'systemMaintenance': return NotificationType.systemMaintenance;
       case 'generalAnnouncement': return NotificationType.generalAnnouncement;
+      case 'studentDataUpdate': return NotificationType.studentDataUpdate;
+      case 'studentStatusUpdate': return NotificationType.studentStatusUpdate;
       default: return NotificationType.generalAnnouncement;
     }
   }
@@ -324,6 +326,8 @@ class NotificationModel {
       case NotificationType.newAbsenceReport: return 'تقرير غياب جديد';
       case NotificationType.systemMaintenance: return 'صيانة النظام';
       case NotificationType.generalAnnouncement: return 'إعلان عام';
+      case NotificationType.studentDataUpdate: return 'تحديث بيانات الطالب';
+      case NotificationType.studentStatusUpdate: return 'تحديث حالة الطالب';
     }
   }
 

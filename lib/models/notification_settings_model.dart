@@ -287,6 +287,8 @@ class NotificationSettingsModel {
           NotificationType.studentAtHome: true,
           NotificationType.studentRemoved: true,
           NotificationType.busRouteChanged: true,
+          NotificationType.studentDataUpdate: true,
+          NotificationType.studentStatusUpdate: true,
         };
         break;
         
