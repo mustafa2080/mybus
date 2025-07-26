@@ -734,6 +734,64 @@ class FirebaseMessagingService {
     }
   }
 
+  /// إرسال إشعار محلي (عندما لا يتوفر FCM)
+  Future<void> showLocalNotification(NotificationModel notification) async {
+    try {
+      final channelId = _getChannelId(notification.priority);
+
+      // إعدادات الأندرويد
+      final androidDetails = AndroidNotificationDetails(
+        channelId,
+        'إشعارات كيدز باص',
+        channelDescription: 'إشعارات تطبيق كيدز باص للنقل المدرسي',
+        importance: _getImportance(notification.priority),
+        priority: _getPriority(notification.priority),
+        playSound: notification.shouldPlaySound,
+        enableVibration: notification.shouldVibrate,
+        icon: '@mipmap/launcher_icon',
+        largeIcon: const DrawableResourceAndroidBitmap('@mipmap/launcher_icon'),
+        color: const Color(0xFFFFD700),
+        showWhen: true,
+        when: DateTime.now().millisecondsSinceEpoch,
+        autoCancel: true,
+        styleInformation: BigTextStyleInformation(
+          notification.body,
+          contentTitle: notification.title,
+          summaryText: 'كيدز باص',
+        ),
+      );
+
+      // إعدادات iOS
+      const iosDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
+
+      final platformDetails = NotificationDetails(
+        android: androidDetails,
+        iOS: iosDetails,
+      );
+
+      // عرض الإشعار
+      await _localNotifications.show(
+        notification.id.hashCode,
+        notification.title,
+        notification.body,
+        platformDetails,
+        payload: jsonEncode({
+          'notificationId': notification.id,
+          'type': notification.type.toString(),
+          'data': notification.data,
+        }),
+      );
+
+      debugPrint('✅ تم عرض الإشعار المحلي: ${notification.title}');
+    } catch (e) {
+      debugPrint('❌ خطأ في عرض الإشعار المحلي: $e');
+    }
+  }
+
   /// تنظيف الموارد
   void dispose() {
     _audioPlayer.dispose();

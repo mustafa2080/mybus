@@ -34,6 +34,7 @@ class NotificationBadge extends StatelessWidget {
       stream: FirebaseFirestore.instance
           .collection('notifications')
           .where('recipientId', isEqualTo: currentUser.uid)
+          .where('createdAt', isGreaterThan: DateTime.now().subtract(const Duration(days: 7))) // آخر 7 أيام فقط
           .snapshots(),
       builder: (context, snapshot) {
         int unreadCount = 0;
@@ -43,6 +44,23 @@ class NotificationBadge extends StatelessWidget {
           unreadCount = snapshot.data!.docs.where((doc) {
             final data = doc.data() as Map<String, dynamic>;
             final status = data['status'] as String?;
+            final createdAt = data['createdAt'];
+
+            // التأكد من أن الإشعار حديث (آخر 7 أيام)
+            if (createdAt != null) {
+              DateTime notificationDate;
+              if (createdAt is Timestamp) {
+                notificationDate = createdAt.toDate();
+              } else if (createdAt is String) {
+                notificationDate = DateTime.parse(createdAt);
+              } else {
+                return false;
+              }
+
+              final isRecent = DateTime.now().difference(notificationDate).inDays <= 7;
+              return isRecent && status != null && ['pending', 'sent', 'delivered'].contains(status);
+            }
+
             return status != null && ['pending', 'sent', 'delivered'].contains(status);
           }).length;
         }

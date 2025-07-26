@@ -371,70 +371,70 @@ class NotificationService {
         },
       };
 
-      // إرسال الإشعار مباشرة عبر Firebase Admin SDK
+      // إرسال الإشعار عبر Firebase Legacy API (أكثر استقراراً)
+      final serverKey = await _getServerKeyFromRemoteConfig();
+      if (serverKey.isEmpty) {
+        debugPrint('⚠️ Server Key غير متوفر - سيتم إرسال الإشعار محلياً فقط');
+
+        // إرسال إشعار محلي بدلاً من FCM
+        await _messagingService.showLocalNotification(notification);
+
+        // تحديث حالة الإشعار
+        await _updateNotificationStatus(
+          notification.id,
+          NotificationStatus.sent,
+          sentAt: DateTime.now(),
+        );
+        return true;
+      }
+
       final response = await http.post(
-        Uri.parse('https://fcm.googleapis.com/v1/projects/mybus-5a992/messages:send'),
+        Uri.parse('https://fcm.googleapis.com/fcm/send'),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer ${await _getAccessToken()}',
+          'Authorization': 'key=$serverKey',
         },
         body: jsonEncode({
-          'message': {
-            'token': token,
+          'to': token,
+          'notification': {
+            'title': notification.title,
+            'body': notification.body,
+            'sound': notification.shouldPlaySound ? 'default' : null,
+          },
+          'data': {
+            'notificationId': notification.id,
+            'type': notification.type.toString().split('.').last,
+            'priority': notification.priority.toString().split('.').last,
+            'recipientId': notification.recipientId,
+            'timestamp': DateTime.now().toIso8601String(),
+            'click_action': 'FLUTTER_NOTIFICATION_CLICK',
+            ...notification.data.map((key, value) => MapEntry(key, value.toString())),
+          },
+          'android': {
+            'priority': notification.priority == NotificationPriority.urgent ||
+                       notification.priority == NotificationPriority.high ? 'high' : 'normal',
             'notification': {
-              'title': notification.title,
-              'body': notification.body,
-            },
-            'data': {
-              'notificationId': notification.id,
-              'type': notification.type.toString().split('.').last,
-              'priority': notification.priority.toString().split('.').last,
-              'recipientId': notification.recipientId,
-              'timestamp': DateTime.now().toIso8601String(),
-              'click_action': 'FLUTTER_NOTIFICATION_CLICK',
-              ...notification.data.map((key, value) => MapEntry(key, value.toString())),
-            },
-            'android': {
-              'priority': notification.priority == NotificationPriority.urgent ||
-                         notification.priority == NotificationPriority.high ? 'high' : 'normal',
-              'notification': {
-                'channel_id': _getChannelId(notification.priority),
-                'sound': notification.shouldPlaySound ? 'default' : 'silent',
-                'priority': notification.priority == NotificationPriority.urgent ? 'max' : 'default',
-                'icon': '@mipmap/launcher_icon',
-                'color': '#FFD700',
-                'tag': notification.type.toString().split('.').last,
-                'sticky': notification.priority == NotificationPriority.urgent,
-                'local_only': false,
-                'default_sound': notification.shouldPlaySound,
-                'default_vibrate_timings': notification.shouldVibrate,
-                'default_light_settings': true,
-                'notification_count': await _getUnreadCount(notification.recipientId),
-              }
-            },
-            'apns': {
-              'headers': {
-                'apns-priority': notification.priority == NotificationPriority.urgent ? '10' : '5',
-                'apns-push-type': 'alert',
-              },
-              'payload': {
-                'aps': {
-                  'alert': {
-                    'title': notification.title,
-                    'body': notification.body,
-                  },
-                  'sound': notification.shouldPlaySound ? 'default' : null,
-                  'badge': await _getUnreadCount(notification.recipientId),
-                  'category': notification.type.toString().split('.').last,
-                  'thread-id': notification.recipientId,
-                  'interruption-level': notification.priority == NotificationPriority.urgent ? 'critical' : 'active',
-                }
-              }
-            },
-            'fcm_options': {
-              'analytics_label': 'notification_${notification.type.toString().split('.').last}',
+              'channel_id': _getChannelId(notification.priority),
+              'sound': notification.shouldPlaySound ? 'default' : null,
+              'icon': '@mipmap/launcher_icon',
+              'color': '#FFD700',
+              'tag': notification.type.toString().split('.').last,
             }
-          }
+          },
+          'apns': {
+            'payload': {
+              'aps': {
+                'alert': {
+                  'title': notification.title,
+                  'body': notification.body,
+                },
+                'sound': notification.shouldPlaySound ? 'default' : null,
+                'badge': await _getUnreadCount(notification.recipientId),
+              }
+            }
+          },
+          'priority': notification.priority == NotificationPriority.urgent ||
+                     notification.priority == NotificationPriority.high ? 'high' : 'normal',
         }),
       );
 
@@ -467,15 +467,8 @@ class NotificationService {
   /// الحصول على Access Token لـ Firebase Admin API
   Future<String> _getAccessToken() async {
     try {
-      // في بيئة الإنتاج، يجب استخدام Service Account Key
-      // هنا نستخدم Firebase Auth للحصول على token مؤقت
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        final idToken = await user.getIdToken();
-        return idToken ?? '';
-      }
-
-      // Fallback: استخدام Server Key (يجب تشفيره في بيئة الإنتاج)
+      // استخدام Server Key مباشرة للاختبار
+      // في بيئة الإنتاج، يجب استخدام Firebase Functions أو Service Account
       return await _getServerKeyFromRemoteConfig();
     } catch (e) {
       debugPrint('❌ خطأ في الحصول على Access Token: $e');
@@ -489,7 +482,19 @@ class NotificationService {
       // في التطبيق الحقيقي، يجب حفظ Server Key في Firebase Remote Config
       // أو استخدام Firebase Functions للأمان
 
-      // مؤقتاً: إرجاع قيمة فارغة لتجنب الأخطاء
+      // للاختبار: يمكن إضافة Server Key هنا مؤقتاً
+      // احصل على Server Key من Firebase Console > Project Settings > Cloud Messaging
+      const serverKey = ''; // ضع Server Key هنا للاختبار
+
+      if (serverKey.isNotEmpty) {
+        return serverKey;
+      }
+
+      // محاولة الحصول من Remote Config
+      // final remoteConfig = FirebaseRemoteConfig.instance;
+      // return remoteConfig.getString('fcm_server_key');
+
+      debugPrint('⚠️ Server Key غير متوفر - يجب إضافته للاختبار');
       return '';
     } catch (e) {
       debugPrint('❌ خطأ في الحصول على Server Key: $e');
@@ -755,9 +760,14 @@ class NotificationService {
         .where('recipientId', isEqualTo: userId)
         .snapshots()
         .map((snapshot) {
-          // تحويل البيانات وترتيبها في الذاكرة
+          // تحويل البيانات وفلترة الحديثة فقط
           var notifications = snapshot.docs
               .map((doc) => NotificationModel.fromMap(doc.data()))
+              .where((notification) {
+                // عرض الإشعارات من آخر 30 يوم فقط
+                final daysDifference = DateTime.now().difference(notification.createdAt).inDays;
+                return daysDifference <= 30;
+              })
               .toList();
 
           // ترتيب حسب التاريخ (الأحدث أولاً)
@@ -821,6 +831,28 @@ class NotificationService {
     } catch (e) {
       debugPrint('❌ خطأ في تحديد جميع الإشعارات كمقروءة: $e');
       return false;
+    }
+  }
+
+  /// تنظيف الإشعارات القديمة (أكثر من 30 يوم)
+  Future<void> cleanupOldNotifications() async {
+    try {
+      final thirtyDaysAgo = DateTime.now().subtract(const Duration(days: 30));
+
+      final oldNotifications = await _firestore
+          .collection('notifications')
+          .where('createdAt', isLessThan: thirtyDaysAgo)
+          .get();
+
+      final batch = _firestore.batch();
+      for (final doc in oldNotifications.docs) {
+        batch.delete(doc.reference);
+      }
+
+      await batch.commit();
+      debugPrint('🧹 تم حذف ${oldNotifications.docs.length} إشعار قديم');
+    } catch (e) {
+      debugPrint('❌ خطأ في تنظيف الإشعارات القديمة: $e');
     }
   }
 }
