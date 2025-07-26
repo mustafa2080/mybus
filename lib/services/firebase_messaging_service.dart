@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/foundation.dart';
@@ -113,32 +114,74 @@ class FirebaseMessagingService {
     }
   }
 
-  /// إنشاء قنوات الإشعارات للأندرويد
+  /// إنشاء قنوات الإشعارات الاحترافية للأندرويد
   Future<void> _createNotificationChannels() async {
     final List<AndroidNotificationChannel> channels = [
+      // قناة الإشعارات العاجلة - مثل WhatsApp للمكالمات
+      const AndroidNotificationChannel(
+        'urgent_channel',
+        'إشعارات عاجلة',
+        description: 'إشعارات عاجلة تتطلب انتباه فوري - حالات الطوارئ',
+        importance: Importance.max,
+        playSound: true,
+        enableVibration: true,
+        enableLights: true,
+        showBadge: true,
+        ledColor: Color(0xFFFF0000), // أحمر للطوارئ
+        vibrationPattern: Int64List.fromList([0, 1000, 500, 1000]), // نمط اهتزاز قوي
+      ),
+
+      // قناة الإشعارات عالية الأولوية - مثل WhatsApp للرسائل المهمة
       const AndroidNotificationChannel(
         'high_priority_channel',
-        'إشعارات عالية الأولوية',
-        description: 'إشعارات مهمة تتطلب انتباه فوري',
+        'إشعارات مهمة',
+        description: 'إشعارات مهمة تتعلق بسلامة الطلاب',
         importance: Importance.high,
         playSound: true,
         enableVibration: true,
+        enableLights: true,
+        showBadge: true,
+        ledColor: Color(0xFFFFD700), // ذهبي للمهم
+        vibrationPattern: Int64List.fromList([0, 500, 250, 500]),
       ),
+
+      // قناة الإشعارات المتوسطة - مثل WhatsApp للرسائل العادية
       const AndroidNotificationChannel(
         'medium_priority_channel',
-        'إشعارات متوسطة الأولوية',
-        description: 'إشعارات عادية',
+        'إشعارات عادية',
+        description: 'إشعارات عادية حول أنشطة الطلاب',
         importance: Importance.defaultImportance,
         playSound: true,
-        enableVibration: false,
+        enableVibration: true,
+        enableLights: true,
+        showBadge: true,
+        ledColor: Color(0xFF4A90E2), // أزرق للعادي
+        vibrationPattern: Int64List.fromList([0, 300, 200, 300]),
       ),
+
+      // قناة الإشعارات المنخفضة - للتحديثات البسيطة
       const AndroidNotificationChannel(
         'low_priority_channel',
-        'إشعارات منخفضة الأولوية',
-        description: 'إشعارات غير عاجلة',
+        'تحديثات بسيطة',
+        description: 'تحديثات وإشعارات غير مهمة',
         importance: Importance.low,
         playSound: false,
         enableVibration: false,
+        enableLights: false,
+        showBadge: true,
+        ledColor: Color(0xFF808080), // رمادي للبسيط
+      ),
+
+      // قناة إشعارات الخلفية - للعمليات الصامتة
+      const AndroidNotificationChannel(
+        'background_channel',
+        'عمليات الخلفية',
+        description: 'إشعارات صامتة للعمليات في الخلفية',
+        importance: Importance.min,
+        playSound: false,
+        enableVibration: false,
+        enableLights: false,
+        showBadge: false,
       ),
     ];
 
@@ -406,30 +449,70 @@ class FirebaseMessagingService {
           break;
       }
 
-      // إعدادات الأندرويد
+      // إعدادات الأندرويد الاحترافية - مثل WhatsApp
       final androidDetails = AndroidNotificationDetails(
         channelId,
         'إشعارات كيدز باص',
-        channelDescription: 'إشعارات تطبيق كيدز باص',
+        channelDescription: 'إشعارات تطبيق كيدز باص للنقل المدرسي',
         importance: _getImportance(notification.priority),
         priority: _getPriority(notification.priority),
         playSound: notification.shouldPlaySound && (_userSettings?.soundEnabled ?? true),
         enableVibration: notification.shouldVibrate && (_userSettings?.vibrationEnabled ?? true),
-        icon: '@mipmap/ic_launcher',
-        largeIcon: const DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
+        enableLights: true,
+        ledColor: _getLedColor(notification.priority),
+        ledOnMs: 1000,
+        ledOffMs: 500,
+        icon: '@mipmap/launcher_icon',
+        largeIcon: const DrawableResourceAndroidBitmap('@mipmap/launcher_icon'),
+        color: const Color(0xFFFFD700), // لون ذهبي مميز
+        colorized: true,
+        showWhen: true,
+        when: DateTime.now().millisecondsSinceEpoch,
+        usesChronometer: false,
+        chronometerCountDown: false,
+        showProgress: false,
+        maxProgress: 0,
+        progress: 0,
+        indeterminate: false,
+        channelShowBadge: true,
+        onlyAlertOnce: false,
+        ongoing: notification.priority == NotificationPriority.urgent,
+        autoCancel: true,
+        silent: !notification.shouldPlaySound,
+        fullScreenIntent: notification.priority == NotificationPriority.urgent,
+        shortcutId: 'mybus_shortcut',
+        additionalFlags: Int32List.fromList([4]), // FLAG_INSISTENT للإشعارات العاجلة
+        category: AndroidNotificationCategory.message,
+        visibility: NotificationVisibility.public,
+        timeoutAfter: notification.priority == NotificationPriority.low ? 10000 : null,
+        groupKey: 'mybus_notifications',
+        setAsGroupSummary: false,
+        groupAlertBehavior: GroupAlertBehavior.all,
         styleInformation: BigTextStyleInformation(
           notification.body,
+          htmlFormatBigText: true,
           contentTitle: notification.title,
-          summaryText: 'كيدز باص',
+          htmlFormatContentTitle: true,
+          summaryText: 'كيدز باص • ${_getTimeAgo(notification.createdAt)}',
+          htmlFormatSummaryText: true,
         ),
+        actions: _getNotificationActions(notification),
       );
 
-      // إعدادات iOS
-      const iosDetails = DarwinNotificationDetails(
+      // إعدادات iOS الاحترافية - مثل WhatsApp
+      final iosDetails = DarwinNotificationDetails(
         presentAlert: true,
         presentBadge: true,
-        presentSound: true,
-        sound: 'default',
+        presentSound: notification.shouldPlaySound && (_userSettings?.soundEnabled ?? true),
+        sound: notification.shouldPlaySound ? 'default' : null,
+        badgeNumber: await _getUnreadCount(notification.recipientId),
+        subtitle: _getNotificationSubtitle(notification),
+        threadIdentifier: notification.recipientId, // تجميع الإشعارات حسب المستخدم
+        categoryIdentifier: notification.type.toString().split('.').last,
+        interruptionLevel: notification.priority == NotificationPriority.urgent
+            ? InterruptionLevel.critical
+            : InterruptionLevel.active,
+        attachments: _getIOSAttachments(notification),
       );
 
       final details = NotificationDetails(
@@ -532,6 +615,122 @@ class FirebaseMessagingService {
         return Priority.defaultPriority;
       case NotificationPriority.low:
         return Priority.low;
+    }
+  }
+
+  /// الحصول على لون LED حسب الأولوية
+  Color _getLedColor(NotificationPriority priority) {
+    switch (priority) {
+      case NotificationPriority.urgent:
+        return const Color(0xFFFF0000); // أحمر للطوارئ
+      case NotificationPriority.high:
+        return const Color(0xFFFFD700); // ذهبي للمهم
+      case NotificationPriority.medium:
+        return const Color(0xFF4A90E2); // أزرق للعادي
+      case NotificationPriority.low:
+        return const Color(0xFF808080); // رمادي للبسيط
+    }
+  }
+
+  /// الحصول على نص الوقت المنقضي
+  String _getTimeAgo(DateTime dateTime) {
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+
+    if (difference.inMinutes < 1) {
+      return 'الآن';
+    } else if (difference.inMinutes < 60) {
+      return 'منذ ${difference.inMinutes} دقيقة';
+    } else if (difference.inHours < 24) {
+      return 'منذ ${difference.inHours} ساعة';
+    } else {
+      return 'منذ ${difference.inDays} يوم';
+    }
+  }
+
+  /// الحصول على إجراءات الإشعار
+  List<AndroidNotificationAction> _getNotificationActions(NotificationModel notification) {
+    final actions = <AndroidNotificationAction>[];
+
+    // إجراء "قراءة" لجميع الإشعارات
+    actions.add(const AndroidNotificationAction(
+      'mark_read',
+      'تم القراءة',
+      showsUserInterface: false,
+    ));
+
+    // إجراءات خاصة حسب نوع الإشعار
+    switch (notification.type) {
+      case NotificationType.studentBoarded:
+      case NotificationType.studentAtSchool:
+      case NotificationType.studentAtHome:
+        actions.add(const AndroidNotificationAction(
+          'view_location',
+          'عرض الموقع',
+          showsUserInterface: true,
+        ));
+        break;
+
+      case NotificationType.emergencyAlert:
+        actions.add(const AndroidNotificationAction(
+          'call_school',
+          'اتصال بالمدرسة',
+          showsUserInterface: true,
+        ));
+        break;
+
+      default:
+        actions.add(const AndroidNotificationAction(
+          'open_app',
+          'فتح التطبيق',
+          showsUserInterface: true,
+        ));
+    }
+
+    return actions;
+  }
+
+  /// الحصول على عنوان فرعي للإشعار (iOS)
+  String _getNotificationSubtitle(NotificationModel notification) {
+    switch (notification.type) {
+      case NotificationType.studentBoarded:
+        return 'ركب الحافلة';
+      case NotificationType.studentAtSchool:
+        return 'وصل للمدرسة';
+      case NotificationType.studentAtHome:
+        return 'وصل للمنزل';
+      case NotificationType.emergencyAlert:
+        return 'تنبيه عاجل';
+      case NotificationType.studentDataUpdate:
+        return 'تحديث البيانات';
+      default:
+        return 'كيدز باص';
+    }
+  }
+
+  /// الحصول على مرفقات iOS
+  List<DarwinNotificationAttachment> _getIOSAttachments(NotificationModel notification) {
+    final attachments = <DarwinNotificationAttachment>[];
+
+    // يمكن إضافة صور أو ملفات صوتية حسب نوع الإشعار
+    // مثلاً: صورة الطالب، خريطة الموقع، إلخ
+
+    return attachments;
+  }
+
+  /// الحصول على عدد الإشعارات غير المقروءة (مساعدة)
+  Future<int> _getUnreadCount(String userId) async {
+    try {
+      final snapshot = await _firestore
+          .collection('notifications')
+          .where('recipientId', isEqualTo: userId)
+          .where('status', whereIn: ['pending', 'sent', 'delivered'])
+          .get();
+
+      return snapshot.docs.length;
+    } catch (e) {
+      debugPrint('❌ خطأ في حساب الإشعارات غير المقروءة: $e');
+      return 0;
     }
   }
 
