@@ -75,7 +75,7 @@ class NotificationService {
     if (targetUserId != null && currentUser?.uid == targetUserId) {
       // عرض الإشعار فقط إذا كان المستخدم الحالي هو المستهدف
       debugPrint('✅ Showing notification for target user: $targetUserId');
-      _showSystemNotification(message);
+      _showSystemNotification(message, targetUserId);
     } else {
       debugPrint('⚠️ Notification not for current user (${currentUser?.uid}), target: $targetUserId');
       debugPrint('📤 Notification skipped - not for current user');
@@ -83,7 +83,7 @@ class NotificationService {
   }
 
   // Show system notification with sound
-  void _showSystemNotification(RemoteMessage message) {
+  void _showSystemNotification(RemoteMessage message, String? targetUserId) {
     try {
       // استخدام الخدمة الموحدة لعرض الإشعار المحلي
       _unifiedService.showLocalNotification(

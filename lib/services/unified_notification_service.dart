@@ -175,7 +175,7 @@ class UnifiedNotificationService {
         // تسجيل Token للوصول العالمي
         final currentUser = FirebaseAuth.instance.currentUser;
         if (currentUser != null) {
-          await _registerTokenForGlobalDelivery(token, currentUser.uid);
+          await _registerTokenForGlobalDelivery(_currentToken!, currentUser.uid);
         }
       }
 
