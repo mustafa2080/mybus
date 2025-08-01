@@ -429,13 +429,6 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                 onTap: () => _showBackupDialog(),
               ),
               _buildManagementCard(
-                icon: Icons.phone_android,
-                label: 'اختبار التجاوب',
-                description: 'فحص تجاوب التطبيق',
-                color: const Color(0xFF9C27B0),
-                onTap: () => context.push('/test/responsive'),
-              ),
-              _buildManagementCard(
                 icon: Icons.people_alt,
                 label: 'إدارة أولياء الأمور',
                 description: 'إدارة حسابات أولياء الأمور',

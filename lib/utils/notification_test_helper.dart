@@ -94,6 +94,17 @@ class NotificationTestHelper {
           'absenceDate': DateTime.now().add(Duration(days: 1)).toString(),
         },
       },
+      {
+        'title': '📝 تحديث بيانات الطالب',
+        'body': 'تم تحديث بيانات الطالب أحمد من قبل الإدارة\n\nالتحديثات:\n• الاسم: من "أحمد محمد" إلى "أحمد علي"\n• الصف: من "الثاني" إلى "الثالث"\n• رقم الباص: من "غير محدد" إلى "123"',
+        'type': 'student',
+        'data': {
+          'type': 'student_data_update',
+          'studentName': 'أحمد',
+          'updatedBy': 'الإدارة',
+          'action': 'data_updated',
+        },
+      },
     ];
 
     for (final notification in notifications) {
@@ -280,6 +291,24 @@ class NotificationTestHelper {
                   title: '📢 إشعار عام',
                   body: 'هذا إشعار عام لجميع أولياء الأمور',
                   type: 'general',
+                );
+              },
+            ),
+
+            ListTile(
+              leading: Icon(Icons.edit, color: Colors.purple),
+              title: Text('اختبار إشعار تعديل الطالب'),
+              onTap: () {
+                Navigator.pop(context);
+                testNotificationDialog(
+                  title: '📝 تحديث بيانات الطالب',
+                  body: 'تم تحديث بيانات الطالب أحمد من قبل الإدارة\n\nالتحديثات:\n• الاسم: من "أحمد محمد" إلى "أحمد علي"\n• الصف: من "الثاني" إلى "الثالث"',
+                  type: 'student',
+                  data: {
+                    'type': 'student_data_update',
+                    'studentName': 'أحمد',
+                    'updatedBy': 'الإدارة',
+                  },
                 );
               },
             ),

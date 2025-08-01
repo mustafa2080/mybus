@@ -209,15 +209,30 @@ class EnhancedNotificationService {
       final currentUser = FirebaseAuth.instance.currentUser;
 
       // فحص محدد: منع الإشعارات للإدمن الحالي فقط إذا كان الإشعار متعلق بعمليات يقوم بها
+      // ولكن فقط إذا كان المستخدم المستهدف هو إدمن أيضاً
       if (currentUser?.uid == userId &&
           type == 'student' &&
           data != null &&
           (data['type'] == 'student_data_update' ||
            data['action'] == 'student_assigned' ||
            data['action'] == 'student_unassigned')) {
-        debugPrint('⚠️ Skipping student-related notification for current admin: $userId');
-        debugPrint('⚠️ Notification type: $type, Title: $title');
-        return;
+
+        // التحقق من أن المستخدم المستهدف هو إدمن
+        final userDoc = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(userId)
+            .get();
+
+        final userRole = userDoc.data()?['role'] ?? '';
+
+        // منع الإشعار فقط إذا كان المستخدم إدمن
+        if (userRole == 'admin') {
+          debugPrint('⚠️ Skipping student-related notification for current admin: $userId');
+          debugPrint('⚠️ Notification type: $type, Title: $title');
+          return;
+        } else {
+          debugPrint('✅ Sending notification to parent (who is also current user): $userId');
+        }
       }
 
       // حفظ الإشعار في قاعدة البيانات باستخدام الخدمة الموحدة
