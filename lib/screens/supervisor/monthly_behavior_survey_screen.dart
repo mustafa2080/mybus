@@ -37,20 +37,82 @@ class _MonthlyBehaviorSurveyScreenState extends State<MonthlyBehaviorSurveyScree
     super.dispose();
   }
 
+  /// نفس الدالة المستخدمة في الصفحة الرئيسية للمشرف
+  Future<List<StudentModel>> _loadSupervisorStudents(String supervisorId) async {
+    try {
+      debugPrint('🔄 Loading supervisor students for monthly surveys: $supervisorId');
+
+      // استخدام الطريقة البسيطة
+      final assignments = await _databaseService.getSupervisorAssignmentsSimple(supervisorId);
+      debugPrint('📋 Found ${assignments.length} assignments for supervisor');
+
+      if (assignments.isEmpty) {
+        debugPrint('⚠️ No assignments found for supervisor $supervisorId');
+        return <StudentModel>[];
+      }
+
+      // جمع جميع الطلاب من جميع التكليفات
+      List<StudentModel> allStudents = [];
+
+      for (final assignment in assignments) {
+        final busRoute = assignment['busRoute'] as String? ?? '';
+        final busId = assignment['busId'] as String? ?? '';
+
+        debugPrint('🚌 Processing assignment - Route: "$busRoute", BusId: "$busId"');
+
+        List<StudentModel> students = [];
+
+        // البحث بـ busRoute أولاً
+        if (busRoute.isNotEmpty) {
+          students = await _databaseService.getStudentsByRouteSimple(busRoute);
+          debugPrint('👥 Found ${students.length} students by route "$busRoute"');
+        }
+
+        // البحث بـ busId إذا لم نجد طلاب بـ busRoute
+        if (students.isEmpty && busId.isNotEmpty) {
+          students = await _databaseService.getStudentsByBusIdSimple(busId);
+          debugPrint('👥 Found ${students.length} students by busId "$busId"');
+        }
+
+        allStudents.addAll(students);
+      }
+
+      // إزالة التكرارات
+      final uniqueStudents = <String, StudentModel>{};
+      for (final student in allStudents) {
+        uniqueStudents[student.id] = student;
+      }
+
+      final result = uniqueStudents.values.toList();
+      debugPrint('✅ Total unique students for supervisor: ${result.length}');
+
+      return result;
+    } catch (e) {
+      debugPrint('❌ Error loading supervisor students: $e');
+      return <StudentModel>[];
+    }
+  }
+
   Future<void> _loadData() async {
     setState(() {
       _isLoading = true;
     });
 
     try {
-      // Load students
-      _databaseService.getAllStudents().listen((students) {
-        if (mounted) {
-          setState(() {
-            _students = students;
-          });
-        }
-      });
+      // Load students for supervisor's route only
+      final supervisorId = _authService.currentUser?.uid ?? '';
+      debugPrint('🔍 Loading students for supervisor: $supervisorId');
+
+      // استخدام نفس الطريقة المستخدمة في الصفحة الرئيسية للمشرف
+      final supervisorStudents = await _loadSupervisorStudents(supervisorId);
+
+      if (mounted) {
+        setState(() {
+          _students = supervisorStudents;
+        });
+      }
+
+      debugPrint('👥 Loaded ${supervisorStudents.length} students for monthly surveys');
 
       // Load evaluations for current month
       await _loadEvaluations();

@@ -3208,6 +3208,7 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
               else
                 Expanded(
                   child: ListView.builder(
+                    padding: const EdgeInsets.only(bottom: 16), // إضافة مساحة في الأسفل
                     itemCount: students.length,
                     itemBuilder: (context, index) {
                       final student = students[index];

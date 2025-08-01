@@ -528,7 +528,11 @@ class _StudentsListScreenState extends State<StudentsListScreen> {
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: const EdgeInsets.only(
+        left: 16,
+        right: 16,
+        bottom: 80, // إضافة مساحة كافية في الأسفل لعرض الطالب الأخير بالكامل
+      ),
       itemCount: _filteredStudents.length,
       itemBuilder: (context, index) {
         final student = _filteredStudents[index];

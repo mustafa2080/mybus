@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -7,6 +8,7 @@ import '../models/notification_model.dart';
 import '../models/student_model.dart';
 import 'enhanced_notification_service.dart';
 import 'unified_notification_service.dart';
+import 'notification_dialog_service.dart';
 
 
 class NotificationService {
@@ -76,6 +78,9 @@ class NotificationService {
       // عرض الإشعار فقط إذا كان المستخدم الحالي هو المستهدف
       debugPrint('✅ Showing notification for target user: $targetUserId');
       _showSystemNotification(message, targetUserId);
+
+      // عرض dialog تنبيهي للمستخدم باستخدام الخدمة المحسنة
+      NotificationDialogService().showNotificationDialog(message);
     } else {
       debugPrint('⚠️ Notification not for current user (${currentUser?.uid}), target: $targetUserId');
       debugPrint('📤 Notification skipped - not for current user');
@@ -1582,4 +1587,8 @@ class NotificationService {
       throw Exception('خطأ في إرسال الإشعار الترحيبي السريع: $e');
     }
   }
+
+
+
+
 }
