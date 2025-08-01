@@ -21,42 +21,16 @@ class NotificationDialogService {
       final context = _navigatorKey?.currentContext;
       if (context == null) {
         debugPrint('⚠️ No context available for notification dialog');
+        debugPrint('🔍 Navigator key: $_navigatorKey');
+        debugPrint('🔍 Navigator key current context: ${_navigatorKey?.currentContext}');
+
+        // محاولة أخرى للحصول على context
+        _tryShowDialogWithDelay(message);
         return;
       }
 
-      final title = message.notification?.title ?? 'إشعار جديد';
-      final body = message.notification?.body ?? '';
-      final notificationType = message.data['type'] ?? 'general';
-
-      // تشغيل اهتزاز للفت الانتباه
-      HapticFeedback.vibrate();
-
-      // عرض dialog مع تأثير بصري جذاب
-      showDialog(
-        context: context,
-        barrierDismissible: true,
-        barrierColor: Colors.black.withOpacity(0.5),
-        builder: (BuildContext dialogContext) => _buildNotificationDialog(
-          context: dialogContext,
-          title: title,
-          body: body,
-          type: notificationType,
-          data: message.data,
-        ),
-      );
-
-      // إخفاء Dialog تلقائياً بعد 8 ثوان
-      Future.delayed(Duration(seconds: 8), () {
-        try {
-          if (_navigatorKey?.currentContext != null && Navigator.canPop(context)) {
-            Navigator.of(context, rootNavigator: true).pop();
-          }
-        } catch (e) {
-          debugPrint('❌ Error auto-closing dialog: $e');
-        }
-      });
-
-      debugPrint('✅ Notification dialog shown for: $title');
+      debugPrint('✅ Context available, showing dialog immediately');
+      _showDialogWithContext(context, message);
     } catch (e) {
       debugPrint('❌ Error showing notification dialog: $e');
     }
@@ -305,9 +279,77 @@ class NotificationDialogService {
     }
   }
 
+  /// محاولة عرض Dialog مع تأخير
+  void _tryShowDialogWithDelay(RemoteMessage message) {
+    debugPrint('🔄 Trying to show dialog with delay...');
+
+    // محاولة بعد ثانية واحدة
+    Future.delayed(Duration(seconds: 1), () {
+      final context = _navigatorKey?.currentContext;
+      if (context != null) {
+        debugPrint('✅ Context found after delay, showing dialog');
+        _showDialogWithContext(context, message);
+      } else {
+        debugPrint('❌ Still no context after delay');
+
+        // محاولة أخيرة بعد 3 ثوان
+        Future.delayed(Duration(seconds: 3), () {
+          final context = _navigatorKey?.currentContext;
+          if (context != null) {
+            debugPrint('✅ Context found after 3 seconds, showing dialog');
+            _showDialogWithContext(context, message);
+          } else {
+            debugPrint('❌ No context available after multiple attempts');
+          }
+        });
+      }
+    });
+  }
+
+  /// عرض Dialog مع context محدد
+  void _showDialogWithContext(BuildContext context, RemoteMessage message) {
+    try {
+      final title = message.notification?.title ?? 'إشعار جديد';
+      final body = message.notification?.body ?? '';
+      final notificationType = message.data['type'] ?? 'general';
+
+      // تشغيل اهتزاز للفت الانتباه
+      HapticFeedback.vibrate();
+
+      // عرض dialog مع تأثير بصري جذاب
+      showDialog(
+        context: context,
+        barrierDismissible: true,
+        barrierColor: Colors.black.withOpacity(0.5),
+        builder: (BuildContext dialogContext) => _buildNotificationDialog(
+          context: dialogContext,
+          title: title,
+          body: body,
+          type: notificationType,
+          data: message.data,
+        ),
+      );
+
+      // إخفاء Dialog تلقائياً بعد 8 ثوان
+      Future.delayed(Duration(seconds: 8), () {
+        try {
+          if (Navigator.canPop(context)) {
+            Navigator.of(context, rootNavigator: true).pop();
+          }
+        } catch (e) {
+          debugPrint('❌ Error auto-closing dialog: $e');
+        }
+      });
+
+      debugPrint('✅ Notification dialog shown for: $title');
+    } catch (e) {
+      debugPrint('❌ Error showing dialog with context: $e');
+    }
+  }
+
   /// التحقق من وجود إجراء للإشعار
   bool _hasNotificationAction(String type, Map<String, dynamic> data) {
-    return data.containsKey('action') || 
+    return data.containsKey('action') ||
            type.toLowerCase() == 'student' ||
            type.toLowerCase() == 'absence' ||
            type.toLowerCase() == 'assignment' ||

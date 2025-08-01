@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import '../../services/database_service.dart';
 import '../../services/auth_service.dart';
 import '../../models/notification_model.dart';
+import '../../utils/notification_test_helper.dart';
 
 class ParentNotificationsScreen extends StatefulWidget {
   const ParentNotificationsScreen({super.key});
@@ -47,6 +48,12 @@ class _ParentNotificationsScreenState extends State<ParentNotificationsScreen> {
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
+          // زر اختبار الإشعارات (للتطوير فقط)
+          IconButton(
+            icon: const Icon(Icons.bug_report),
+            onPressed: () => NotificationTestHelper.showQuickTestMenu(context),
+            tooltip: 'اختبار الإشعارات',
+          ),
           StreamBuilder<int>(
             stream: _databaseService.getParentNotificationsCount(_authService.currentUser?.uid ?? ''),
             builder: (context, snapshot) {
@@ -132,6 +139,16 @@ class _ParentNotificationsScreenState extends State<ParentNotificationsScreen> {
   }
 
   Widget _buildNotificationCard(NotificationModel notification) {
+    // تسجيل تشخيصي لفهم محتوى الإشعار
+    debugPrint('🔍 Notification Debug:');
+    debugPrint('  - ID: ${notification.id}');
+    debugPrint('  - Title: "${notification.title}"');
+    debugPrint('  - Body: "${notification.body}"');
+    debugPrint('  - Body length: ${notification.body.length}');
+    debugPrint('  - Type: ${notification.type}');
+    debugPrint('  - IsRead: ${notification.isRead}');
+    debugPrint('  - Data: ${notification.data}');
+
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: notification.isRead ? 1 : 3,
@@ -206,11 +223,12 @@ class _ParentNotificationsScreenState extends State<ParentNotificationsScreen> {
               
               // Body
               Text(
-                notification.body,
+                notification.body.isNotEmpty ? notification.body : 'لا يوجد محتوى للإشعار',
                 style: TextStyle(
                   fontSize: 14,
-                  color: Colors.grey[700],
+                  color: notification.body.isNotEmpty ? Colors.grey[700] : Colors.red[400],
                   height: 1.4,
+                  fontStyle: notification.body.isNotEmpty ? FontStyle.normal : FontStyle.italic,
                 ),
               ),
               
