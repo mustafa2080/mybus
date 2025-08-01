@@ -55,8 +55,8 @@ class _MonthlyBehaviorSurveyScreenState extends State<MonthlyBehaviorSurveyScree
       List<StudentModel> allStudents = [];
 
       for (final assignment in assignments) {
-        final busRoute = assignment['busRoute'] as String? ?? '';
-        final busId = assignment['busId'] as String? ?? '';
+        final busRoute = assignment.busRoute;
+        final busId = assignment.busId;
 
         debugPrint('🚌 Processing assignment - Route: "$busRoute", BusId: "$busId"');
 
