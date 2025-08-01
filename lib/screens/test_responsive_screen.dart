@@ -345,41 +345,6 @@ class TestResponsiveScreen extends StatelessWidget {
     }
   }
 
-  /// اختبار الحوار المتجاوب
-  void _showResponsiveDialog() {
-    ResponsiveDialog.show(
-      context: context,
-      title: 'حوار متجاوب',
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const ResponsiveBodyText('هذا مثال على حوار متجاوب يتكيف مع حجم الشاشة'),
-          const ResponsiveVerticalSpace(),
-          ResponsiveTextField(
-            labelText: 'اختبار حقل النص',
-            hintText: 'أدخل نص تجريبي',
-          ),
-        ],
-      ),
-      actions: [
-        ResponsiveTextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('إغلاق'),
-        ),
-        ResponsiveElevatedButton(
-          onPressed: () {
-            Navigator.of(context).pop();
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('تم اختبار الحوار بنجاح!')),
-            );
-          },
-          child: const Text('تأكيد'),
-        ),
-      ],
-    );
-  }
-}
-
   /// تشغيل تحليل التجاوب
   Future<void> _runResponsiveAnalysis(BuildContext context) async {
     try {
