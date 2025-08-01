@@ -1773,4 +1773,95 @@ class EnhancedNotificationService {
       debugPrint('❌ Error sending bus deactivation notifications: $e');
     }
   }
+
+  /// إشعار ترحيبي محسن لولي الأمر الجديد
+  Future<void> sendWelcomeNotificationToNewParent({
+    required String parentId,
+    required String parentName,
+    required String parentEmail,
+    String? parentPhone,
+  }) async {
+    try {
+      debugPrint('🎉 Sending enhanced welcome notification to new parent: $parentName');
+
+      // إشعار ترحيبي أساسي
+      await sendNotificationToUser(
+        userId: parentId,
+        title: '🎉 أهلاً وسهلاً بك في MyBus',
+        body: 'مرحباً $parentName! تم إنشاء حسابك بنجاح. استمتع بمتابعة رحلة طفلك بأمان.',
+        type: 'welcome',
+        data: {
+          'type': 'welcome_notification',
+          'parentId': parentId,
+          'parentName': parentName,
+          'action': 'welcome',
+          'timestamp': DateTime.now().toIso8601String(),
+        },
+      );
+
+      // انتظار قصير ثم إرسال إشعار تعليمات
+      await Future.delayed(Duration(seconds: 5));
+
+      await sendNotificationToUser(
+        userId: parentId,
+        title: '📱 كيفية استخدام التطبيق',
+        body: 'يمكنك الآن متابعة رحلة طفلك، طلب الغياب، والتواصل مع المشرف. اضغط هنا للمزيد.',
+        type: 'tutorial',
+        data: {
+          'type': 'app_tutorial',
+          'parentId': parentId,
+          'action': 'show_tutorial',
+          'timestamp': DateTime.now().toIso8601String(),
+        },
+      );
+
+      // انتظار قصير ثم إرسال إشعار الدعم
+      await Future.delayed(Duration(seconds: 10));
+
+      await sendNotificationToUser(
+        userId: parentId,
+        title: '🆘 الدعم والمساعدة',
+        body: 'إذا كان لديك أي استفسار، يمكنك التواصل معنا في أي وقت. نحن هنا لمساعدتك!',
+        type: 'support',
+        data: {
+          'type': 'support_info',
+          'parentId': parentId,
+          'action': 'show_support',
+          'timestamp': DateTime.now().toIso8601String(),
+        },
+      );
+
+      debugPrint('✅ Enhanced welcome notifications sent to new parent: $parentName');
+    } catch (e) {
+      debugPrint('❌ Error sending welcome notification to new parent: $e');
+    }
+  }
+
+  /// إشعار ترحيبي سريع لولي الأمر الجديد
+  Future<void> sendQuickWelcomeNotification({
+    required String parentId,
+    required String parentName,
+  }) async {
+    try {
+      debugPrint('🎉 Sending quick welcome notification to: $parentName');
+
+      await sendNotificationToUser(
+        userId: parentId,
+        title: '🎉 مرحباً بك في MyBus',
+        body: 'أهلاً وسهلاً $parentName! تم تسجيل حسابك بنجاح. نحن سعداء لانضمامك إلى عائلة MyBus.',
+        type: 'welcome',
+        data: {
+          'type': 'quick_welcome',
+          'parentId': parentId,
+          'parentName': parentName,
+          'action': 'welcome',
+          'timestamp': DateTime.now().toIso8601String(),
+        },
+      );
+
+      debugPrint('✅ Quick welcome notification sent to: $parentName');
+    } catch (e) {
+      debugPrint('❌ Error sending quick welcome notification: $e');
+    }
+  }
 }

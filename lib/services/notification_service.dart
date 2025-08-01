@@ -1522,4 +1522,64 @@ class NotificationService {
       debugPrint('❌ Error deleting notification: $e');
     }
   }
+
+  /// إشعار ترحيبي لولي الأمر الجديد
+  Future<void> sendWelcomeNotificationToNewParent({
+    required String parentId,
+    required String parentName,
+    required String parentEmail,
+    String? parentPhone,
+  }) async {
+    try {
+      debugPrint('🎉 Sending welcome notification to new parent: $parentName');
+
+      // استخدام الخدمة المحسنة للإشعار الترحيبي
+      await _enhancedService.sendWelcomeNotificationToNewParent(
+        parentId: parentId,
+        parentName: parentName,
+        parentEmail: parentEmail,
+        parentPhone: parentPhone,
+      );
+
+      // إشعار للإدمن عن التسجيل الجديد
+      await _sendAdminNotification(
+        title: '👨‍👩‍👧‍👦 تسجيل ولي أمر جديد',
+        body: 'تم تسجيل ولي أمر جديد: $parentName\nالبريد الإلكتروني: $parentEmail${parentPhone != null ? '\nرقم الهاتف: $parentPhone' : ''}',
+        data: {
+          'type': 'new_parent_registration',
+          'parentId': parentId,
+          'parentName': parentName,
+          'parentEmail': parentEmail,
+          'parentPhone': parentPhone ?? '',
+          'registrationDate': DateTime.now().toIso8601String(),
+        },
+      );
+
+      debugPrint('✅ Welcome notification sent successfully to: $parentName');
+    } catch (e) {
+      debugPrint('❌ Error sending welcome notification: $e');
+      throw Exception('خطأ في إرسال إشعار الترحيب: $e');
+    }
+  }
+
+  /// إشعار ترحيبي سريع لولي الأمر الجديد
+  Future<void> sendQuickWelcomeNotification({
+    required String parentId,
+    required String parentName,
+  }) async {
+    try {
+      debugPrint('🎉 Sending quick welcome notification to: $parentName');
+
+      // استخدام الخدمة المحسنة للإشعار السريع
+      await _enhancedService.sendQuickWelcomeNotification(
+        parentId: parentId,
+        parentName: parentName,
+      );
+
+      debugPrint('✅ Quick welcome notification sent to: $parentName');
+    } catch (e) {
+      debugPrint('❌ Error sending quick welcome notification: $e');
+      throw Exception('خطأ في إرسال الإشعار الترحيبي السريع: $e');
+    }
+  }
 }
