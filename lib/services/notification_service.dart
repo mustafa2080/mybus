@@ -69,14 +69,19 @@ class NotificationService {
   // Handle foreground messages with sound and system notification
   void _handleForegroundMessage(RemoteMessage message) {
     debugPrint('🔔 Received foreground message: ${message.notification?.title}');
+    debugPrint('📋 Message data: ${message.data}');
 
     // التحقق من المستخدم المستهدف قبل عرض الإشعار
     final targetUserId = message.data['userId'] ?? message.data['recipientId'];
     final currentUser = FirebaseAuth.instance.currentUser;
 
-    if (targetUserId != null && currentUser?.uid == targetUserId) {
-      // عرض الإشعار فقط إذا كان المستخدم الحالي هو المستهدف
-      debugPrint('✅ Showing notification for target user: $targetUserId');
+    debugPrint('🎯 Target user ID: $targetUserId');
+    debugPrint('👤 Current user ID: ${currentUser?.uid}');
+
+    // إذا لم يكن هناك targetUserId محدد، اعرض الإشعار لجميع المستخدمين
+    if (targetUserId == null || currentUser?.uid == targetUserId) {
+      // عرض الإشعار للمستخدم المستهدف أو لجميع المستخدمين إذا لم يكن محدد
+      debugPrint('✅ Showing notification for user: ${currentUser?.uid}');
       _showSystemNotification(message, targetUserId);
 
       // عرض dialog تنبيهي للمستخدم باستخدام الخدمة المحسنة

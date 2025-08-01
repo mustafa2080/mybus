@@ -53,6 +53,18 @@ import '../utils/app_constants.dart';
 import '../models/student_model.dart';
 
 class AppRoutes {
+  // مفتاح التنقل الرئيسي
+  static GlobalKey<NavigatorState>? _navigatorKey;
+
+  // دالة للحصول على مفتاح التنقل
+  static GlobalKey<NavigatorState> _getNavigatorKey() {
+    _navigatorKey ??= GlobalKey<NavigatorState>();
+    return _navigatorKey!;
+  }
+
+  // دالة للحصول على مفتاح التنقل من الخارج
+  static GlobalKey<NavigatorState> get navigatorKey => _getNavigatorKey();
+
   // Route Names
   static const String splash = '/';
   static const String login = '/login';
@@ -108,6 +120,7 @@ class AppRoutes {
   // Router Configuration
   static final GoRouter router = GoRouter(
     initialLocation: splash,
+    navigatorKey: _getNavigatorKey(),
     routes: [
       // Splash Screen
       GoRoute(
