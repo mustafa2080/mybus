@@ -305,21 +305,27 @@ class TestResponsiveScreen extends StatelessWidget {
             onChanged: (value) {},
           ),
           const ResponsiveVerticalSpace(),
-          ResponsiveButtonGroup(
-            buttons: [
-              ResponsiveElevatedButton(
-                onPressed: () {},
-                child: const Text('حفظ'),
+          Row(
+            children: [
+              Expanded(
+                child: ResponsiveElevatedButton(
+                  onPressed: () {},
+                  child: const Text('حفظ'),
+                ),
               ),
-              ResponsiveOutlinedButton(
-                onPressed: () {},
-                child: const Text('إلغاء'),
-              ),
-              ResponsiveTextButton(
-                onPressed: () => _showResponsiveDialog(context),
-                child: const Text('اختبار الحوار'),
+              const ResponsiveHorizontalSpace(),
+              Expanded(
+                child: ResponsiveOutlinedButton(
+                  onPressed: () {},
+                  child: const Text('إلغاء'),
+                ),
               ),
             ],
+          ),
+          const ResponsiveVerticalSpace(),
+          ResponsiveTextButton(
+            onPressed: () => _showResponsiveDialog(),
+            child: const Text('اختبار الحوار'),
           ),
         ],
       ),
@@ -340,7 +346,7 @@ class TestResponsiveScreen extends StatelessWidget {
   }
 
   /// اختبار الحوار المتجاوب
-  void _showResponsiveDialog(BuildContext context) {
+  void _showResponsiveDialog() {
     ResponsiveDialog.show(
       context: context,
       title: 'حوار متجاوب',
@@ -379,7 +385,7 @@ class TestResponsiveScreen extends StatelessWidget {
     try {
       final result = await ResponsiveValidator.analyzeResponsiveness(context);
 
-      if (mounted) {
+      if (context.mounted) {
         ResponsiveValidator.printDetailedReport(result);
 
         ResponsiveDialog.show(
@@ -430,7 +436,7 @@ class TestResponsiveScreen extends StatelessWidget {
         );
       }
     } catch (e) {
-      if (mounted) {
+      if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('خطأ في التحليل: $e')),
         );
@@ -502,60 +508,5 @@ class TestResponsiveScreen extends StatelessWidget {
     if (score >= 80) return Icons.check_circle;
     if (score >= 60) return Icons.warning;
     return Icons.error;
-  }
-}
-
-/// Widget لعرض معلومات الاستجابة في الوقت الفعلي
-class ResponsiveDebugInfo extends StatelessWidget {
-  const ResponsiveDebugInfo({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Positioned(
-      top: 100,
-      right: 16,
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: Colors.black.withOpacity(0.8),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text(
-              'Debug Info',
-              style: TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
-                fontSize: ResponsiveHelper.getFontSize(context, mobileFontSize: 12),
-              ),
-            ),
-            Text(
-              'Device: ${ResponsiveHelper.getDeviceType(context).name}',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: ResponsiveHelper.getFontSize(context, mobileFontSize: 10),
-              ),
-            ),
-            Text(
-              'Width: ${ResponsiveHelper.getScreenWidth(context).toInt()}',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: ResponsiveHelper.getFontSize(context, mobileFontSize: 10),
-              ),
-            ),
-            Text(
-              'Columns: ${ResponsiveHelper.getGridCrossAxisCount(context)}',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: ResponsiveHelper.getFontSize(context, mobileFontSize: 10),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }

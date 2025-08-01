@@ -55,7 +55,7 @@ class ResponsiveDialog extends StatelessWidget {
             ? MediaQuery.of(context).size.width * 0.7
             : MediaQuery.of(context).size.width * 0.5;
 
-    Widget titleWidget = this.titleWidget;
+    Widget? titleWidget = this.titleWidget;
     if (title != null && titleWidget == null) {
       titleWidget = Text(
         title!,
