@@ -324,7 +324,7 @@ class TestResponsiveScreen extends StatelessWidget {
           ),
           const ResponsiveVerticalSpace(),
           ResponsiveTextButton(
-            onPressed: () => _showResponsiveDialog(),
+            onPressed: () => _showResponsiveDialog(context),
             child: const Text('اختبار الحوار'),
           ),
         ],
@@ -476,7 +476,7 @@ class TestResponsiveScreen extends StatelessWidget {
   }
 
   /// اختبار الحوار المتجاوب
-  void _showResponsiveDialog() {
+  void _showResponsiveDialog(BuildContext context) {
     ResponsiveDialog.show(
       context: context,
       title: 'حوار متجاوب',
