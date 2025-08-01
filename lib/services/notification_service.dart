@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:uuid/uuid.dart';
 import '../models/notification_model.dart';
 import '../models/student_model.dart';
@@ -67,15 +68,32 @@ class NotificationService {
   void _handleForegroundMessage(RemoteMessage message) {
     debugPrint('🔔 Received foreground message: ${message.notification?.title}');
 
-    // عرض الإشعار في النظام حتى لو كان التطبيق مفتوح
-    _showSystemNotification(message);
+    // التحقق من المستخدم المستهدف قبل عرض الإشعار
+    final targetUserId = message.data['userId'] ?? message.data['recipientId'];
+    final currentUser = FirebaseAuth.instance.currentUser;
+
+    if (targetUserId != null && currentUser?.uid == targetUserId) {
+      // عرض الإشعار فقط إذا كان المستخدم الحالي هو المستهدف
+      debugPrint('✅ Showing notification for target user: $targetUserId');
+      _showSystemNotification(message);
+    } else {
+      debugPrint('⚠️ Notification not for current user (${currentUser?.uid}), target: $targetUserId');
+      debugPrint('📤 Notification skipped - not for current user');
+    }
   }
 
   // Show system notification with sound
   void _showSystemNotification(RemoteMessage message) {
     try {
-      // هذا سيتم التعامل معه تلقائياً بواسطة Firebase Messaging
-      // لكن يمكننا إضافة معالجة إضافية هنا إذا لزم الأمر
+      // استخدام الخدمة الموحدة لعرض الإشعار المحلي
+      _unifiedService.showLocalNotification(
+        title: message.notification?.title ?? 'إشعار جديد',
+        body: message.notification?.body ?? '',
+        channelId: message.data['channelId'] ?? 'mybus_notifications',
+        data: message.data,
+        targetUserId: targetUserId,
+      );
+
       debugPrint('🔊 System notification displayed with sound');
 
       // يمكن إضافة vibration أو sound إضافي هنا إذا لزم الأمر
@@ -326,8 +344,7 @@ class NotificationService {
       final fcmToken = userDoc.data()?['fcmToken'] as String?;
 
       if (fcmToken != null && fcmToken.isNotEmpty) {
-        // في مرحلة الاختبار: حفظ الإشعار في قاعدة البيانات للمستخدم المستهدف فقط
-        // في الإنتاج: سيتم إرسال FCM حقيقي للمستخدم المستهدف
+        // حفظ الإشعار في قاعدة البيانات + إرسال FCM للوصول العالمي
         await _firestore.collection('fcm_queue').add({
           'recipientId': notification.recipientId,
           'fcmToken': fcmToken, // إضافة FCM token للمستخدم المحدد
@@ -347,10 +364,13 @@ class NotificationService {
         'timestamp': FieldValue.serverTimestamp(),
         'status': 'pending',
         'type': notification.type.toString().split('.').last,
-        // إعدادات Android محسنة للصوت والعرض
+        'global_delivery': true, // تمكين التسليم العالمي
+        'retry_count': 0,
+        'max_retries': 3,
+        // إعدادات Android محسنة للصوت والعرض والوصول العالمي
         'android': {
           'priority': 'high',
-          'ttl': '86400s', // 24 hours
+          'ttl': '2419200s', // 4 weeks للوصول العالمي
           'notification': {
             'title': notification.title,
             'body': notification.body,
@@ -363,14 +383,14 @@ class NotificationService {
             'notification_priority': 'PRIORITY_MAX',
             'visibility': 'public',
             'show_when': true,
-            'local_only': false,
+            'local_only': false, // مهم للوصول العالمي
             'sticky': false,
             'icon': 'ic_notification',
             'color': '#FF6B6B',
             'tag': 'mybus_${notification.type.toString().split('.').last}',
           }
         },
-        // إعدادات iOS محسنة
+        // إعدادات iOS محسنة للوصول العالمي
         'apns': {
           'payload': {
             'aps': {
@@ -388,6 +408,7 @@ class NotificationService {
           'headers': {
             'apns-priority': '10',
             'apns-push-type': 'alert',
+            'apns-expiration': '${DateTime.now().add(Duration(days: 28)).millisecondsSinceEpoch ~/ 1000}', // انتهاء بعد 4 أسابيع
           }
         },
         // إعدادات الويب

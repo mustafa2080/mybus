@@ -31,10 +31,11 @@ Future<void> _showBackgroundNotification(RemoteMessage message) async {
       return;
     }
 
-    // في مرحلة الاختبار: لا نعرض إشعارات خلفية محلية
-    // الإشعارات ستكون محفوظة في قاعدة البيانات للمستخدم المستهدف فقط
+    // التحقق من المستخدم الحالي (إذا كان متاحاً في الخلفية)
+    // في الخلفية، نحفظ الإشعار في قاعدة البيانات فقط للمستخدم المستهدف
+    // ولا نعرض إشعارات محلية لتجنب إظهارها للمستخدم الخطأ
     debugPrint('📤 Background notification for user: $targetUserId');
-    debugPrint('⚠️ In testing mode - notification saved to database only');
+    debugPrint('⚠️ Background mode - notification saved to database only');
     debugPrint('📱 User will see notification when they open the app');
     return;
 

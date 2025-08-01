@@ -12,6 +12,7 @@ class FCMHttpService {
 
   // يجب الحصول على Server Key من Firebase Console
   // في بيئة الإنتاج، يجب حفظ هذا في متغيرات البيئة أو الخادم
+  // للإشعارات العالمية، نحتاج Server Key حقيقي من Firebase Console
   static const String _serverKey = 'YOUR_SERVER_KEY_HERE';
 
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -204,20 +205,41 @@ class FCMHttpService {
     String? iconUrl,
   }) async {
     try {
-      // في بيئة التطوير، إرسال إشعار محلي حقيقي
+      // في بيئة التطوير، إرسال إشعار محلي + محاولة FCM حقيقي
       if (_serverKey == 'YOUR_SERVER_KEY_HERE') {
         debugPrint('🔥 FCM HTTP Service - Development Mode');
-        debugPrint('📱 Sending real local notification to all users');
+        debugPrint('📱 Sending local notification + attempting real FCM');
+        debugPrint('🎯 Target user: ${data['userId'] ?? data['recipientId']}');
         debugPrint('📝 Title: $title');
         debugPrint('📝 Body: $body');
         debugPrint('📊 Data: $data');
 
-        // إرسال إشعار محلي حقيقي لجميع المستخدمين
-        await _sendRealLocalNotification(
+        // التحقق من المستخدم المستهدف قبل إرسال الإشعار المحلي
+        final targetUserId = data['userId'] ?? data['recipientId'];
+        final currentUser = FirebaseAuth.instance.currentUser;
+
+        if (targetUserId != null && currentUser?.uid == targetUserId) {
+          // إرسال إشعار محلي حقيقي للمستخدم المستهدف فقط
+          await _sendRealLocalNotification(
+            title: title,
+            body: body,
+            data: data,
+            channelId: channelId,
+          );
+        } else {
+          debugPrint('⚠️ Local notification not for current user (${currentUser?.uid}), target: $targetUserId');
+          debugPrint('📤 Local notification skipped - not for current user');
+        }
+
+        // محاولة إرسال FCM حقيقي للمستخدمين البعيدين
+        await _attemptRealFCMDelivery(
+          token: token,
           title: title,
           body: body,
           data: data,
           channelId: channelId,
+          imageUrl: imageUrl,
+          iconUrl: iconUrl,
         );
 
         return true;
@@ -480,7 +502,109 @@ class FCMHttpService {
     }
   }
 
-  /// إرسال إشعار فوري للاختبار (بدون التحقق من المستخدم)
+  /// محاولة إرسال FCM حقيقي للمستخدمين البعيدين
+  Future<void> _attemptRealFCMDelivery({
+    required String token,
+    required String title,
+    required String body,
+    required Map<String, String> data,
+    required String channelId,
+    String? imageUrl,
+    String? iconUrl,
+  }) async {
+    try {
+      debugPrint('🌍 Attempting real FCM delivery for global reach...');
+
+      // إنشاء payload محسن للوصول العالمي
+      final payload = {
+        'to': token,
+        'priority': 'high',
+        'content_available': true,
+        'mutable_content': true,
+        'notification': {
+          'title': title,
+          'body': body,
+          'sound': 'default',
+          'badge': '1',
+          'click_action': 'FLUTTER_NOTIFICATION_CLICK',
+          if (imageUrl != null) 'image': imageUrl,
+        },
+        'data': {
+          'channelId': channelId,
+          'timestamp': DateTime.now().toIso8601String(),
+          'global_delivery': 'true',
+          ...data,
+        },
+        'android': {
+          'priority': 'high',
+          'ttl': '2419200s', // 4 weeks
+          'notification': {
+            'channel_id': channelId,
+            'sound': 'default',
+            'priority': 'high',
+            'visibility': 'public',
+            'icon': 'ic_notification',
+            'color': '#FF6B6B',
+            'default_sound': true,
+            'default_vibrate_timings': true,
+            'sticky': false,
+          }
+        },
+        'apns': {
+          'headers': {
+            'apns-priority': '10',
+            'apns-push-type': 'alert',
+            'apns-expiration': '${DateTime.now().add(Duration(days: 28)).millisecondsSinceEpoch ~/ 1000}',
+          },
+          'payload': {
+            'aps': {
+              'alert': {
+                'title': title,
+                'body': body,
+              },
+              'sound': 'default',
+              'badge': 1,
+              'content-available': 1,
+              'mutable-content': 1,
+            },
+          },
+        },
+      };
+
+      // محاولة إرسال عبر Firebase Admin SDK (إذا كان متاح)
+      await _tryFirebaseAdminDelivery(payload);
+
+      debugPrint('✅ Real FCM delivery attempted for global reach');
+    } catch (e) {
+      debugPrint('❌ Error in real FCM delivery: $e');
+    }
+  }
+
+  /// محاولة إرسال عبر Firebase Admin SDK
+  Future<void> _tryFirebaseAdminDelivery(Map<String, dynamic> payload) async {
+    try {
+      // في بيئة الإنتاج، هذا سيتم عبر Cloud Functions أو خادم خلفي
+      debugPrint('🔥 Firebase Admin SDK delivery would be used in production');
+      debugPrint('📤 Payload prepared for global delivery: ${payload.keys}');
+
+      // حفظ في قاعدة البيانات للمعالجة اللاحقة
+      await _firestore.collection('fcm_global_queue').add({
+        'payload': payload,
+        'timestamp': FieldValue.serverTimestamp(),
+        'status': 'pending',
+        'delivery_type': 'global',
+        'target_token': payload['to'],
+        'retry_count': 0,
+        'max_retries': 3,
+      });
+
+      debugPrint('✅ FCM payload queued for global delivery');
+    } catch (e) {
+      debugPrint('❌ Error queuing FCM for global delivery: $e');
+    }
+  }
+
+  /// إرسال إشعار فوري للاختبار (للمستخدم الحالي فقط)
   Future<bool> sendInstantTestNotification({
     required String title,
     required String body,
@@ -488,19 +612,28 @@ class FCMHttpService {
     Map<String, String>? data,
   }) async {
     try {
-      debugPrint('🔔 Sending instant test notification');
+      debugPrint('🔔 Sending instant test notification to current user only');
+
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        debugPrint('⚠️ No current user, skipping test notification');
+        return false;
+      }
 
       await _sendRealLocalNotification(
         title: title,
         body: body,
-        data: data ?? {
+        data: {
           'type': 'instant_test',
+          'userId': currentUser.uid,
+          'recipientId': currentUser.uid,
           'timestamp': DateTime.now().toIso8601String(),
+          ...?data,
         },
         channelId: channelId ?? 'mybus_notifications',
       );
 
-      debugPrint('✅ Instant test notification sent successfully');
+      debugPrint('✅ Instant test notification sent successfully to: ${currentUser.uid}');
       return true;
     } catch (e) {
       debugPrint('❌ Error sending instant test notification: $e');

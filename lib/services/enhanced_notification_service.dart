@@ -13,6 +13,7 @@ import '../models/user_model.dart';
 import '../utils/notification_images.dart' as NotificationUtils;
 import 'unified_notification_service.dart';
 import 'fcm_http_service.dart';
+import 'global_notification_monitor.dart';
 
 // تعريف UserRole للتوافق مع الكود
 enum UserRole {
@@ -32,6 +33,7 @@ class EnhancedNotificationService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FCMHttpService _fcmHttpService = FCMHttpService();
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
+  final GlobalNotificationMonitor _globalMonitor = GlobalNotificationMonitor();
   final Uuid _uuid = const Uuid();
 
   bool _isInitialized = false;
@@ -44,8 +46,11 @@ class EnhancedNotificationService {
       // تهيئة الخدمة الموحدة
       await _unifiedService.initialize();
 
+      // بدء مراقبة الإشعارات العالمية
+      await _globalMonitor.startMonitoring();
+
       _isInitialized = true;
-      debugPrint('✅ Enhanced Notification Service initialized successfully');
+      debugPrint('✅ Enhanced Notification Service initialized successfully with global monitoring');
     } catch (e) {
       debugPrint('❌ Error initializing notification service: $e');
     }
@@ -89,14 +94,25 @@ class EnhancedNotificationService {
   /// معالجة الرسائل في المقدمة
   Future<void> _handleForegroundMessage(RemoteMessage message) async {
     debugPrint('Received foreground message: ${message.messageId}');
-    
-    // عرض الإشعار المحلي باستخدام الخدمة الموحدة
-    await _unifiedService.showLocalNotification(
-      title: message.notification?.title ?? 'إشعار جديد',
-      body: message.notification?.body ?? '',
-      channelId: _getChannelId(message.data['type']),
-      data: message.data,
-    );
+
+    // التحقق من المستخدم المستهدف قبل عرض الإشعار
+    final targetUserId = message.data['userId'] ?? message.data['recipientId'];
+    final currentUser = FirebaseAuth.instance.currentUser;
+
+    if (targetUserId != null && currentUser?.uid == targetUserId) {
+      // عرض الإشعار فقط إذا كان المستخدم الحالي هو المستهدف
+      debugPrint('✅ Showing notification for target user: $targetUserId');
+      await _unifiedService.showLocalNotification(
+        title: message.notification?.title ?? 'إشعار جديد',
+        body: message.notification?.body ?? '',
+        channelId: _getChannelId(message.data['type']),
+        data: message.data,
+        targetUserId: targetUserId,
+      );
+    } else {
+      debugPrint('⚠️ Notification not for current user (${currentUser?.uid}), target: $targetUserId');
+      debugPrint('📤 Notification skipped - not for current user');
+    }
   }
 
   /// معالجة الرسائل في الخلفية
@@ -229,6 +245,15 @@ class EnhancedNotificationService {
         iconUrl: notificationIcon,
       );
 
+      // إضافة للطابور العالمي للوصول من أي مكان
+      await _queueForGlobalDelivery(
+        userId: userId,
+        title: enhancedTitle,
+        body: body,
+        type: type,
+        data: data,
+      );
+
       // إرسال إشعار محلي للمستخدم الحالي إذا كان هو المستهدف
       if (currentUser?.uid == userId) {
         debugPrint('📱 Sending enhanced local notification to current user: $userId');
@@ -238,6 +263,7 @@ class EnhancedNotificationService {
           channelId: _getChannelId(type),
           imageUrl: notificationImage,
           iconUrl: notificationIcon,
+          targetUserId: userId,
           data: {
             'type': type,
             'userId': userId,
@@ -328,6 +354,47 @@ class EnhancedNotificationService {
   /// الحصول على رابط الأيقونة حسب نوع الإشعار
   String _getNotificationIcon(String type) {
     return NotificationUtils.NotificationImages.getNotificationIcon(type);
+  }
+
+  /// إضافة الإشعار للطابور العالمي للوصول من أي مكان
+  Future<void> _queueForGlobalDelivery({
+    required String userId,
+    required String title,
+    required String body,
+    required String type,
+    Map<String, dynamic>? data,
+  }) async {
+    try {
+      // الحصول على FCM token للمستخدم
+      final userDoc = await _firestore.collection('users').doc(userId).get();
+      if (!userDoc.exists) return;
+
+      final userData = userDoc.data() as Map<String, dynamic>;
+      final fcmToken = userData['fcmToken'] as String?;
+
+      if (fcmToken == null || fcmToken.isEmpty) {
+        debugPrint('⚠️ No FCM token for global delivery to user: $userId');
+        return;
+      }
+
+      // إضافة للطابور العالمي
+      await _globalMonitor.queueGlobalNotification(
+        targetToken: fcmToken,
+        title: title,
+        body: body,
+        userId: userId,
+        data: {
+          'type': type,
+          'channelId': _getChannelId(type),
+          ...?data?.map((key, value) => MapEntry(key, value.toString())),
+        },
+        channelId: _getChannelId(type),
+      );
+
+      debugPrint('✅ Notification queued for global delivery to: $userId');
+    } catch (e) {
+      debugPrint('❌ Error queuing for global delivery: $e');
+    }
   }
 
   /// إرسال إشعار FCM مع notification payload

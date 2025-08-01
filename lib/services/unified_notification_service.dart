@@ -164,20 +164,33 @@ class UnifiedNotificationService {
     debugPrint('Notification permission status: ${settings.authorizationStatus}');
   }
 
-  /// الحصول على FCM Token وحفظه - دالة موحدة
+  /// الحصول على FCM Token وحفظه - دالة موحدة محسنة للوصول العالمي
   Future<void> _getAndSaveToken() async {
     try {
       _currentToken = await _messaging.getToken();
       if (_currentToken != null) {
         await _saveTokenToFirestore(_currentToken!);
         debugPrint('✅ FCM Token saved: ${_currentToken!.substring(0, 20)}...');
+
+        // تسجيل Token للوصول العالمي
+        final currentUser = FirebaseAuth.instance.currentUser;
+        if (currentUser != null) {
+          await _registerTokenForGlobalDelivery(token, currentUser.uid);
+        }
       }
+
+      // الاستماع لتحديثات Token
+      _messaging.onTokenRefresh.listen((newToken) async {
+        _currentToken = newToken;
+        await _saveTokenToFirestore(newToken);
+        debugPrint('🔄 FCM Token refreshed and updated globally');
+      });
     } catch (e) {
       debugPrint('❌ Error getting FCM token: $e');
     }
   }
 
-  /// حفظ Token في Firestore - دالة موحدة
+  /// حفظ Token في Firestore - دالة موحدة محسنة للوصول العالمي
   Future<void> _saveTokenToFirestore(String token) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
@@ -187,9 +200,40 @@ class UnifiedNotificationService {
         'fcmToken': token,
         'lastTokenUpdate': FieldValue.serverTimestamp(),
         'platform': Platform.operatingSystem,
+        'globalDeliveryEnabled': true, // تمكين التسليم العالمي
+        'lastSeen': FieldValue.serverTimestamp(),
+        'deviceInfo': {
+          'platform': Platform.operatingSystem,
+          'version': Platform.operatingSystemVersion,
+        }
       });
+
+      // تسجيل Token للوصول العالمي
+      await _registerTokenForGlobalDelivery(token, user.uid);
+
+      debugPrint('✅ FCM Token saved with global delivery enabled');
     } catch (e) {
       debugPrint('❌ Error saving FCM token: $e');
+    }
+  }
+
+  /// تسجيل Token للوصول العالمي
+  Future<void> _registerTokenForGlobalDelivery(String token, String userId) async {
+    try {
+      // حفظ في مجموعة منفصلة للتسليم العالمي
+      await _firestore.collection('global_fcm_tokens').doc(userId).set({
+        'token': token,
+        'userId': userId,
+        'registeredAt': FieldValue.serverTimestamp(),
+        'lastUpdated': FieldValue.serverTimestamp(),
+        'platform': Platform.operatingSystem,
+        'active': true,
+        'globalDelivery': true,
+      }, SetOptions(merge: true));
+
+      debugPrint('✅ Token registered for global delivery');
+    } catch (e) {
+      debugPrint('❌ Error registering token for global delivery: $e');
     }
   }
 
@@ -201,8 +245,19 @@ class UnifiedNotificationService {
     Map<String, dynamic>? data,
     String? imageUrl,
     String? iconUrl,
+    String? targetUserId, // إضافة معرف المستخدم المستهدف
   }) async {
     if (!_isInitialized) await initialize();
+
+    // التحقق من المستخدم المستهدف إذا تم تمريره
+    if (targetUserId != null) {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser?.uid != targetUserId) {
+        debugPrint('⚠️ Local notification not for current user (${currentUser?.uid}), target: $targetUserId');
+        debugPrint('📤 Local notification skipped - not for current user');
+        return;
+      }
+    }
 
     final notificationId = DateTime.now().millisecondsSinceEpoch ~/ 1000;
 
