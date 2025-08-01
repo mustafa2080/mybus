@@ -2409,7 +2409,20 @@ class DatabaseService {
           final notifications = <NotificationModel>[];
           for (final doc in snapshot.docs) {
             try {
-              final notification = NotificationModel.fromMap(doc.data());
+              final data = doc.data();
+              debugPrint('🔍 Raw notification data for ${doc.id}:');
+              debugPrint('   - title: "${data['title']}"');
+              debugPrint('   - body: "${data['body']}"');
+              debugPrint('   - message: "${data['message']}"');
+              debugPrint('   - recipientId: "${data['recipientId']}"');
+              debugPrint('   - type: "${data['type']}"');
+
+              final notification = NotificationModel.fromMap(data);
+              debugPrint('🔍 Parsed notification:');
+              debugPrint('   - title: "${notification.title}"');
+              debugPrint('   - body: "${notification.body}"');
+              debugPrint('   - body length: ${notification.body.length}');
+
               notifications.add(notification);
             } catch (e) {
               debugPrint('❌ Error parsing notification ${doc.id}: $e');

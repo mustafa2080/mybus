@@ -222,6 +222,233 @@ class NotificationTestHelper {
     }
   }
 
+  /// إنشاء إشعار مباشر في قاعدة البيانات للاختبار
+  static Future<void> _createDirectDatabaseNotification(BuildContext context) async {
+    try {
+      final currentUser = _auth.currentUser;
+      if (currentUser == null) {
+        debugPrint('❌ No current user for direct database notification');
+        return;
+      }
+
+      final notificationId = DateTime.now().millisecondsSinceEpoch.toString();
+      final testBody = 'هذا نص اختبار مباشر في قاعدة البيانات. تم إنشاؤه في ${_getCurrentTime()} لاختبار عرض النص في صفحة الإشعارات.';
+
+      // إنشاء الإشعار مباشرة في Firestore
+      await _firestore.collection('notifications').doc(notificationId).set({
+        'id': notificationId,
+        'title': '🧪 اختبار نص الإشعار المباشر',
+        'body': testBody,
+        'recipientId': currentUser.uid,
+        'type': 'test',
+        'isRead': false,
+        'timestamp': FieldValue.serverTimestamp(),
+        'createdBy': 'direct_test_system',
+        'data': {
+          'source': 'direct_database_test',
+          'testType': 'body_display_test',
+          'createdAt': DateTime.now().toIso8601String(),
+        },
+      });
+
+      debugPrint('✅ Direct database notification created');
+      debugPrint('📋 Notification ID: $notificationId');
+      debugPrint('📋 Body: $testBody');
+      debugPrint('📋 Body length: ${testBody.length}');
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('✅ تم إنشاء إشعار اختبار مباشر في قاعدة البيانات'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ Error creating direct database notification: $e');
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ خطأ في إنشاء الإشعار: $e'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
+  /// فحص الإشعارات الموجودة في قاعدة البيانات
+  static Future<void> _inspectDatabaseNotifications(BuildContext context) async {
+    try {
+      final currentUser = _auth.currentUser;
+      if (currentUser == null) {
+        debugPrint('❌ No current user for database inspection');
+        return;
+      }
+
+      debugPrint('🔍 Inspecting notifications in database for user: ${currentUser.uid}');
+
+      final snapshot = await _firestore
+          .collection('notifications')
+          .where('recipientId', isEqualTo: currentUser.uid)
+          .orderBy('timestamp', descending: true)
+          .limit(10)
+          .get();
+
+      debugPrint('📊 Found ${snapshot.docs.length} notifications in database');
+
+      for (int i = 0; i < snapshot.docs.length; i++) {
+        final doc = snapshot.docs[i];
+        final data = doc.data();
+
+        debugPrint('📋 Notification ${i + 1}:');
+        debugPrint('   - ID: ${doc.id}');
+        debugPrint('   - Title: "${data['title']}"');
+        debugPrint('   - Body: "${data['body']}"');
+        debugPrint('   - Body length: ${(data['body'] as String?)?.length ?? 0}');
+        debugPrint('   - Message: "${data['message']}"');
+        debugPrint('   - Type: "${data['type']}"');
+        debugPrint('   - RecipientId: "${data['recipientId']}"');
+        debugPrint('   - IsRead: ${data['isRead']}');
+        debugPrint('   - Timestamp: ${data['timestamp']}');
+        debugPrint('   - Data: ${data['data']}');
+        debugPrint('   ---');
+      }
+
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text('فحص قاعدة البيانات'),
+            content: Text('تم فحص ${snapshot.docs.length} إشعارات.\nتحقق من console للتفاصيل الكاملة.'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('موافق'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ Error inspecting database notifications: $e');
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ خطأ في فحص قاعدة البيانات: $e'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
+  /// إصلاح الإشعارات الفاسدة (التي لا تحتوي على نص)
+  static Future<void> _fixCorruptedNotifications(BuildContext context) async {
+    try {
+      final currentUser = _auth.currentUser;
+      if (currentUser == null) {
+        debugPrint('❌ No current user for fixing notifications');
+        return;
+      }
+
+      debugPrint('🔧 Fixing corrupted notifications for user: ${currentUser.uid}');
+
+      final snapshot = await _firestore
+          .collection('notifications')
+          .where('recipientId', isEqualTo: currentUser.uid)
+          .get();
+
+      int fixedCount = 0;
+      final batch = _firestore.batch();
+
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        final body = data['body'] as String?;
+        final message = data['message'] as String?;
+        final title = data['title'] as String?;
+
+        // إصلاح الإشعارات التي لا تحتوي على نص
+        if ((body == null || body.isEmpty) && (message == null || message.isEmpty)) {
+          String fixedBody = '';
+
+          // إنشاء نص بناءً على العنوان أو النوع
+          if (title != null && title.isNotEmpty) {
+            if (title.contains('ركب')) {
+              fixedBody = 'ركب الطالب الباص بأمان';
+            } else if (title.contains('نزل')) {
+              fixedBody = 'نزل الطالب من الباص بأمان';
+            } else if (title.contains('وصل')) {
+              fixedBody = 'وصل الطالب إلى المدرسة بأمان';
+            } else if (title.contains('تحديث')) {
+              fixedBody = 'تم تحديث بيانات الطالب من قبل الإدارة';
+            } else if (title.contains('تسكين')) {
+              fixedBody = 'تم تسكين الطالب في الباص';
+            } else if (title.contains('غياب')) {
+              fixedBody = 'طلب غياب للطالب';
+            } else {
+              fixedBody = 'إشعار من إدارة المدرسة';
+            }
+          } else {
+            fixedBody = 'إشعار من إدارة المدرسة';
+          }
+
+          // تحديث الإشعار
+          batch.update(doc.reference, {
+            'body': fixedBody,
+            'fixedAt': FieldValue.serverTimestamp(),
+            'fixedBy': 'notification_test_helper',
+          });
+
+          fixedCount++;
+          debugPrint('🔧 Fixed notification ${doc.id}: "$fixedBody"');
+        }
+      }
+
+      if (fixedCount > 0) {
+        await batch.commit();
+        debugPrint('✅ Fixed $fixedCount corrupted notifications');
+      } else {
+        debugPrint('ℹ️ No corrupted notifications found');
+      }
+
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text('إصلاح الإشعارات'),
+            content: Text(fixedCount > 0
+                ? 'تم إصلاح $fixedCount إشعار فاسد'
+                : 'لم يتم العثور على إشعارات فاسدة'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('موافق'),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ Error fixing corrupted notifications: $e');
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ خطأ في إصلاح الإشعارات: $e'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+    }
+  }
+
   /// الحصول على الوقت الحالي
   static String _getCurrentTime() {
     final now = DateTime.now();
@@ -313,6 +540,33 @@ class NotificationTestHelper {
               },
             ),
             
+            ListTile(
+              leading: Icon(Icons.bug_report, color: Colors.teal),
+              title: Text('اختبار إشعار مباشر في قاعدة البيانات'),
+              onTap: () {
+                Navigator.pop(context);
+                _createDirectDatabaseNotification(context);
+              },
+            ),
+
+            ListTile(
+              leading: Icon(Icons.search, color: Colors.indigo),
+              title: Text('فحص الإشعارات في قاعدة البيانات'),
+              onTap: () {
+                Navigator.pop(context);
+                _inspectDatabaseNotifications(context);
+              },
+            ),
+
+            ListTile(
+              leading: Icon(Icons.build, color: Colors.brown),
+              title: Text('إصلاح الإشعارات الفاسدة'),
+              onTap: () {
+                Navigator.pop(context);
+                _fixCorruptedNotifications(context);
+              },
+            ),
+
             ListTile(
               leading: Icon(Icons.delete, color: Colors.red),
               title: Text('حذف الإشعارات الاختبارية'),
