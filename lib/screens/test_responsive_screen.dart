@@ -323,9 +323,11 @@ class TestResponsiveScreen extends StatelessWidget {
             ],
           ),
           const ResponsiveVerticalSpace(),
-          ResponsiveTextButton(
-            onPressed: () => _showResponsiveDialog(context),
-            child: const Text('اختبار الحوار'),
+          Builder(
+            builder: (context) => ResponsiveTextButton(
+              onPressed: () => _showResponsiveDialog(context),
+              child: const Text('اختبار الحوار'),
+            ),
           ),
         ],
       ),
