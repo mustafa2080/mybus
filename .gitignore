@@ -54,7 +54,8 @@ app.*.map.json
 *.p12
 *.jks
 *.keystore
-google-services.json
+# google-services.json (تم السماح برفعه للمشروع)
+# GoogleService-Info.plist (iOS config file)
 GoogleService-Info.plist
 firebase_options.dart.backup
 
