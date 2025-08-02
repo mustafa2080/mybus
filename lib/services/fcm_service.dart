@@ -431,22 +431,7 @@ class FCMService {
   /// التحقق من حالة التهيئة
   bool get isInitialized => _isInitialized;
 
-  /// إرسال إشعار تجريبي لاختبار النظام
-  Future<void> sendTestNotification() async {
-    try {
-      debugPrint('🧪 Sending test notification...');
 
-      // إرسال إشعار محلي للاختبار الفوري
-      await _sendLocalTestNotification();
-
-      // محاولة إرسال إشعار FCM للاختبار الحقيقي
-      await _sendFCMTestNotification();
-
-      debugPrint('✅ Test notifications sent');
-    } catch (e) {
-      debugPrint('❌ Error sending test notification: $e');
-    }
-  }
 
   /// إرسال إشعار محلي للاختبار
   Future<void> _sendLocalTestNotification() async {
