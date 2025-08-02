@@ -4912,6 +4912,118 @@ class DatabaseService {
     }
   }
 
+  /// Get admin notifications
+  Stream<List<NotificationModel>> getAdminNotifications(String adminId) {
+    if (adminId.isEmpty) return Stream.value([]);
+
+    return _firestore
+        .collection('notifications')
+        .where('recipientId', isEqualTo: adminId)
+        .orderBy('timestamp', descending: true)
+        .limit(50)
+        .snapshots()
+        .map((snapshot) {
+          final notifications = <NotificationModel>[];
+          for (final doc in snapshot.docs) {
+            try {
+              final notification = NotificationModel.fromMap(doc.data());
+              notifications.add(notification);
+            } catch (e) {
+              debugPrint('❌ Error parsing admin notification ${doc.id}: $e');
+            }
+          }
+          debugPrint('📱 Admin notifications loaded: ${notifications.length}');
+          return notifications;
+        });
+  }
+
+  /// Get total users count
+  Stream<int> getTotalUsersCount() {
+    return _firestore
+        .collection('users')
+        .where('isActive', isEqualTo: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
+  }
+
+  /// Get active students count
+  Stream<int> getActiveStudentsCount() {
+    return _firestore
+        .collection('students')
+        .where('isActive', isEqualTo: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
+  }
+
+  /// Get total parents count
+  Stream<int> getTotalParentsCount() {
+    return _firestore
+        .collection('users')
+        .where('userType', isEqualTo: 'parent')
+        .where('isActive', isEqualTo: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
+  }
+
+  /// Get total supervisors count
+  Stream<int> getTotalSupervisorsCount() {
+    return _firestore
+        .collection('users')
+        .where('userType', isEqualTo: 'supervisor')
+        .where('isActive', isEqualTo: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
+  }
+
+  /// Get total buses count
+  Stream<int> getTotalBusesCount() {
+    return _firestore
+        .collection('buses')
+        .where('isActive', isEqualTo: true)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
+  }
+
+  /// Get active trip count
+  Stream<int> getActiveTripCount() {
+    return _firestore
+        .collection('trips')
+        .where('status', isEqualTo: 'active')
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
+  }
+
+  /// Get today trips count
+  Stream<int> getTodayTripsCount() {
+    final today = DateTime.now();
+    final startOfDay = DateTime(today.year, today.month, today.day);
+    final endOfDay = DateTime(today.year, today.month, today.day, 23, 59, 59);
+
+    return _firestore
+        .collection('trips')
+        .where('startTime', isGreaterThanOrEqualTo: Timestamp.fromDate(startOfDay))
+        .where('startTime', isLessThanOrEqualTo: Timestamp.fromDate(endOfDay))
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
+  }
+
+  /// Get assigned students count
+  Stream<int> getAssignedStudentsCount() {
+    return _firestore
+        .collection('students')
+        .where('isActive', isEqualTo: true)
+        .snapshots()
+        .map((snapshot) {
+          final assignedStudents = snapshot.docs.where((doc) {
+            final data = doc.data();
+            final busRoute = data['busRoute'] as String? ?? '';
+            final busId = data['busId'] as String? ?? '';
+            return busRoute.isNotEmpty || busId.isNotEmpty;
+          }).length;
+          return assignedStudents;
+        });
+  }
+
   /// إصلاح الإشعارات الموجودة لضمان وجود النص في حقل body
   Future<void> fixExistingNotifications() async {
     try {

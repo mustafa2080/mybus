@@ -101,7 +101,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
 
   Widget _buildGeneralNotifications() {
     return StreamBuilder<List<NotificationModel>>(
-      stream: _notificationService.getNotificationsForUser(
+      stream: _databaseService.getAdminNotifications(
         _authService.currentUser?.uid ?? '',
       ),
       builder: (context, snapshot) {
@@ -215,17 +215,26 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
             color: Colors.blue,
             children: [
               StreamBuilder<int>(
-                stream: _databaseService.getRecentNotificationsCount(),
+                stream: _databaseService.getAllRecentNotificationsCount(),
                 builder: (context, snapshot) {
                   final count = snapshot.data ?? 0;
-                  return _buildStatItem('إشعارات اليوم', count.toString(), Icons.today);
+                  return _buildStatItem('إشعارات آخر 24 ساعة', count.toString(), Icons.today);
                 },
               ),
               StreamBuilder<int>(
                 stream: _databaseService.getPendingAbsences().map((list) => list.length),
                 builder: (context, snapshot) {
                   final count = snapshot.data ?? 0;
-                  return _buildStatItem('طلبات غياب معلقة', count.toString(), Icons.pending_actions);
+                  return _buildStatItem('طلبات غياب معلقة', count.toString(), Icons.pending_actions,
+                    valueColor: count > 0 ? Colors.orange : Colors.green);
+                },
+              ),
+              StreamBuilder<int>(
+                stream: _databaseService.getPendingComplaints().map((list) => list.length),
+                builder: (context, snapshot) {
+                  final count = snapshot.data ?? 0;
+                  return _buildStatItem('شكاوى معلقة', count.toString(), Icons.report_problem,
+                    valueColor: count > 0 ? Colors.red : Colors.green);
                 },
               ),
             ],
@@ -240,8 +249,85 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
             color: Colors.green,
             children: [
               _buildStatItem('حالة الخادم', 'متصل', Icons.cloud_done, valueColor: Colors.green),
-              _buildStatItem('آخر نسخة احتياطية', 'منذ ساعة', Icons.backup),
-              _buildStatItem('المستخدمين النشطين', '45', Icons.people),
+              StreamBuilder<int>(
+                stream: _databaseService.getTotalUsersCount(),
+                builder: (context, snapshot) {
+                  final count = snapshot.data ?? 0;
+                  return _buildStatItem('إجمالي المستخدمين', count.toString(), Icons.people);
+                },
+              ),
+              StreamBuilder<int>(
+                stream: _databaseService.getActiveStudentsCount(),
+                builder: (context, snapshot) {
+                  final count = snapshot.data ?? 0;
+                  return _buildStatItem('الطلاب النشطين', count.toString(), Icons.school);
+                },
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          // Additional Statistics
+          _buildStatisticsCard(
+            title: 'إحصائيات إضافية',
+            icon: Icons.analytics,
+            color: Colors.purple,
+            children: [
+              StreamBuilder<int>(
+                stream: _databaseService.getTotalParentsCount(),
+                builder: (context, snapshot) {
+                  final count = snapshot.data ?? 0;
+                  return _buildStatItem('أولياء الأمور', count.toString(), Icons.family_restroom);
+                },
+              ),
+              StreamBuilder<int>(
+                stream: _databaseService.getTotalSupervisorsCount(),
+                builder: (context, snapshot) {
+                  final count = snapshot.data ?? 0;
+                  return _buildStatItem('المشرفين', count.toString(), Icons.supervisor_account);
+                },
+              ),
+              StreamBuilder<int>(
+                stream: _databaseService.getTotalBusesCount(),
+                builder: (context, snapshot) {
+                  final count = snapshot.data ?? 0;
+                  return _buildStatItem('الحافلات', count.toString(), Icons.directions_bus);
+                },
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
+
+          // Trip Statistics
+          _buildStatisticsCard(
+            title: 'إحصائيات الرحلات',
+            icon: Icons.directions_bus,
+            color: Colors.orange,
+            children: [
+              StreamBuilder<int>(
+                stream: _databaseService.getActiveTripCount(),
+                builder: (context, snapshot) {
+                  final count = snapshot.data ?? 0;
+                  return _buildStatItem('رحلات نشطة', count.toString(), Icons.play_circle,
+                    valueColor: count > 0 ? Colors.green : Colors.grey);
+                },
+              ),
+              StreamBuilder<int>(
+                stream: _databaseService.getTodayTripsCount(),
+                builder: (context, snapshot) {
+                  final count = snapshot.data ?? 0;
+                  return _buildStatItem('رحلات اليوم', count.toString(), Icons.today);
+                },
+              ),
+              StreamBuilder<int>(
+                stream: _databaseService.getAssignedStudentsCount(),
+                builder: (context, snapshot) {
+                  final count = snapshot.data ?? 0;
+                  return _buildStatItem('طلاب مسكنين', count.toString(), Icons.assignment_ind);
+                },
+              ),
             ],
           ),
         ],
