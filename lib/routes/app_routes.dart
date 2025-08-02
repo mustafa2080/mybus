@@ -50,6 +50,7 @@ import '../screens/admin/absence_management_screen.dart';
 import '../screens/admin/supervisor_assignments_screen.dart';
 import '../screens/admin/parent_student_linking_screen.dart';
 import '../screens/admin/admin_profile_screen.dart';
+import '../screens/admin/notification_test_screen.dart';
 import '../utils/app_constants.dart';
 import '../models/student_model.dart';
 
@@ -398,6 +399,11 @@ class AppRoutes {
             path: 'profile',
             name: 'admin-profile',
             builder: (context, state) => const AdminProfileScreen(),
+          ),
+          GoRoute(
+            path: 'notification-test',
+            name: 'notification-test',
+            builder: (context, state) => const NotificationTestScreen(),
           ),
         ],
       ),

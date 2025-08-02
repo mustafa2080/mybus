@@ -179,11 +179,33 @@ class FCMService {
 
     debugPrint('📱 FCM Permission status: ${settings.authorizationStatus}');
 
+    // التحقق من حالة الأذونات وإظهار تحذير إذا لزم الأمر
+    if (settings.authorizationStatus == AuthorizationStatus.denied) {
+      debugPrint('⚠️ Notification permissions denied by user');
+    } else if (settings.authorizationStatus == AuthorizationStatus.notDetermined) {
+      debugPrint('⚠️ Notification permissions not determined');
+    } else if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+      debugPrint('✅ Notification permissions granted');
+    }
+
     // طلب أذونات إضافية لأندرويد 13+
     if (Platform.isAndroid) {
-      await _localNotifications
-          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
-          ?.requestNotificationsPermission();
+      final androidImplementation = _localNotifications
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+
+      if (androidImplementation != null) {
+        // طلب أذونات الإشعارات
+        final notificationPermission = await androidImplementation.requestNotificationsPermission();
+        debugPrint('📱 Android notification permission: $notificationPermission');
+
+        // طلب أذونات الإنذارات الدقيقة (Android 12+)
+        final exactAlarmPermission = await androidImplementation.requestExactAlarmsPermission();
+        debugPrint('📱 Android exact alarm permission: $exactAlarmPermission');
+
+        // التحقق من إعدادات البطارية
+        final batteryOptimized = await androidImplementation.getNotificationAppLaunchDetails();
+        debugPrint('📱 Battery optimization status: $batteryOptimized');
+      }
     }
   }
 
@@ -744,6 +766,78 @@ class FCMService {
       debugPrint('✅ Emergency notification sent to all users');
     } catch (e) {
       debugPrint('❌ Error sending emergency notification: $e');
+    }
+  }
+
+  /// فحص حالة الإشعارات وإرجاع معلومات مفصلة
+  Future<Map<String, dynamic>> checkNotificationStatus() async {
+    try {
+      // فحص أذونات FCM
+      final settings = await _firebaseMessaging.getNotificationSettings();
+
+      // فحص أذونات Android المحلية
+      bool androidPermissionGranted = true;
+      if (Platform.isAndroid) {
+        final androidImplementation = _localNotifications
+            .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
+        if (androidImplementation != null) {
+          final permission = await androidImplementation.areNotificationsEnabled();
+          androidPermissionGranted = permission ?? false;
+        }
+      }
+
+      return {
+        'fcmAuthorized': settings.authorizationStatus == AuthorizationStatus.authorized,
+        'fcmStatus': settings.authorizationStatus.toString(),
+        'androidPermissionGranted': androidPermissionGranted,
+        'alertSetting': settings.alert.toString(),
+        'badgeSetting': settings.badge.toString(),
+        'soundSetting': settings.sound.toString(),
+        'isFullyEnabled': settings.authorizationStatus == AuthorizationStatus.authorized && androidPermissionGranted,
+      };
+    } catch (e) {
+      debugPrint('❌ Error checking notification status: $e');
+      return {
+        'fcmAuthorized': false,
+        'androidPermissionGranted': false,
+        'isFullyEnabled': false,
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// الحصول على التوكن الحالي
+  Future<String?> getToken() async {
+    try {
+      final token = await _firebaseMessaging.getToken();
+      debugPrint('📱 FCM Token: $token');
+      return token;
+    } catch (e) {
+      debugPrint('❌ Error getting FCM token: $e');
+      return null;
+    }
+  }
+
+  /// إرسال إشعار تجريبي محلي
+  Future<void> sendTestNotification({
+    required String title,
+    required String body,
+    Map<String, String>? data,
+  }) async {
+    try {
+      debugPrint('🧪 Sending test notification...');
+
+      await _displayLocalNotification(
+        title: title,
+        body: body,
+        channelId: 'mybus_notifications',
+        data: data ?? {},
+      );
+
+      debugPrint('✅ Test notification sent successfully');
+    } catch (e) {
+      debugPrint('❌ Error sending test notification: $e');
+      rethrow;
     }
   }
 

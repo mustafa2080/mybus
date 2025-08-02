@@ -35,21 +35,13 @@ void main() async {
     FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
     print('✅ Background message handler registered');
 
-    // تهيئة خدمة FCM المتكاملة
+    // تهيئة خدمة FCM المتكاملة فقط (لتجنب التضارب)
     await FCMService().initialize();
     print('✅ FCM service initialized');
 
-    // تهيئة خدمة الإشعارات
-    await NotificationService().initialize();
-    print('✅ Notification service initialized');
-
-    // تهيئة الخدمة الموحدة للإشعارات
+    // تهيئة الخدمة الموحدة للإشعارات فقط
     await UnifiedNotificationService().initialize();
     print('✅ Unified notification service initialized');
-
-    // تهيئة خدمة الإشعارات المحسنة
-    await EnhancedNotificationService().initialize();
-    print('✅ Enhanced notification service initialized');
 
     // طباعة معلومات التطبيق
     AppValidator.printAppInfo();
@@ -79,8 +71,6 @@ class MyApp extends StatelessWidget {
         // تسجيل جميع الخدمات كـ Providers
         ChangeNotifierProvider(create: (_) => AuthService()),
         Provider(create: (_) => DatabaseService()),
-        Provider(create: (_) => NotificationService()),
-        Provider(create: (_) => EnhancedNotificationService()),
         Provider(create: (_) => UnifiedNotificationService()),
         Provider(create: (_) => FCMService()),
         ChangeNotifierProvider(create: (_) => ThemeService()),

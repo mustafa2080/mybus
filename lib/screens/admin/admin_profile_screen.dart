@@ -867,6 +867,12 @@ class _AdminProfileScreenState extends State<AdminProfileScreen> {
                 Colors.teal,
                 () => Navigator.pushNamed(context, '/admin/advanced-analytics'),
               ),
+              _buildActionButton(
+                'اختبار الإشعارات',
+                Icons.notifications_active,
+                Colors.deepPurple,
+                () => Navigator.pushNamed(context, '/admin/notification-test'),
+              ),
             ],
           ),
         ],
