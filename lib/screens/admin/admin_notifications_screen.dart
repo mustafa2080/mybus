@@ -210,21 +210,67 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
     return StreamBuilder<List<AbsenceModel>>(
       stream: _databaseService.getPendingAbsences(),
       builder: (context, snapshot) {
+        // إضافة تشخيص مفصل
+        debugPrint('🔍 AbsenceRequests - Connection State: ${snapshot.connectionState}');
+        debugPrint('🔍 AbsenceRequests - Has Error: ${snapshot.hasError}');
+        debugPrint('🔍 AbsenceRequests - Error: ${snapshot.error}');
+        debugPrint('🔍 AbsenceRequests - Data Length: ${snapshot.data?.length ?? 0}');
+
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('جاري تحميل طلبات الغياب...'),
+              ],
+            ),
+          );
         }
 
         if (snapshot.hasError) {
-          return _buildErrorState('خطأ في تحميل طلبات الغياب');
+          debugPrint('❌ Error in absence requests: ${snapshot.error}');
+          return _buildErrorState('خطأ في تحميل طلبات الغياب: ${snapshot.error}');
         }
 
         final absences = snapshot.data ?? [];
+        debugPrint('📊 Loaded ${absences.length} pending absences');
 
         if (absences.isEmpty) {
-          return _buildEmptyState(
-            'لا توجد طلبات غياب معلقة',
-            'جميع طلبات الغياب تم التعامل معها',
-            Icons.check_circle,
+          return Column(
+            children: [
+              _buildEmptyState(
+                'لا توجد طلبات غياب معلقة',
+                'جميع طلبات الغياب تم التعامل معها',
+                Icons.check_circle,
+              ),
+              const SizedBox(height: 20),
+              // إضافة أزرار للتشخيص والاختبار
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: () => _debugAbsenceData(),
+                    icon: const Icon(Icons.bug_report),
+                    label: const Text('تشخيص البيانات'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                  ElevatedButton.icon(
+                    onPressed: () => _createTestAbsence(),
+                    icon: const Icon(Icons.add_circle),
+                    label: const Text('إنشاء طلب تجريبي'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      foregroundColor: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           );
         }
 
@@ -1841,6 +1887,101 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
           backgroundColor: Colors.red,
         ),
       );
+    }
+  }
+
+  /// تشخيص بيانات الغياب
+  Future<void> _debugAbsenceData() async {
+    try {
+      debugPrint('🔍 === تشخيص بيانات الغياب ===');
+
+      // استدعاء دالة التشخيص من DatabaseService
+      await _databaseService.debugAllAbsences();
+
+      // عرض رسالة للمستخدم
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم تشغيل تشخيص البيانات - تحقق من Console'),
+            backgroundColor: Colors.blue,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ خطأ في تشخيص البيانات: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ في التشخيص: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  /// إنشاء طلب غياب تجريبي للاختبار
+  Future<void> _createTestAbsence() async {
+    try {
+      debugPrint('🧪 إنشاء طلب غياب تجريبي...');
+
+      // إنشاء طلب غياب تجريبي
+      final testAbsence = AbsenceModel(
+        id: 'test_${DateTime.now().millisecondsSinceEpoch}',
+        studentId: 'test_student_001',
+        studentName: 'أحمد محمد (طالب تجريبي)',
+        parentId: 'test_parent_001',
+        type: AbsenceType.sick,
+        status: AbsenceStatus.pending,
+        source: AbsenceSource.parent,
+        date: DateTime.now(),
+        reason: 'مرض - طلب تجريبي للاختبار',
+        notes: 'هذا طلب تجريبي تم إنشاؤه للاختبار',
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+
+      // حفظ الطلب في قاعدة البيانات
+      await _databaseService.createAbsence(testAbsence);
+
+      // إنشاء إشعار للأدمن عن الطلب الجديد
+      await _adminNotificationService.addNotification(
+        AdminNotificationModel(
+          id: 'absence_${testAbsence.id}',
+          title: 'طلب غياب جديد',
+          body: 'طلب غياب جديد للطالب ${testAbsence.studentName} - ${testAbsence.reason}',
+          type: 'absence',
+          priority: NotificationPriority.normal,
+          timestamp: DateTime.now(),
+          isRead: false,
+          data: {
+            'absenceId': testAbsence.id,
+            'studentName': testAbsence.studentName,
+            'type': 'absenceRequested',
+          },
+        ),
+      );
+
+      debugPrint('✅ تم إنشاء طلب الغياب التجريبي والإشعار بنجاح');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم إنشاء طلب غياب تجريبي بنجاح'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ خطأ في إنشاء طلب الغياب التجريبي: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ في إنشاء الطلب التجريبي: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 }
