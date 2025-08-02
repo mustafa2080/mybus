@@ -4957,37 +4957,77 @@ class DatabaseService {
     }
   }
 
-  /// Get admin notifications (all notifications in the system for admin overview)
+  /// Get admin notifications (admin-specific notifications only)
   Stream<List<NotificationModel>> getAdminNotifications(String adminId) {
     if (adminId.isEmpty) return Stream.value([]);
 
-    // الإدمن يرى جميع الإشعارات في النظام
+    // الإدمن يرى الإشعارات المخصصة له فقط لتجنب التكرار
     return _firestore
         .collection('notifications')
+        .where('recipientId', isEqualTo: adminId)
         .orderBy('timestamp', descending: true)
-        .limit(100) // زيادة العدد للإدمن
+        .limit(50) // تقليل العدد لتحسين الأداء
         .snapshots()
         .map((snapshot) {
           final notifications = <NotificationModel>[];
+          final seenIds = <String>{};
+          final seenContent = <String>{};
+
           for (final doc in snapshot.docs) {
             try {
               final data = Map<String, dynamic>.from(doc.data());
               // إضافة معرف الوثيقة للتأكد من التحديث الصحيح
               data['id'] = doc.id;
 
-              debugPrint('🔍 Processing notification ${doc.id}:');
-              debugPrint('   - title: "${data['title']}"');
-              debugPrint('   - body: "${data['body']}"');
-              debugPrint('   - recipientId: "${data['recipientId']}"');
-              debugPrint('   - isRead: ${data['isRead']}');
+              // التحقق من عدم التكرار
+              final contentKey = '${data['title']}_${data['body']}';
+              if (seenIds.contains(doc.id) || seenContent.contains(contentKey)) {
+                debugPrint('⚠️ Skipping duplicate notification: ${data['title']}');
+                continue;
+              }
 
               final notification = NotificationModel.fromMap(data);
               notifications.add(notification);
+              seenIds.add(doc.id);
+              seenContent.add(contentKey);
+
             } catch (e) {
               debugPrint('❌ Error parsing admin notification ${doc.id}: $e');
             }
           }
           debugPrint('📱 Admin notifications loaded: ${notifications.length}');
+          return notifications;
+        });
+  }
+
+  /// Get all system notifications for admin monitoring (separate from personal notifications)
+  Stream<List<NotificationModel>> getAllSystemNotifications() {
+    return _firestore
+        .collection('notifications')
+        .orderBy('timestamp', descending: true)
+        .limit(100)
+        .snapshots()
+        .map((snapshot) {
+          final notifications = <NotificationModel>[];
+          final seenIds = <String>{};
+
+          for (final doc in snapshot.docs) {
+            try {
+              // تجنب المكررات
+              if (seenIds.contains(doc.id)) continue;
+
+              final data = Map<String, dynamic>.from(doc.data());
+              data['id'] = doc.id;
+
+              final notification = NotificationModel.fromMap(data);
+              notifications.add(notification);
+              seenIds.add(doc.id);
+
+            } catch (e) {
+              debugPrint('❌ Error parsing system notification ${doc.id}: $e');
+            }
+          }
+          debugPrint('📱 System notifications loaded: ${notifications.length}');
           return notifications;
         });
   }

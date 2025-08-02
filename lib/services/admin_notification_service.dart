@@ -63,6 +63,9 @@ class AdminNotificationService {
       // تحميل الإشعارات المحفوظة
       await _loadSavedNotifications();
 
+      // إزالة الإشعارات المكررة
+      await removeDuplicateNotifications();
+
       // إعداد معالجات الرسائل
       _setupMessageHandlers();
 
@@ -177,8 +180,13 @@ class AdminNotificationService {
 
   /// إنشاء نموذج الإشعار من RemoteMessage
   AdminNotificationModel _createNotificationModel(RemoteMessage message) {
+    // إنشاء ID فريد يتضمن hash للمحتوى لتجنب التكرار
+    final contentHash = (message.notification?.title ?? '').hashCode ^
+                       (message.notification?.body ?? '').hashCode;
+    final uniqueId = '${DateTime.now().millisecondsSinceEpoch}_$contentHash';
+
     return AdminNotificationModel(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      id: uniqueId,
       title: message.notification?.title ?? 'إشعار جديد',
       body: message.notification?.body ?? '',
       data: message.data,
@@ -225,6 +233,19 @@ class AdminNotificationService {
   /// حفظ الإشعار محلياً
   Future<void> _saveNotificationLocally(AdminNotificationModel notification) async {
     try {
+      // التحقق من عدم وجود إشعار مكرر
+      final existingIndex = _localNotificationsList.indexWhere((existing) =>
+        existing.id == notification.id ||
+        (existing.title == notification.title &&
+         existing.body == notification.body &&
+         existing.timestamp.difference(notification.timestamp).abs().inSeconds < 5)
+      );
+
+      if (existingIndex != -1) {
+        debugPrint('⚠️ إشعار مكرر تم تجاهله: ${notification.title}');
+        return;
+      }
+
       _localNotificationsList.insert(0, notification);
 
       // الاحتفاظ بآخر 100 إشعار فقط
@@ -389,10 +410,46 @@ class AdminNotificationService {
     _unreadCountController.add(_unreadCount);
   }
 
+  /// إزالة الإشعارات المكررة
+  Future<void> removeDuplicateNotifications() async {
+    final uniqueNotifications = <AdminNotificationModel>[];
+    final seenIds = <String>{};
+    final seenContent = <String>{};
+
+    for (final notification in _localNotificationsList) {
+      final contentKey = '${notification.title}_${notification.body}';
+
+      if (!seenIds.contains(notification.id) && !seenContent.contains(contentKey)) {
+        uniqueNotifications.add(notification);
+        seenIds.add(notification.id);
+        seenContent.add(contentKey);
+      } else {
+        debugPrint('🗑️ إزالة إشعار مكرر: ${notification.title}');
+        // تقليل العداد إذا كان الإشعار المكرر غير مقروء
+        if (!notification.isRead) {
+          _unreadCount = (_unreadCount - 1).clamp(0, _localNotificationsList.length);
+        }
+      }
+    }
+
+    if (uniqueNotifications.length != _localNotificationsList.length) {
+      _localNotificationsList = uniqueNotifications;
+      await _saveToPreferences();
+      _notificationsController.add(_localNotificationsList);
+      _unreadCountController.add(_unreadCount);
+
+      debugPrint('✅ تم إزالة ${_localNotificationsList.length - uniqueNotifications.length} إشعار مكرر');
+    }
+  }
+
   /// إضافة إشعارات تجريبية للاختبار
   Future<void> addTestNotifications() async {
-    if (_localNotificationsList.isNotEmpty) {
-      debugPrint('📝 الإشعارات موجودة بالفعل، لن يتم إضافة إشعارات تجريبية');
+    // التحقق من وجود إشعارات تجريبية مسبقاً
+    final hasTestNotifications = _localNotificationsList.any((notification) =>
+      notification.id.startsWith('test_'));
+
+    if (hasTestNotifications) {
+      debugPrint('📝 الإشعارات التجريبية موجودة بالفعل، لن يتم إضافة إشعارات جديدة');
       return;
     }
 

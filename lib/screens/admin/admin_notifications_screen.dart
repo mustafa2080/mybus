@@ -1452,6 +1452,16 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
                 label: const Text('تحديد الكل كمقروء'),
               ),
 
+              // زر إزالة المكررات
+              TextButton.icon(
+                onPressed: () => _removeDuplicates(),
+                icon: const Icon(Icons.content_copy, size: 16),
+                label: const Text('إزالة المكررات'),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.orange,
+                ),
+              ),
+
               // زر مسح الكل
               TextButton.icon(
                 onPressed: () => _showClearAllDialog(),
@@ -1812,5 +1822,25 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
         ],
       ),
     );
+  }
+
+  /// إزالة الإشعارات المكررة
+  Future<void> _removeDuplicates() async {
+    try {
+      await _adminNotificationService.removeDuplicateNotifications();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('تم فحص وإزالة الإشعارات المكررة'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('خطأ في إزالة المكررات: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }
