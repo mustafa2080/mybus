@@ -1,6 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import '../../services/database_service.dart';
+import '../../services/backup_service.dart';
 import '../../models/student_model.dart';
 import '../../models/absence_model.dart';
 import '../../widgets/admin_bottom_navigation.dart';
@@ -20,6 +21,38 @@ class AdminHomeScreen extends StatefulWidget {
 
 class _AdminHomeScreenState extends State<AdminHomeScreen> {
   final DatabaseService _databaseService = DatabaseService();
+  final BackupService _backupService = BackupService();
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeBackupService();
+  }
+
+  /// تهيئة خدمة النسخ الاحتياطي
+  Future<void> _initializeBackupService() async {
+    try {
+      await _backupService.initialize();
+      debugPrint('✅ تم تهيئة خدمة النسخ الاحتياطي بنجاح');
+
+      // إنشاء نسخة احتياطية تجريبية عند التشغيل الأول (للاختبار)
+      if (!_backupService.isAutoBackupEnabled) {
+        debugPrint('🔧 إنشاء نسخة احتياطية تجريبية...');
+        final result = await _backupService.createSystemBackup();
+        if (result['success'] == true) {
+          debugPrint('✅ تم إنشاء النسخة التجريبية: ${result['backupId']}');
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ خطأ في تهيئة خدمة النسخ الاحتياطي: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    _backupService.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -680,6 +713,61 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
                 ),
               ],
             ),
+            const SizedBox(height: 16),
+            // إعدادات النسخ التلقائي
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey[50],
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey[200]!),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.schedule, color: Colors.blue[600], size: 20),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'النسخ التلقائي',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  FutureBuilder<bool>(
+                    future: Future.value(_backupService.isAutoBackupEnabled),
+                    builder: (context, snapshot) {
+                      final isEnabled = snapshot.data ?? false;
+                      return SwitchListTile(
+                        title: const Text(
+                          'تفعيل النسخ التلقائي',
+                          style: TextStyle(fontSize: 13),
+                        ),
+                        subtitle: Text(
+                          isEnabled ? 'مفعل - كل 24 ساعة' : 'معطل',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: isEnabled ? Colors.green : Colors.grey,
+                          ),
+                        ),
+                        value: isEnabled,
+                        onChanged: (value) async {
+                          await _backupService.setAutoBackupEnabled(value);
+                          setState(() {}); // إعادة بناء الواجهة
+                        },
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
         actions: [
@@ -687,29 +775,108 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
             onPressed: () => Navigator.pop(context),
             child: const Text('إغلاق'),
           ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _showBackupStatistics();
+            },
+            child: const Text('الإحصائيات'),
+          ),
         ],
       ),
     );
   }
 
-  void _createBackup() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('جاري إنشاء النسخة الاحتياطية...'),
-        backgroundColor: Colors.blue,
-      ),
-    );
-    // هنا يمكن إضافة منطق النسخ الاحتياطي الفعلي
+  Future<void> _createBackup() async {
+    try {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+              SizedBox(width: 12),
+              Text('جاري إنشاء النسخة الاحتياطية...'),
+            ],
+          ),
+          backgroundColor: Colors.blue,
+          duration: Duration(seconds: 10),
+        ),
+      );
+
+      // إنشاء النسخة الاحتياطية
+      final backupResult = await _backupService.createSystemBackup();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+        if (backupResult['success'] == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.check_circle, color: Colors.white, size: 20),
+                      SizedBox(width: 8),
+                      Text('تم إنشاء النسخة الاحتياطية بنجاح!'),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'معرف النسخة: ${backupResult['backupId']}',
+                    style: const TextStyle(fontSize: 12, color: Colors.white70),
+                  ),
+                  Text(
+                    'عدد السجلات: ${backupResult['totalRecords']}',
+                    style: const TextStyle(fontSize: 12, color: Colors.white70),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 5),
+              action: SnackBarAction(
+                label: 'عرض التفاصيل',
+                textColor: Colors.white,
+                onPressed: () => _showBackupDetails(backupResult),
+              ),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('فشل في إنشاء النسخة الاحتياطية: ${backupResult['error']}'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 5),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ في إنشاء النسخة الاحتياطية: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    }
   }
 
-  void _restoreBackup() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('جاري استعادة النسخة الاحتياطية...'),
-        backgroundColor: Colors.orange,
-      ),
-    );
-    // هنا يمكن إضافة منطق الاستعادة الفعلي
+  Future<void> _restoreBackup() async {
+    // عرض قائمة النسخ الاحتياطية المتاحة
+    _showBackupsList();
   }
 
   void _showNotificationDialog() {
@@ -1114,6 +1281,613 @@ class _AdminHomeScreenState extends State<AdminHomeScreen> {
       case AbsenceStatus.rejected:
         return Colors.red;
     }
+  }
+
+  // ==================== دوال النسخ الاحتياطي ====================
+
+
+
+  /// عرض تفاصيل النسخة الاحتياطية
+  void _showBackupDetails(Map<String, dynamic> backupResult) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.info, color: Colors.blue),
+            SizedBox(width: 8),
+            Text('تفاصيل النسخة الاحتياطية'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildDetailRow('معرف النسخة', backupResult['backupId'] ?? 'غير محدد'),
+            _buildDetailRow('إجمالي السجلات', '${backupResult['totalRecords'] ?? 0}'),
+            _buildDetailRow('عدد المجموعات', '${backupResult['collections'] ?? 0}'),
+            _buildDetailRow('الحجم', '${((backupResult['size'] ?? 0) / 1024).toStringAsFixed(1)} KB'),
+            _buildDetailRow('التاريخ', DateTime.now().toString().substring(0, 19)),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('إغلاق'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// عرض قائمة النسخ الاحتياطية المتاحة
+  void _showBackupsList() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.restore, color: Colors.orange),
+            SizedBox(width: 8),
+            Text('استعادة النسخة الاحتياطية'),
+          ],
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          height: 400,
+          child: StreamBuilder<List<Map<String, dynamic>>>(
+            stream: _getBackupsList(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (snapshot.hasError) {
+                return Center(
+                  child: Text('خطأ في تحميل النسخ: ${snapshot.error}'),
+                );
+              }
+
+              final backups = snapshot.data ?? [];
+
+              if (backups.isEmpty) {
+                return const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.backup, size: 64, color: Colors.grey),
+                      SizedBox(height: 16),
+                      Text('لا توجد نسخ احتياطية متاحة'),
+                    ],
+                  ),
+                );
+              }
+
+              return ListView.builder(
+                itemCount: backups.length,
+                itemBuilder: (context, index) {
+                  final backup = backups[index];
+                  return _buildBackupListItem(backup);
+                },
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('إغلاق'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// بناء عنصر في قائمة النسخ الاحتياطية
+  Widget _buildBackupListItem(Map<String, dynamic> backup) {
+    final createdAt = backup['createdAt'] as String?;
+    final totalRecords = backup['totalRecords'] as int? ?? 0;
+    final size = backup['size'] as int? ?? 0;
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListTile(
+        leading: Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.blue.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: const Icon(Icons.backup, color: Colors.blue),
+        ),
+        title: Text(
+          backup['id'] ?? 'نسخة احتياطية',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('التاريخ: ${createdAt?.substring(0, 19) ?? 'غير محدد'}'),
+            Text('السجلات: $totalRecords | الحجم: ${(size / 1024).toStringAsFixed(1)} KB'),
+          ],
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              icon: const Icon(Icons.info, color: Colors.blue),
+              onPressed: () => _showBackupInfo(backup),
+              tooltip: 'عرض التفاصيل',
+            ),
+            IconButton(
+              icon: const Icon(Icons.restore, color: Colors.orange),
+              onPressed: () => _confirmRestoreBackup(backup),
+              tooltip: 'استعادة',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// الحصول على قائمة النسخ الاحتياطية
+  Stream<List<Map<String, dynamic>>> _getBackupsList() {
+    return _backupService.getBackupsList();
+  }
+
+  /// عرض معلومات النسخة الاحتياطية
+  void _showBackupInfo(Map<String, dynamic> backup) {
+    Navigator.pop(context); // إغلاق الحوار الحالي
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.info, color: Colors.blue),
+            SizedBox(width: 8),
+            Text('معلومات النسخة الاحتياطية'),
+          ],
+        ),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildDetailRow('المعرف', backup['id'] ?? 'غير محدد'),
+              _buildDetailRow('التاريخ', backup['createdAt']?.toString().substring(0, 19) ?? 'غير محدد'),
+              _buildDetailRow('المنشئ', backup['createdBy'] ?? 'غير محدد'),
+              _buildDetailRow('الإصدار', backup['version'] ?? 'غير محدد'),
+              _buildDetailRow('إجمالي السجلات', '${backup['totalRecords'] ?? 0}'),
+              _buildDetailRow('الحجم', '${((backup['size'] ?? 0) / 1024).toStringAsFixed(1)} KB'),
+              _buildDetailRow('الحالة', backup['status'] ?? 'غير محدد'),
+
+              const SizedBox(height: 16),
+              const Text(
+                'المجموعات المشمولة:',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+
+              if (backup['collections'] != null)
+                ...((backup['collections'] as List).map((collection) =>
+                  Padding(
+                    padding: const EdgeInsets.only(left: 16, bottom: 4),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.folder, size: 16, color: Colors.grey),
+                        const SizedBox(width: 8),
+                        Text(collection.toString()),
+                      ],
+                    ),
+                  ),
+                )),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('إغلاق'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _confirmRestoreBackup(backup);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.orange,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('استعادة هذه النسخة'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// تأكيد استعادة النسخة الاحتياطية
+  void _confirmRestoreBackup(Map<String, dynamic> backup) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.warning, color: Colors.red),
+            SizedBox(width: 8),
+            Text('تأكيد الاستعادة'),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              '⚠️ تحذير مهم',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.red,
+                fontSize: 16,
+              ),
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'استعادة النسخة الاحتياطية ستؤدي إلى:\n'
+              '• حذف جميع البيانات الحالية\n'
+              '• استبدالها ببيانات النسخة المحددة\n'
+              '• فقدان أي تغييرات حدثت بعد تاريخ النسخة\n\n'
+              'هذه العملية لا يمكن التراجع عنها!',
+              style: TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.grey[100],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('النسخة المحددة: ${backup['id']}'),
+                  Text('التاريخ: ${backup['createdAt']?.toString().substring(0, 19)}'),
+                  Text('السجلات: ${backup['totalRecords']}'),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('إلغاء'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _performRestore(backup);
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('تأكيد الاستعادة'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// تنفيذ عملية الاستعادة
+  Future<void> _performRestore(Map<String, dynamic> backup) async {
+    try {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                ),
+              ),
+              SizedBox(width: 12),
+              Text('جاري استعادة النسخة الاحتياطية...'),
+            ],
+          ),
+          backgroundColor: Colors.orange,
+          duration: Duration(minutes: 5),
+        ),
+      );
+
+      // تنفيذ الاستعادة
+      final result = await _restoreFromBackup(backup);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+
+        if (result['success'] == true) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Row(
+                    children: [
+                      Icon(Icons.check_circle, color: Colors.white, size: 20),
+                      SizedBox(width: 8),
+                      Text('تم استعادة النسخة الاحتياطية بنجاح!'),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'تم استعادة ${result['restoredRecords']} سجل',
+                    style: const TextStyle(fontSize: 12, color: Colors.white70),
+                  ),
+                ],
+              ),
+              backgroundColor: Colors.green,
+              duration: const Duration(seconds: 5),
+            ),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('فشل في استعادة النسخة: ${result['error']}'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 5),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).hideCurrentSnackBar();
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ في استعادة النسخة: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 5),
+          ),
+        );
+      }
+    }
+  }
+
+  /// استعادة البيانات من النسخة الاحتياطية
+  Future<Map<String, dynamic>> _restoreFromBackup(Map<String, dynamic> backup) async {
+    try {
+      final backupData = backup['data'] as Map<String, dynamic>?;
+      if (backupData == null) {
+        throw Exception('بيانات النسخة الاحتياطية غير صالحة');
+      }
+
+      int restoredRecords = 0;
+      final firestore = _databaseService.firestore;
+
+      // استعادة كل مجموعة
+      for (final entry in backupData.entries) {
+        final collectionName = entry.key;
+        final collectionData = entry.value as List<dynamic>;
+
+        debugPrint('🔄 استعادة مجموعة $collectionName: ${collectionData.length} سجل');
+
+        // حذف البيانات الحالية
+        final currentDocs = await firestore.collection(collectionName).get();
+        final batch = firestore.batch();
+
+        for (final doc in currentDocs.docs) {
+          batch.delete(doc.reference);
+        }
+        await batch.commit();
+
+        // إضافة البيانات المستعادة
+        final restoreBatch = firestore.batch();
+        for (final record in collectionData) {
+          final recordMap = record as Map<String, dynamic>;
+          final docId = recordMap['id'] as String;
+          recordMap.remove('id'); // إزالة المعرف من البيانات
+
+          restoreBatch.set(
+            firestore.collection(collectionName).doc(docId),
+            recordMap,
+          );
+        }
+        await restoreBatch.commit();
+
+        restoredRecords += collectionData.length;
+        debugPrint('✅ تم استعادة مجموعة $collectionName');
+      }
+
+      debugPrint('✅ تم استعادة النسخة الاحتياطية بنجاح: $restoredRecords سجل');
+
+      return {
+        'success': true,
+        'restoredRecords': restoredRecords,
+      };
+
+    } catch (e) {
+      debugPrint('❌ خطأ في استعادة النسخة الاحتياطية: $e');
+      return {
+        'success': false,
+        'error': e.toString(),
+      };
+    }
+  }
+
+  /// عرض إحصائيات النسخ الاحتياطي
+  void _showBackupStatistics() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Icon(Icons.analytics, color: Colors.blue),
+            SizedBox(width: 8),
+            Text('إحصائيات النسخ الاحتياطي'),
+          ],
+        ),
+        content: FutureBuilder<Map<String, dynamic>>(
+          future: _backupService.getBackupStatistics(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const SizedBox(
+                height: 100,
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+
+            if (snapshot.hasError) {
+              return Text('خطأ في تحميل الإحصائيات: ${snapshot.error}');
+            }
+
+            final stats = snapshot.data ?? {};
+            final totalBackups = stats['totalBackups'] ?? 0;
+            final lastBackup = stats['lastBackup'] as DateTime?;
+            final totalSize = stats['totalSize'] ?? 0;
+            final isAutoEnabled = stats['isAutoEnabled'] ?? false;
+
+            return Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _buildStatRow('إجمالي النسخ', '$totalBackups نسخة'),
+                _buildStatRow(
+                  'آخر نسخة احتياطية',
+                  lastBackup != null
+                    ? '${lastBackup.toString().substring(0, 19)}'
+                    : 'لا توجد نسخ',
+                ),
+                _buildStatRow(
+                  'إجمالي الحجم',
+                  '${(totalSize / 1024 / 1024).toStringAsFixed(2)} MB',
+                ),
+                _buildStatRow(
+                  'النسخ التلقائي',
+                  isAutoEnabled ? 'مفعل' : 'معطل',
+                ),
+
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.blue[50],
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.info, color: Colors.blue[600], size: 16),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'معلومات مهمة',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      const Text(
+                        '• يتم الاحتفاظ بآخر 10 نسخ احتياطية فقط\n'
+                        '• النسخ التلقائي يعمل كل 24 ساعة\n'
+                        '• يمكن تغيير إعدادات النسخ من الإعدادات',
+                        style: TextStyle(fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            );
+          },
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('إغلاق'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _createBackup();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.blue,
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('إنشاء نسخة الآن'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(
+              '$label:',
+              style: const TextStyle(
+                fontWeight: FontWeight.w500,
+                color: Colors.grey,
+                fontSize: 13,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 100,
+            child: Text(
+              '$label:',
+              style: const TextStyle(
+                fontWeight: FontWeight.w500,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(fontWeight: FontWeight.w500),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }
 
