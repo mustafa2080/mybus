@@ -29,7 +29,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 5, vsync: this); // زيادة عدد التابات
+    _tabController = TabController(length: 3, vsync: this); // تقليل عدد التابات إلى 3
     _initializeAdminNotifications();
   }
 
@@ -155,12 +155,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
                   ),
                 ],
               ),
-              text: 'إشعارات الأدمن',
-            ),
-            const Tab(
-              icon: Icon(Icons.person_off, size: 18),
-              text: 'طلبات الغياب',
-            ),
+
             const Tab(
               icon: Icon(Icons.report_problem, size: 18),
               text: 'الشكاوى',
@@ -176,8 +171,6 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
         controller: _tabController,
         children: [
           _buildGeneralNotifications(),
-          _buildAdminNotifications(),
-          _buildAbsenceRequests(),
           _buildComplaints(),
           _buildStatistics(),
         ],

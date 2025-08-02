@@ -72,7 +72,7 @@ Future<void> _showBackgroundNotification(RemoteMessage message) async {
     final String title = message.notification?.title ?? 'إشعار جديد';
     final String body = message.notification?.body ?? '';
 
-    // إعدادات الإشعار لأندرويد مع تمييز المستخدم
+    // إعدادات الإشعار لأندرويد محسنة لتظهر مثل WhatsApp
     final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
       channelId,
       _getChannelName(channelId),
@@ -82,8 +82,9 @@ Future<void> _showBackgroundNotification(RemoteMessage message) async {
       sound: const RawResourceAndroidNotificationSound('notification_sound'),
       enableVibration: true,
       playSound: true,
-      icon: '@drawable/ic_notification',
-      color: const Color(0xFF1E88E5),
+      icon: '@mipmap/launcher_icon', // استخدام أيقونة التطبيق الرئيسية
+      largeIcon: const DrawableResourceAndroidBitmap('@mipmap/launcher_icon'), // أيقونة كبيرة
+      color: const Color(0xFF1E88E5), // لون التطبيق
       showWhen: true,
       when: DateTime.now().millisecondsSinceEpoch,
       autoCancel: true,
@@ -92,22 +93,34 @@ Future<void> _showBackgroundNotification(RemoteMessage message) async {
       channelShowBadge: true,
       onlyAlertOnce: false,
       visibility: NotificationVisibility.public,
-      ticker: title,
-      tag: 'mybus_background_${DateTime.now().millisecondsSinceEpoch}', // معرف فريد لكل إشعار
-      largeIcon: const DrawableResourceAndroidBitmap('@drawable/ic_notification'),
-      // إضافة إعدادات إضافية لضمان الظهور
-      fullScreenIntent: false,
+      ticker: '$title - $body', // نص يظهر عند وصول الإشعار
+      tag: 'mybus_${DateTime.now().millisecondsSinceEpoch}',
+      // إعدادات إضافية لتحسين الظهور
       category: AndroidNotificationCategory.message,
-      additionalFlags: Int32List.fromList([4]), // FLAG_INSISTENT
+      groupKey: 'com.mybus.notifications', // تجميع الإشعارات
+      setAsGroupSummary: false,
+      groupAlertBehavior: GroupAlertBehavior.all,
+      // إعدادات النمط
+      styleInformation: BigTextStyleInformation(
+        body,
+        htmlFormatBigText: false,
+        contentTitle: title,
+        htmlFormatContentTitle: false,
+        summaryText: 'كيدز باص',
+        htmlFormatSummaryText: false,
+      ),
     );
 
-    // إعدادات الإشعار لـ iOS
+    // إعدادات الإشعار لـ iOS محسنة
     const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
       presentAlert: true,
       presentBadge: true,
       presentSound: true,
       sound: 'notification_sound.mp3',
       badgeNumber: 1,
+      subtitle: 'كيدز باص', // عنوان فرعي يظهر تحت العنوان
+      threadIdentifier: 'mybus_notifications', // لتجميع الإشعارات
+      categoryIdentifier: 'mybus_category',
     );
 
     // تجميع الإعدادات
@@ -143,16 +156,18 @@ Future<void> _showBackgroundNotification(RemoteMessage message) async {
 Future<void> _createBackgroundNotificationChannel(FlutterLocalNotificationsPlugin localNotifications) async {
   try {
     final List<AndroidNotificationChannel> channels = [
-      // القناة الرئيسية
+      // القناة الرئيسية محسنة
       const AndroidNotificationChannel(
         'mybus_notifications',
-        'إشعارات MyBus',
-        description: 'إشعارات عامة لتطبيق MyBus',
+        'كيدز باص - الإشعارات العامة',
+        description: 'إشعارات عامة من تطبيق كيدز باص للنقل المدرسي',
         importance: Importance.max,
         sound: RawResourceAndroidNotificationSound('notification_sound'),
         enableVibration: true,
         playSound: true,
         showBadge: true,
+        enableLights: true,
+        ledColor: Color(0xFF1E88E5),
       ),
       // قناة إشعارات الطلاب
       const AndroidNotificationChannel(

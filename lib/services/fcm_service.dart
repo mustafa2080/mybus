@@ -112,16 +112,18 @@ class FCMService {
     if (!Platform.isAndroid) return;
 
     final List<AndroidNotificationChannel> channels = [
-      // القناة الرئيسية
+      // القناة الرئيسية محسنة
       const AndroidNotificationChannel(
         'mybus_notifications',
-        'إشعارات MyBus',
-        description: 'إشعارات عامة لتطبيق MyBus',
+        'كيدز باص - الإشعارات العامة',
+        description: 'إشعارات عامة من تطبيق كيدز باص للنقل المدرسي',
         importance: Importance.max,
         sound: RawResourceAndroidNotificationSound('notification_sound'),
         enableVibration: true,
         playSound: true,
         showBadge: true,
+        enableLights: true,
+        ledColor: Color(0xFF1E88E5),
       ),
       // قناة إشعارات الطلاب
       const AndroidNotificationChannel(
@@ -145,13 +147,15 @@ class FCMService {
         playSound: true,
         showBadge: true,
       ),
-      // قناة إشعارات الطوارئ
+      // قناة إشعارات الطوارئ محسنة
       const AndroidNotificationChannel(
         'emergency_notifications',
-        'تنبيهات الطوارئ',
-        description: 'تنبيهات طوارئ مهمة وعاجلة',
+        'كيدز باص - تنبيهات الطوارئ',
+        description: 'تنبيهات طوارئ مهمة وعاجلة من كيدز باص',
         importance: Importance.max,
         sound: RawResourceAndroidNotificationSound('notification_sound'),
+        enableLights: true,
+        ledColor: Color(0xFFFF0000), // أحمر للطوارئ
         enableVibration: true,
         playSound: true,
         showBadge: true,
@@ -675,7 +679,7 @@ class FCMService {
       // إنشاء معرف فريد للإشعار
       final notificationId = DateTime.now().millisecondsSinceEpoch ~/ 1000;
 
-      // إعدادات Android
+      // إعدادات Android محسنة لتظهر مثل WhatsApp
       final androidDetails = AndroidNotificationDetails(
         channelId,
         _getChannelName(channelId),
@@ -685,16 +689,38 @@ class FCMService {
         sound: const RawResourceAndroidNotificationSound('notification_sound'),
         enableVibration: true,
         playSound: true,
-        channelShowBadge: true, // استخدام channelShowBadge بدلاً من showBadge
-        icon: '@drawable/ic_notification',
+        channelShowBadge: true,
+        icon: '@mipmap/launcher_icon', // أيقونة التطبيق
+        largeIcon: const DrawableResourceAndroidBitmap('@mipmap/launcher_icon'),
+        color: const Color(0xFF1E88E5),
+        showWhen: true,
+        when: DateTime.now().millisecondsSinceEpoch,
+        autoCancel: true,
+        ongoing: false,
+        visibility: NotificationVisibility.public,
+        ticker: '$title - $body',
+        groupKey: 'com.mybus.notifications',
+        // إضافة نمط النص الكبير
+        styleInformation: BigTextStyleInformation(
+          body,
+          htmlFormatBigText: false,
+          contentTitle: title,
+          htmlFormatContentTitle: false,
+          summaryText: 'كيدز باص',
+          htmlFormatSummaryText: false,
+        ),
       );
 
-      // إعدادات iOS
+      // إعدادات iOS محسنة
       const iosDetails = DarwinNotificationDetails(
         presentAlert: true,
         presentBadge: true,
         presentSound: true,
-        sound: 'default',
+        sound: 'notification_sound.mp3',
+        subtitle: 'كيدز باص',
+        threadIdentifier: 'mybus_notifications',
+        categoryIdentifier: 'mybus_category',
+        badgeNumber: 1,
       );
 
       // إعدادات الإشعار
