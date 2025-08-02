@@ -118,44 +118,6 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
               icon: Icon(Icons.notifications_active, size: 18),
               text: 'الإشعارات العامة',
             ),
-            Tab(
-              icon: Stack(
-                children: [
-                  const Icon(Icons.admin_panel_settings, size: 18),
-                  StreamBuilder<int>(
-                    stream: _adminNotificationService.unreadCountStream,
-                    builder: (context, snapshot) {
-                      final count = snapshot.data ?? 0;
-                      if (count == 0) return const SizedBox.shrink();
-                      return Positioned(
-                        right: 0,
-                        top: 0,
-                        child: Container(
-                          padding: const EdgeInsets.all(2),
-                          decoration: BoxDecoration(
-                            color: Colors.red,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          constraints: const BoxConstraints(
-                            minWidth: 12,
-                            minHeight: 12,
-                          ),
-                          child: Text(
-                            count > 99 ? '99+' : count.toString(),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 8,
-                              fontWeight: FontWeight.bold,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      );
-                    },
-                  ),
-                ],
-              ),
-
             const Tab(
               icon: Icon(Icons.report_problem, size: 18),
               text: 'الشكاوى',
