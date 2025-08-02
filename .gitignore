@@ -1,0 +1,116 @@
+# Miscellaneous
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.build/
+.buildlog/
+.history
+.svn/
+.swiftpm/
+migrate_working_dir/
+
+# IntelliJ related
+*.iml
+*.ipr
+*.iws
+.idea/
+
+# The .vscode folder contains launch configuration and tasks you configure in
+# VS Code which you may wish to be included in version control, so this line
+# is commented out by default.
+#.vscode/
+
+# Flutter/Dart/Pub related
+**/doc/api/
+**/ios/Flutter/.last_build_id
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.pub-cache/
+.pub/
+/build/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# Android Studio will place build artifacts here
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# Security and sensitive files
+.env
+.env.local
+.env.production
+.env.development
+*.key
+*.pem
+*.p12
+*.jks
+*.keystore
+# google-services.json (تم السماح برفعه للمشروع)
+# GoogleService-Info.plist (iOS config file)
+GoogleService-Info.plist
+firebase_options.dart.backup
+
+# API Keys and secrets
+secrets/
+keys/
+certificates/
+*.secret
+api_keys.dart
+config.json
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Log files
+logs/
+*.log
+crash_reports/
+
+# Temporary files
+temp/
+tmp/
+cache/
+.cache/
+
+# Backup files
+*.backup
+*.bak
+*.old
+
+# IDE specific files
+.vscode/settings.json
+.vscode/launch.json
+*.code-workspace
+
+# OS specific files
+Thumbs.db
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+
+# Firebase specific
+.firebase/
+firebase-debug.log
+firestore-debug.log
+
+# Testing
+coverage/
+test_coverage/
+.nyc_output/
+
+# Documentation
+docs/build/
