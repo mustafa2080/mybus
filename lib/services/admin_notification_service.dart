@@ -402,7 +402,7 @@ class AdminNotificationService {
         title: 'شكوى جديدة',
         body: 'تم تقديم شكوى جديدة من ولي أمر الطالب أحمد محمد',
         type: 'complaint',
-        priority: 'high',
+        priority: NotificationPriority.high,
         timestamp: DateTime.now().subtract(const Duration(minutes: 5)),
         isRead: false,
         data: {'complaintId': 'comp_001', 'studentName': 'أحمد محمد'},
@@ -412,7 +412,7 @@ class AdminNotificationService {
         title: 'طلب غياب جديد',
         body: 'طلب غياب جديد للطالبة سارة علي يحتاج موافقة',
         type: 'absence',
-        priority: 'medium',
+        priority: NotificationPriority.normal,
         timestamp: DateTime.now().subtract(const Duration(hours: 1)),
         isRead: false,
         data: {'absenceId': 'abs_001', 'studentName': 'سارة علي'},
@@ -422,7 +422,7 @@ class AdminNotificationService {
         title: 'تقرير يومي',
         body: 'تقرير الرحلات اليومية جاهز للمراجعة',
         type: 'report',
-        priority: 'low',
+        priority: NotificationPriority.low,
         timestamp: DateTime.now().subtract(const Duration(hours: 2)),
         isRead: true,
         data: {'reportType': 'daily', 'date': DateTime.now().toIso8601String()},
@@ -432,7 +432,7 @@ class AdminNotificationService {
         title: 'تنبيه أمان',
         body: 'تم الإبلاغ عن حادث بسيط في الحافلة رقم 123',
         type: 'safety',
-        priority: 'high',
+        priority: NotificationPriority.high,
         timestamp: DateTime.now().subtract(const Duration(hours: 3)),
         isRead: false,
         data: {'busNumber': '123', 'incidentType': 'minor'},
@@ -442,7 +442,7 @@ class AdminNotificationService {
         title: 'مستخدم جديد',
         body: 'تم تسجيل ولي أمر جديد في النظام',
         type: 'user',
-        priority: 'low',
+        priority: NotificationPriority.low,
         timestamp: DateTime.now().subtract(const Duration(hours: 4)),
         isRead: true,
         data: {'userId': 'user_001', 'userType': 'parent'},
@@ -450,7 +450,7 @@ class AdminNotificationService {
     ];
 
     for (final notification in testNotifications) {
-      await addNotification(notification);
+      await _saveNotificationLocally(notification);
     }
 
     debugPrint('✅ تم إضافة ${testNotifications.length} إشعار تجريبي');
