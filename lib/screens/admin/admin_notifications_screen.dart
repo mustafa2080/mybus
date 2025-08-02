@@ -2367,18 +2367,32 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
         return 'عام';
       case NotificationType.emergency:
         return 'طوارئ';
-      case NotificationType.system:
-        return 'نظام';
-      case NotificationType.student:
-        return 'طالب';
-      case NotificationType.bus:
-        return 'باص';
-      case NotificationType.parent:
-        return 'ولي أمر';
-      case NotificationType.supervisor:
-        return 'مشرف';
-      case NotificationType.admin:
-        return 'إداري';
+      case NotificationType.systemUpdate:
+        return 'تحديث النظام';
+      case NotificationType.studentBoarded:
+        return 'ركوب طالب';
+      case NotificationType.studentLeft:
+        return 'نزول طالب';
+      case NotificationType.studentAssigned:
+        return 'تسكين طالب';
+      case NotificationType.studentUnassigned:
+        return 'إلغاء تسكين طالب';
+      case NotificationType.tripStarted:
+        return 'بداية رحلة';
+      case NotificationType.tripEnded:
+        return 'نهاية رحلة';
+      case NotificationType.tripDelayed:
+        return 'تأخير رحلة';
+      case NotificationType.absenceRequested:
+        return 'طلب غياب';
+      case NotificationType.absenceApproved:
+        return 'موافقة على غياب';
+      case NotificationType.absenceRejected:
+        return 'رفض غياب';
+      case NotificationType.complaintSubmitted:
+        return 'شكوى جديدة';
+      case NotificationType.complaintResponded:
+        return 'رد على شكوى';
       default:
         return 'غير محدد';
     }
