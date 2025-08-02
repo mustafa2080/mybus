@@ -51,6 +51,11 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
+            icon: const Icon(Icons.build),
+            onPressed: _fixNotifications,
+            tooltip: 'إصلاح الإشعارات',
+          ),
+          IconButton(
             icon: const Icon(Icons.mark_email_read),
             onPressed: _markAllAsRead,
             tooltip: 'تحديد الكل كمقروء',
@@ -579,16 +584,68 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
     }
   }
 
+  Future<void> _fixNotifications() async {
+    try {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('جاري إصلاح الإشعارات...'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+
+      await _databaseService.fixExistingNotifications();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('تم إصلاح الإشعارات بنجاح'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ Error fixing notifications: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ في إصلاح الإشعارات'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _markNotificationAsRead(NotificationModel notification) async {
+    if (!notification.isRead) {
+      try {
+        await _databaseService.markNotificationAsRead(notification.id);
+        debugPrint('✅ Admin marked notification as read: ${notification.id}');
+      } catch (e) {
+        debugPrint('❌ Error marking notification as read: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('خطأ في تحديث الإشعار: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    }
+  }
+
   Future<void> _markAllAsRead() async {
     try {
       final userId = _authService.currentUser?.uid;
       if (userId != null) {
-        await _databaseService.markAllNotificationsAsRead(userId);
+        // للإدمن: تحديد جميع الإشعارات في النظام كمقروءة
+        await _databaseService.markAllSystemNotificationsAsRead();
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('تم تحديد جميع الإشعارات كمقروءة'),
+              content: Text('تم تحديد جميع الإشعارات في النظام كمقروءة'),
               backgroundColor: Colors.green,
             ),
           );
@@ -609,47 +666,99 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
   Widget _buildNotificationCard(NotificationModel notification) {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(
-                  _getNotificationIcon(notification.type),
-                  color: _getNotificationColor(notification.type),
-                  size: 24,
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    notification.title,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
+      elevation: notification.isRead ? 1 : 3,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: notification.isRead
+            ? BorderSide.none
+            : BorderSide(color: Colors.blue.withAlpha(76), width: 1),
+      ),
+      color: notification.isRead ? Colors.white : Colors.blue[50],
+      child: InkWell(
+        onTap: () => _markNotificationAsRead(notification),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    _getNotificationIcon(notification.type),
+                    color: _getNotificationColor(notification.type),
+                    size: 24,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      notification.title,
+                      style: TextStyle(
+                        fontWeight: notification.isRead ? FontWeight.w600 : FontWeight.bold,
+                        fontSize: 16,
+                        color: notification.isRead ? Colors.grey[800] : Colors.blue[800],
+                      ),
                     ),
                   ),
-                ),
-                Text(
-                  notification.formattedTime,
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 12,
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        notification.relativeTime,
+                        style: TextStyle(
+                          color: Colors.grey[600],
+                          fontSize: 12,
+                        ),
+                      ),
+                      if (!notification.isRead) ...[
+                        const SizedBox(height: 4),
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: Colors.blue,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ],
+                    ],
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Text(
-              notification.body,
-              style: TextStyle(
-                color: Colors.grey[700],
-                fontSize: 14,
+                ],
               ),
-            ),
+              const SizedBox(height: 8),
+              Text(
+                notification.body.isNotEmpty ? notification.body : 'لا يوجد محتوى للإشعار',
+                style: TextStyle(
+                  color: notification.body.isNotEmpty ? Colors.grey[700] : Colors.red[400],
+                  fontSize: 14,
+                  fontStyle: notification.body.isNotEmpty ? FontStyle.normal : FontStyle.italic,
+                ),
+              ),
+
+              // معلومات إضافية
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Icon(Icons.person, size: 14, color: Colors.grey[500]),
+                  const SizedBox(width: 4),
+                  Text(
+                    'المستلم: ${notification.recipientId.substring(0, 8)}...',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    notification.typeDescription,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: _getNotificationColor(notification.type),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
             if (notification.studentName != null) ...[
               const SizedBox(height: 8),
               Container(

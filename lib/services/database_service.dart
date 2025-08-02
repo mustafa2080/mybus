@@ -2339,13 +2339,27 @@ class DatabaseService {
   // Mark notification as read
   Future<void> markNotificationAsRead(String notificationId) async {
     try {
-      await _firestore
-          .collection('notifications')
-          .doc(notificationId)
-          .update({'isRead': true});
-      debugPrint('✅ Notification marked as read: $notificationId');
+      debugPrint('🔄 Attempting to mark notification as read: $notificationId');
+
+      // التحقق من وجود الإشعار أولاً
+      final docRef = _firestore.collection('notifications').doc(notificationId);
+      final docSnapshot = await docRef.get();
+
+      if (!docSnapshot.exists) {
+        debugPrint('⚠️ Notification document does not exist: $notificationId');
+        return;
+      }
+
+      // تحديث حالة القراءة
+      await docRef.update({
+        'isRead': true,
+        'readAt': FieldValue.serverTimestamp(),
+      });
+
+      debugPrint('✅ Notification marked as read successfully: $notificationId');
     } catch (e) {
       debugPrint('❌ Error marking notification as read: $e');
+      throw Exception('فشل في تحديث حالة الإشعار: $e');
     }
   }
 
@@ -2367,6 +2381,34 @@ class DatabaseService {
       debugPrint('✅ All notifications marked as read for user: $userId');
     } catch (e) {
       debugPrint('❌ Error marking all notifications as read: $e');
+    }
+  }
+
+  // Mark all system notifications as read (for admin)
+  Future<void> markAllSystemNotificationsAsRead() async {
+    try {
+      debugPrint('🔄 Marking all system notifications as read...');
+
+      final batch = _firestore.batch();
+      final snapshot = await _firestore
+          .collection('notifications')
+          .where('isRead', isEqualTo: false)
+          .get();
+
+      debugPrint('📊 Found ${snapshot.docs.length} unread notifications to mark as read');
+
+      for (final doc in snapshot.docs) {
+        batch.update(doc.reference, {
+          'isRead': true,
+          'readAt': FieldValue.serverTimestamp(),
+        });
+      }
+
+      await batch.commit();
+      debugPrint('✅ All system notifications marked as read');
+    } catch (e) {
+      debugPrint('❌ Error marking all system notifications as read: $e');
+      throw Exception('فشل في تحديث جميع الإشعارات: $e');
     }
   }
 
@@ -4912,21 +4954,31 @@ class DatabaseService {
     }
   }
 
-  /// Get admin notifications
+  /// Get admin notifications (all notifications in the system for admin overview)
   Stream<List<NotificationModel>> getAdminNotifications(String adminId) {
     if (adminId.isEmpty) return Stream.value([]);
 
+    // الإدمن يرى جميع الإشعارات في النظام
     return _firestore
         .collection('notifications')
-        .where('recipientId', isEqualTo: adminId)
         .orderBy('timestamp', descending: true)
-        .limit(50)
+        .limit(100) // زيادة العدد للإدمن
         .snapshots()
         .map((snapshot) {
           final notifications = <NotificationModel>[];
           for (final doc in snapshot.docs) {
             try {
-              final notification = NotificationModel.fromMap(doc.data());
+              final data = Map<String, dynamic>.from(doc.data());
+              // إضافة معرف الوثيقة للتأكد من التحديث الصحيح
+              data['id'] = doc.id;
+
+              debugPrint('🔍 Processing notification ${doc.id}:');
+              debugPrint('   - title: "${data['title']}"');
+              debugPrint('   - body: "${data['body']}"');
+              debugPrint('   - recipientId: "${data['recipientId']}"');
+              debugPrint('   - isRead: ${data['isRead']}');
+
+              final notification = NotificationModel.fromMap(data);
               notifications.add(notification);
             } catch (e) {
               debugPrint('❌ Error parsing admin notification ${doc.id}: $e');
