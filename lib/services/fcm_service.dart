@@ -9,6 +9,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'admin_notification_service.dart';
 import 'parent_notification_service.dart';
+import 'supervisor_notification_service.dart';
 
 /// خدمة Firebase Cloud Messaging المتكاملة
 /// تدعم الإشعارات في جميع حالات التطبيق: نشط، خلفية، مغلق
@@ -31,6 +32,9 @@ class FCMService {
 
   // خدمة إشعارات ولي الأمر
   final ParentNotificationService _parentNotificationService = ParentNotificationService();
+
+  // خدمة إشعارات المشرف
+  final SupervisorNotificationService _supervisorNotificationService = SupervisorNotificationService();
 
   // Token الحالي
   String? _currentToken;
@@ -244,6 +248,10 @@ class FCMService {
       } else if (userType == 'parent') {
         debugPrint('👨‍👩‍👧‍👦 Handling parent notification with advanced service');
         // سيتم التعامل مع الإشعار في ParentNotificationService
+        // لا نحتاج لفعل شيء هنا لأن الخدمة تستمع للرسائل تلقائياً
+      } else if (userType == 'supervisor') {
+        debugPrint('👨‍💼 Handling supervisor notification with advanced service');
+        // سيتم التعامل مع الإشعار في SupervisorNotificationService
         // لا نحتاج لفعل شيء هنا لأن الخدمة تستمع للرسائل تلقائياً
       } else {
         // للمستخدمين العاديين، عرض الإشعار العادي
