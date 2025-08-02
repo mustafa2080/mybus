@@ -112,10 +112,11 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
               icon: Stack(
                 children: [
                   const Icon(Icons.notifications_active, size: 18),
-                  StreamBuilder<int>(
-                    stream: _adminNotificationService.unreadCountStream,
+                  StreamBuilder<List<NotificationModel>>(
+                    stream: _databaseService.getAdminNotifications(_authService.currentUser?.uid ?? ''),
                     builder: (context, snapshot) {
-                      final unreadAdminNotifications = snapshot.data ?? 0;
+                      final allNotifications = snapshot.data ?? [];
+                      final unreadAdminNotifications = allNotifications.where((n) => !n.isRead).length;
 
                       if (unreadAdminNotifications == 0) return const SizedBox.shrink();
                       return Positioned(
@@ -146,7 +147,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
                   ),
                 ],
               ),
-              text: 'الإشعارات العامة',
+              text: 'إشعارات الأدمن',
             ),
             const Tab(
               icon: Icon(Icons.report_problem, size: 18),
@@ -2025,14 +2026,23 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
 
 
 
-  /// بناء الإشعارات الأساسية الحقيقية للأدمن
+  /// بناء الإشعارات الحقيقية للأدمن من قاعدة البيانات
   Widget _buildRealAdminNotifications() {
-    return StreamBuilder<List<AdminNotificationModel>>(
-      stream: _adminNotificationService.notificationsStream,
+    final currentUser = _authService.currentUser;
+    if (currentUser == null) {
+      return _buildEmptyState(
+        'خطأ في المصادقة',
+        'لم يتم العثور على معلومات المستخدم',
+        Icons.error,
+      );
+    }
+
+    return StreamBuilder<List<NotificationModel>>(
+      stream: _databaseService.getAdminNotifications(currentUser.uid),
       builder: (context, snapshot) {
-        debugPrint('🔍 RealAdminNotifications - Connection State: ${snapshot.connectionState}');
-        debugPrint('🔍 RealAdminNotifications - Has Error: ${snapshot.hasError}');
-        debugPrint('🔍 RealAdminNotifications - Data Length: ${snapshot.data?.length ?? 0}');
+        debugPrint('🔍 DatabaseAdminNotifications - Connection State: ${snapshot.connectionState}');
+        debugPrint('🔍 DatabaseAdminNotifications - Has Error: ${snapshot.hasError}');
+        debugPrint('🔍 DatabaseAdminNotifications - Data Length: ${snapshot.data?.length ?? 0}');
 
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
@@ -2041,33 +2051,42 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
               children: [
                 CircularProgressIndicator(),
                 SizedBox(height: 16),
-                Text('جاري تحميل الإشعارات...'),
+                Text('جاري تحميل إشعارات الأدمن من قاعدة البيانات...'),
               ],
             ),
           );
         }
 
         if (snapshot.hasError) {
-          debugPrint('❌ Error in real admin notifications: ${snapshot.error}');
+          debugPrint('❌ Error in database admin notifications: ${snapshot.error}');
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Icon(Icons.error, size: 64, color: Colors.red),
                 const SizedBox(height: 16),
-                Text('خطأ في تحميل الإشعارات: ${snapshot.error}'),
+                Text('خطأ في تحميل الإشعارات من قاعدة البيانات: ${snapshot.error}'),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    // إعادة تحميل البيانات
+                    setState(() {});
+                  },
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('إعادة المحاولة'),
+                ),
               ],
             ),
           );
         }
 
         final adminNotifications = snapshot.data ?? [];
-        debugPrint('📊 Loaded ${adminNotifications.length} admin notifications');
+        debugPrint('📊 Loaded ${adminNotifications.length} admin notifications from database');
 
         if (adminNotifications.isEmpty) {
           return _buildEmptyState(
-            'لا توجد إشعارات أساسية',
-            'لم يتم استلام أي إشعارات أساسية للأدمن بعد',
+            'لا توجد إشعارات للأدمن',
+            'لم يتم استلام أي إشعارات للأدمن من قاعدة البيانات بعد',
             Icons.notifications_none,
           );
         }
@@ -2077,7 +2096,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
           itemCount: adminNotifications.length,
           itemBuilder: (context, index) {
             final notification = adminNotifications[index];
-            return _buildAdminNotificationCard(notification);
+            return _buildDatabaseNotificationCard(notification);
           },
         );
       },
@@ -2134,4 +2153,210 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
 
 
 
+  /// بناء كارد إشعار من قاعدة البيانات
+  Widget _buildDatabaseNotificationCard(NotificationModel notification) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => _handleDatabaseNotificationTap(notification),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // العنوان والوقت
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // أيقونة نوع الإشعار
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: _getNotificationColor(notification.type).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      _getNotificationIcon(notification.type),
+                      color: _getNotificationColor(notification.type),
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // العنوان والمحتوى
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                notification.title,
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: notification.isRead ? FontWeight.normal : FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            if (!notification.isRead)
+                              Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  color: Colors.red,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          notification.body,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  // الوقت
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        DateFormat('HH:mm').format(notification.timestamp),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        DateFormat('dd/MM').format(notification.timestamp),
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.grey[400],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              // نوع الإشعار ومعلومات إضافية
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: _getNotificationColor(notification.type).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: _getNotificationColor(notification.type).withOpacity(0.3),
+                      ),
+                    ),
+                    child: Text(
+                      _getNotificationTypeText(notification.type),
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: _getNotificationColor(notification.type),
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                  const Spacer(),
+                  if (notification.studentName?.isNotEmpty == true)
+                    Text(
+                      notification.studentName!,
+                      style: TextStyle(
+                        fontSize: 10,
+                        color: Colors.grey[500],
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// معالجة النقر على إشعار من قاعدة البيانات
+  void _handleDatabaseNotificationTap(NotificationModel notification) async {
+    debugPrint('🔔 تم النقر على إشعار من قاعدة البيانات: ${notification.title}');
+
+    // تحديد الإشعار كمقروء إذا لم يكن مقروءاً
+    if (!notification.isRead) {
+      try {
+        await _notificationService.markNotificationAsRead(notification.id);
+        debugPrint('✅ تم تحديد الإشعار كمقروء');
+      } catch (e) {
+        debugPrint('❌ خطأ في تحديد الإشعار كمقروء: $e');
+      }
+    }
+
+    // عرض تفاصيل الإشعار
+    _showDatabaseNotificationDetails(notification);
+  }
+
+  /// عرض تفاصيل إشعار من قاعدة البيانات
+  void _showDatabaseNotificationDetails(NotificationModel notification) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(notification.title),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(notification.body),
+            const SizedBox(height: 16),
+            Text(
+              'الوقت: ${DateFormat('dd/MM/yyyy HH:mm').format(notification.timestamp)}',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+              ),
+            ),
+            Text(
+              'النوع: ${_getNotificationTypeText(notification.type)}',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+              ),
+            ),
+            if (notification.studentName?.isNotEmpty == true)
+              Text(
+                'الطالب: ${notification.studentName}',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.grey[600],
+                ),
+              ),
+            Text(
+              'الحالة: ${notification.isRead ? "مقروء" : "غير مقروء"}',
+              style: TextStyle(
+                fontSize: 12,
+                color: notification.isRead ? Colors.green : Colors.orange,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('إغلاق'),
+          ),
+        ],
+      ),
+    );
+  }
 }
