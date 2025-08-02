@@ -288,7 +288,7 @@ class ParentNotificationService {
       try {
         final data = jsonDecode(response.payload!);
         final notification = ParentNotificationModel.fromMap(data);
-        _markAsRead(notification.id);
+        markAsRead(notification.id);
         
         // يمكن إضافة منطق للانتقال لصفحة معينة حسب نوع الإشعار
         debugPrint('🔔 تم النقر على الإشعار: ${notification.title}');

@@ -271,7 +271,7 @@ class AdminNotificationService {
       try {
         final data = jsonDecode(response.payload!);
         final notification = AdminNotificationModel.fromMap(data);
-        _markAsRead(notification.id);
+        markAsRead(notification.id);
         
         // يمكن إضافة منطق للانتقال لصفحة معينة حسب نوع الإشعار
         debugPrint('🔔 تم النقر على الإشعار: ${notification.title}');

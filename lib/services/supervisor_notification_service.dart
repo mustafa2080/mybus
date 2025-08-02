@@ -7,6 +7,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/supervisor_notification_model.dart';
+import '../widgets/supervisor_notification_dialog.dart';
 
 /// خدمة الإشعارات المتقدمة للمشرف
 /// تعرض dialog جميل ثم تحفظ في قائمة الإشعارات المحلية
@@ -287,7 +288,7 @@ class SupervisorNotificationService {
       try {
         final data = jsonDecode(response.payload!);
         final notification = SupervisorNotificationModel.fromMap(data);
-        _markAsRead(notification.id);
+        markAsRead(notification.id);
         
         // يمكن إضافة منطق للانتقال لصفحة معينة حسب نوع الإشعار
         debugPrint('🔔 تم النقر على الإشعار: ${notification.title}');
