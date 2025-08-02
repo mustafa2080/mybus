@@ -51,38 +51,9 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
 
         // تحديث الواجهة بعد التهيئة
         setState(() {});
-
-        // إضافة إشعارات تجريبية إذا لم تكن موجودة
-        await _addTestNotificationsIfNeeded();
       }
     } catch (e) {
       debugPrint('❌ خطأ في تهيئة خدمة إشعارات الأدمن: $e');
-
-      // محاولة إضافة إشعارات تجريبية في حالة الخطأ
-      try {
-        await _adminNotificationService.addTestNotifications();
-        debugPrint('✅ تم إضافة إشعارات تجريبية كحل بديل');
-      } catch (testError) {
-        debugPrint('❌ فشل في إضافة الإشعارات التجريبية: $testError');
-      }
-    }
-  }
-
-  /// إضافة إشعارات تجريبية إذا لم تكن موجودة
-  Future<void> _addTestNotificationsIfNeeded() async {
-    try {
-      // انتظار قليل للتأكد من اكتمال التهيئة
-      await Future.delayed(const Duration(milliseconds: 500));
-
-      if (_adminNotificationService.notifications.isEmpty) {
-        debugPrint('📝 لا توجد إشعارات، سيتم إضافة إشعارات تجريبية...');
-        await _adminNotificationService.addTestNotifications();
-        debugPrint('✅ تم إضافة إشعارات تجريبية تلقائياً');
-      } else {
-        debugPrint('📊 يوجد ${_adminNotificationService.notifications.length} إشعار محفوظ');
-      }
-    } catch (e) {
-      debugPrint('❌ خطأ في إضافة الإشعارات التجريبية: $e');
     }
   }
 
@@ -141,11 +112,24 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
               icon: Stack(
                 children: [
                   const Icon(Icons.notifications_active, size: 18),
-                  StreamBuilder<int>(
-                    stream: _adminNotificationService.unreadCountStream,
+                  StreamBuilder<List<NotificationModel>>(
+                    stream: _notificationService.getNotificationsStream(),
                     builder: (context, snapshot) {
-                      final count = snapshot.data ?? 0;
-                      if (count == 0) return const SizedBox.shrink();
+                      final allNotifications = snapshot.data ?? [];
+                      // حساب عدد الإشعارات الأساسية غير المقروءة
+                      final unreadAdminNotifications = allNotifications.where((notification) {
+                        return !notification.isRead && (
+                          notification.type == 'admin' ||
+                          notification.type == 'emergency' ||
+                          notification.type == 'system' ||
+                          notification.type == 'absence' ||
+                          notification.type == 'complaint' ||
+                          notification.type == 'bus_status' ||
+                          notification.type == 'student_status'
+                        );
+                      }).length;
+
+                      if (unreadAdminNotifications == 0) return const SizedBox.shrink();
                       return Positioned(
                         right: 0,
                         top: 0,
@@ -160,7 +144,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
                             minHeight: 12,
                           ),
                           child: Text(
-                            count > 99 ? '99+' : count.toString(),
+                            unreadAdminNotifications > 99 ? '99+' : unreadAdminNotifications.toString(),
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 8,
@@ -190,7 +174,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildAdminNotifications(), // استخدام إشعارات الأدمن بدلاً من العامة
+          _buildRealAdminNotifications(), // الإشعارات الأساسية الحقيقية للأدمن
           _buildComplaints(),
           _buildStatistics(),
         ],
@@ -2051,6 +2035,160 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
     }
   }
 
+  /// بناء الإشعارات الأساسية المجمعة للأدمن
+  Widget _buildCombinedAdminNotifications() {
+    return StreamBuilder<List<NotificationModel>>(
+      stream: _notificationService.getNotificationsStream(),
+      builder: (context, snapshot) {
+        // إضافة تشخيص مفصل
+        debugPrint('🔍 CombinedAdminNotifications - Connection State: ${snapshot.connectionState}');
+        debugPrint('🔍 CombinedAdminNotifications - Has Error: ${snapshot.hasError}');
+        debugPrint('🔍 CombinedAdminNotifications - Error: ${snapshot.error}');
+        debugPrint('🔍 CombinedAdminNotifications - Data Length: ${snapshot.data?.length ?? 0}');
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('جاري تحميل الإشعارات الأساسية...'),
+              ],
+            ),
+          );
+        }
+
+        if (snapshot.hasError) {
+          debugPrint('❌ Error in combined admin notifications: ${snapshot.error}');
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error, size: 64, color: Colors.red),
+                const SizedBox(height: 16),
+                Text('خطأ في تحميل الإشعارات: ${snapshot.error}'),
+                const SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: () => _createTestBasicNotifications(),
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('إنشاء إشعارات تجريبية'),
+                ),
+              ],
+            ),
+          );
+        }
+
+        final notifications = snapshot.data ?? [];
+        debugPrint('📊 Loaded ${notifications.length} basic admin notifications');
+
+        if (notifications.isEmpty) {
+          return Column(
+            children: [
+              _buildEmptyState(
+                'لا توجد إشعارات أساسية',
+                'لم يتم استلام أي إشعارات أساسية بعد',
+                Icons.notifications_none,
+              ),
+              const SizedBox(height: 20),
+              // إضافة زر لإنشاء إشعارات تجريبية
+              ElevatedButton.icon(
+                onPressed: () => _createTestBasicNotifications(),
+                icon: const Icon(Icons.add_circle),
+                label: const Text('إنشاء إشعارات أساسية تجريبية'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: notifications.length,
+          itemBuilder: (context, index) {
+            final notification = notifications[index];
+            return _buildBasicNotificationCard(notification);
+          },
+        );
+      },
+    );
+  }
+
+  /// بناء الإشعارات الأساسية الحقيقية للأدمن
+  Widget _buildRealAdminNotifications() {
+    return StreamBuilder<List<NotificationModel>>(
+      stream: _notificationService.getNotificationsStream(),
+      builder: (context, snapshot) {
+        debugPrint('🔍 RealAdminNotifications - Connection State: ${snapshot.connectionState}');
+        debugPrint('🔍 RealAdminNotifications - Has Error: ${snapshot.hasError}');
+        debugPrint('🔍 RealAdminNotifications - Data Length: ${snapshot.data?.length ?? 0}');
+
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('جاري تحميل الإشعارات...'),
+              ],
+            ),
+          );
+        }
+
+        if (snapshot.hasError) {
+          debugPrint('❌ Error in real admin notifications: ${snapshot.error}');
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error, size: 64, color: Colors.red),
+                const SizedBox(height: 16),
+                Text('خطأ في تحميل الإشعارات: ${snapshot.error}'),
+              ],
+            ),
+          );
+        }
+
+        final allNotifications = snapshot.data ?? [];
+
+        // فلترة الإشعارات لعرض الإشعارات الأساسية للأدمن فقط
+        final adminNotifications = allNotifications.where((notification) {
+          // عرض الإشعارات المهمة للأدمن فقط
+          return notification.type == 'admin' ||
+                 notification.type == 'emergency' ||
+                 notification.type == 'system' ||
+                 notification.type == 'absence' ||
+                 notification.type == 'complaint' ||
+                 notification.type == 'bus_status' ||
+                 notification.type == 'student_status';
+        }).toList();
+
+        debugPrint('📊 Filtered ${adminNotifications.length} admin notifications from ${allNotifications.length} total');
+
+        if (adminNotifications.isEmpty) {
+          return _buildEmptyState(
+            'لا توجد إشعارات أساسية',
+            'لم يتم استلام أي إشعارات أساسية للأدمن بعد',
+            Icons.notifications_none,
+          );
+        }
+
+        return ListView.builder(
+          padding: const EdgeInsets.all(16),
+          itemCount: adminNotifications.length,
+          itemBuilder: (context, index) {
+            final notification = adminNotifications[index];
+            return _buildBasicNotificationCard(notification);
+          },
+        );
+      },
+    );
+  }
+
   /// تشخيص خدمة إشعارات الأدمن
   Future<void> _debugAdminNotifications() async {
     try {
@@ -2093,6 +2231,240 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
           ),
         );
       }
+    }
+  }
+
+  /// بناء كارد الإشعار الأساسي
+  Widget _buildBasicNotificationCard(NotificationModel notification) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => _handleBasicNotificationTap(notification),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // العنوان والوقت
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // أيقونة نوع الإشعار
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: _getNotificationColor(notification.type).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Icon(
+                      _getNotificationIcon(notification.type),
+                      color: _getNotificationColor(notification.type),
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // العنوان والمحتوى
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          notification.title,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          notification.body,
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey[600],
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  // الوقت
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        DateFormat('HH:mm').format(notification.timestamp),
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[500],
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        DateFormat('dd/MM').format(notification.timestamp),
+                        style: TextStyle(
+                          fontSize: 10,
+                          color: Colors.grey[400],
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+              // نوع الإشعار
+              if (notification.type.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: _getNotificationColor(notification.type).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: _getNotificationColor(notification.type).withOpacity(0.3),
+                    ),
+                  ),
+                  child: Text(
+                    _getNotificationTypeText(notification.type),
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: _getNotificationColor(notification.type),
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// معالجة النقر على الإشعار الأساسي
+  void _handleBasicNotificationTap(NotificationModel notification) {
+    debugPrint('🔔 تم النقر على إشعار: ${notification.title}');
+
+    // يمكن إضافة منطق للتنقل حسب نوع الإشعار
+    switch (notification.type) {
+      case 'absence':
+        // التنقل لصفحة طلبات الغياب
+        break;
+      case 'complaint':
+        // التنقل لصفحة الشكاوى
+        break;
+      case 'emergency':
+        // عرض تفاصيل الطوارئ
+        break;
+      default:
+        // عرض تفاصيل الإشعار
+        _showNotificationDetails(notification);
+    }
+  }
+
+  /// عرض تفاصيل الإشعار
+  void _showNotificationDetails(NotificationModel notification) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(notification.title),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(notification.body),
+            const SizedBox(height: 16),
+            Text(
+              'الوقت: ${DateFormat('dd/MM/yyyy HH:mm').format(notification.timestamp)}',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+              ),
+            ),
+            Text(
+              'النوع: ${_getNotificationTypeText(notification.type)}',
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey[600],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('إغلاق'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// الحصول على أيقونة نوع الإشعار
+  IconData _getNotificationIcon(String type) {
+    switch (type) {
+      case 'admin':
+        return Icons.admin_panel_settings;
+      case 'emergency':
+        return Icons.emergency;
+      case 'system':
+        return Icons.settings;
+      case 'absence':
+        return Icons.person_off;
+      case 'complaint':
+        return Icons.report_problem;
+      case 'bus_status':
+        return Icons.directions_bus;
+      case 'student_status':
+        return Icons.school;
+      default:
+        return Icons.notifications;
+    }
+  }
+
+  /// الحصول على لون نوع الإشعار
+  Color _getNotificationColor(String type) {
+    switch (type) {
+      case 'admin':
+        return Colors.blue;
+      case 'emergency':
+        return Colors.red;
+      case 'system':
+        return Colors.orange;
+      case 'absence':
+        return Colors.purple;
+      case 'complaint':
+        return Colors.amber;
+      case 'bus_status':
+        return Colors.green;
+      case 'student_status':
+        return Colors.teal;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  /// الحصول على نص نوع الإشعار
+  String _getNotificationTypeText(String type) {
+    switch (type) {
+      case 'admin':
+        return 'إداري';
+      case 'emergency':
+        return 'طوارئ';
+      case 'system':
+        return 'نظام';
+      case 'absence':
+        return 'غياب';
+      case 'complaint':
+        return 'شكوى';
+      case 'bus_status':
+        return 'حالة الباص';
+      case 'student_status':
+        return 'حالة الطالب';
+      default:
+        return 'عام';
     }
   }
 }
