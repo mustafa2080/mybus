@@ -36,15 +36,30 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
   /// تهيئة خدمة إشعارات الأدمن
   Future<void> _initializeAdminNotifications() async {
     try {
-      await _adminNotificationService.initialize(context);
-      debugPrint('✅ تم تهيئة خدمة إشعارات الأدمن');
+      debugPrint('🔄 بدء تهيئة خدمة إشعارات الأدمن...');
 
-      // تحديث الواجهة بعد التهيئة
+      // انتظار حتى يصبح context متاحاً
+      await Future.delayed(const Duration(milliseconds: 100));
+
       if (mounted) {
+        await _adminNotificationService.initialize(context);
+        debugPrint('✅ تم تهيئة خدمة إشعارات الأدمن بنجاح');
+        debugPrint('📊 حالة التهيئة: ${_adminNotificationService.isInitialized}');
+        debugPrint('📊 عدد الإشعارات: ${_adminNotificationService.notifications.length}');
+
+        // تحديث الواجهة بعد التهيئة
         setState(() {});
       }
     } catch (e) {
       debugPrint('❌ خطأ في تهيئة خدمة إشعارات الأدمن: $e');
+
+      // محاولة إضافة إشعارات تجريبية في حالة الخطأ
+      try {
+        await _adminNotificationService.addTestNotifications();
+        debugPrint('✅ تم إضافة إشعارات تجريبية كحل بديل');
+      } catch (testError) {
+        debugPrint('❌ فشل في إضافة الإشعارات التجريبية: $testError');
+      }
     }
   }
 
@@ -1526,11 +1541,28 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
           child: StreamBuilder<List<AdminNotificationModel>>(
             stream: _adminNotificationService.notificationsStream,
             builder: (context, snapshot) {
+              // إضافة تشخيص مفصل
+              debugPrint('🔍 AdminNotifications - Connection State: ${snapshot.connectionState}');
+              debugPrint('🔍 AdminNotifications - Has Error: ${snapshot.hasError}');
+              debugPrint('🔍 AdminNotifications - Error: ${snapshot.error}');
+              debugPrint('🔍 AdminNotifications - Data Length: ${snapshot.data?.length ?? 0}');
+              debugPrint('🔍 AdminNotifications - Service Initialized: ${_adminNotificationService.isInitialized}');
+
               if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
+                return const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 16),
+                      Text('جاري تحميل إشعارات الأدمن...'),
+                    ],
+                  ),
+                );
               }
 
               if (snapshot.hasError) {
+                debugPrint('❌ Error in admin notifications: ${snapshot.error}');
                 return Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -1538,12 +1570,19 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
                       const Icon(Icons.error, size: 64, color: Colors.red),
                       const SizedBox(height: 16),
                       Text('خطأ في تحميل الإشعارات: ${snapshot.error}'),
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        onPressed: () => _debugAdminNotifications(),
+                        icon: const Icon(Icons.refresh),
+                        label: const Text('إعادة المحاولة'),
+                      ),
                     ],
                   ),
                 );
               }
 
               final notifications = snapshot.data ?? [];
+              debugPrint('📊 Loaded ${notifications.length} admin notifications');
 
               if (notifications.isEmpty) {
                 return Center(
@@ -1562,22 +1601,36 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
                         style: TextStyle(fontSize: 14, color: Colors.grey),
                       ),
                       const SizedBox(height: 24),
-                      ElevatedButton.icon(
-                        onPressed: () async {
-                          await _adminNotificationService.addTestNotifications();
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('تم إضافة إشعارات تجريبية للاختبار'),
-                              backgroundColor: Colors.green,
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                        children: [
+                          ElevatedButton.icon(
+                            onPressed: () async {
+                              await _adminNotificationService.addTestNotifications();
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('تم إضافة إشعارات تجريبية للاختبار'),
+                                  backgroundColor: Colors.green,
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.add),
+                            label: const Text('إضافة إشعارات تجريبية'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                              foregroundColor: Colors.white,
                             ),
-                          );
-                        },
-                        icon: const Icon(Icons.add),
-                        label: const Text('إضافة إشعارات تجريبية'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          foregroundColor: Colors.white,
-                        ),
+                          ),
+                          ElevatedButton.icon(
+                            onPressed: () => _debugAdminNotifications(),
+                            icon: const Icon(Icons.bug_report),
+                            label: const Text('تشخيص الخدمة'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.orange,
+                              foregroundColor: Colors.white,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),
@@ -1978,6 +2031,43 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('خطأ في إنشاء الطلب التجريبي: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  /// تشخيص خدمة إشعارات الأدمن
+  Future<void> _debugAdminNotifications() async {
+    try {
+      debugPrint('🔍 === تشخيص خدمة إشعارات الأدمن ===');
+      debugPrint('🔍 Service Initialized: ${_adminNotificationService.isInitialized}');
+      debugPrint('🔍 Current User: ${_authService.currentUser?.uid}');
+      debugPrint('🔍 Current User Email: ${_authService.currentUser?.email}');
+
+      // محاولة إعادة تهيئة الخدمة
+      await _adminNotificationService.initialize();
+      debugPrint('✅ Service re-initialized');
+
+      // إضافة إشعار تجريبي
+      await _adminNotificationService.addTestNotifications();
+      debugPrint('✅ Test notifications added');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم تشغيل تشخيص خدمة الإشعارات - تحقق من Console'),
+            backgroundColor: Colors.blue,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ خطأ في تشخيص خدمة الإشعارات: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ في التشخيص: $e'),
             backgroundColor: Colors.red,
           ),
         );

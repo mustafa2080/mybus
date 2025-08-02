@@ -44,7 +44,7 @@ class AdminNotificationService {
   bool _isInitialized = false;
 
   /// تهيئة الخدمة
-  Future<void> initialize(BuildContext context) async {
+  Future<void> initialize([BuildContext? context]) async {
     if (_isInitialized) {
       // إذا كانت الخدمة مهيأة، أرسل البيانات الحالية للـ streams
       _notificationsController.add(_localNotificationsList);
@@ -52,7 +52,9 @@ class AdminNotificationService {
       return;
     }
 
-    _context = context;
+    if (context != null) {
+      _context = context;
+    }
 
     try {
       debugPrint('🔔 تهيئة خدمة إشعارات الأدمن...');
@@ -513,9 +515,16 @@ class AdminNotificationService {
     debugPrint('✅ تم إضافة ${testNotifications.length} إشعار تجريبي');
   }
 
+  /// إضافة إشعار جديد يدوياً
+  Future<void> addNotification(AdminNotificationModel notification) async {
+    await _saveNotificationLocally(notification);
+    debugPrint('✅ تم إضافة إشعار جديد: ${notification.title}');
+  }
+
   // Getters للبيانات
   List<AdminNotificationModel> get notifications => List.unmodifiable(_localNotificationsList);
   int get unreadCount => _unreadCount;
+  bool get isInitialized => _isInitialized;
   Stream<List<AdminNotificationModel>> get notificationsStream => _notificationsController.stream;
   Stream<int> get unreadCountStream => _unreadCountController.stream;
 
