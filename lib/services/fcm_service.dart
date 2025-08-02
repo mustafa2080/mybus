@@ -7,6 +7,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
+import 'admin_notification_service.dart';
 
 /// خدمة Firebase Cloud Messaging المتكاملة
 /// تدعم الإشعارات في جميع حالات التطبيق: نشط، خلفية، مغلق
@@ -24,9 +25,12 @@ class FCMService {
   // Firestore instance
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  // خدمة إشعارات الأدمن
+  final AdminNotificationService _adminNotificationService = AdminNotificationService();
+
   // Token الحالي
   String? _currentToken;
-  
+
   // حالة التهيئة
   bool _isInitialized = false;
 
@@ -206,10 +210,42 @@ class FCMService {
     if (targetUserId != null && currentUser?.uid == targetUserId) {
       // عرض الإشعار فقط إذا كان المستخدم الحالي هو المستهدف
       debugPrint('✅ Showing notification for target user: $targetUserId');
-      await _showLocalNotification(message);
+
+      // التحقق من نوع المستخدم
+      await _checkUserTypeAndShowNotification(message);
     } else {
       debugPrint('⚠️ Notification not for current user (${currentUser?.uid}), target: $targetUserId');
       debugPrint('📤 Notification skipped - not for current user');
+    }
+  }
+
+  /// التحقق من نوع المستخدم وعرض الإشعار المناسب
+  Future<void> _checkUserTypeAndShowNotification(RemoteMessage message) async {
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) return;
+
+      // جلب بيانات المستخدم لمعرفة نوعه
+      final userDoc = await _firestore.collection('users').doc(currentUser.uid).get();
+      final userData = userDoc.data();
+      final userType = userData?['userType'] ?? '';
+
+      debugPrint('👤 User type: $userType');
+
+      // إذا كان المستخدم أدمن، استخدم خدمة إشعارات الأدمن المتقدمة
+      if (userType == 'admin') {
+        debugPrint('🔔 Handling admin notification with advanced service');
+        // سيتم التعامل مع الإشعار في AdminNotificationService
+        // لا نحتاج لفعل شيء هنا لأن الخدمة تستمع للرسائل تلقائياً
+      } else {
+        // للمستخدمين العاديين، عرض الإشعار العادي
+        debugPrint('📱 Showing regular notification for user type: $userType');
+        await _showLocalNotification(message);
+      }
+    } catch (e) {
+      debugPrint('❌ Error checking user type: $e');
+      // في حالة الخطأ، عرض الإشعار العادي
+      await _showLocalNotification(message);
     }
   }
 
