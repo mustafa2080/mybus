@@ -222,6 +222,7 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: EnhancedCurvedAppBar(
         title: 'كيدز باص - المشرف',
+        automaticallyImplyLeading: false, // إزالة سهم الرجوع
         subtitle: FutureBuilder<List<SupervisorAssignmentModel>>(
           future: _databaseService.getSupervisorAssignmentsSimple(_authService.currentUser?.uid ?? ''),
           builder: (context, snapshot) {
