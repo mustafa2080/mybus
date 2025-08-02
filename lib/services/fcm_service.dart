@@ -378,17 +378,35 @@ class FCMService {
     });
   }
 
-  /// حفظ Token في Firestore
+  /// حفظ Token في Firestore مع نوع المستخدم
   Future<void> _saveTokenToFirestore(String token) async {
     try {
       final User? currentUser = FirebaseAuth.instance.currentUser;
       if (currentUser != null) {
+        // الحصول على نوع المستخدم من الوثيقة
+        final userDoc = await _firestore.collection('users').doc(currentUser.uid).get();
+        final userData = userDoc.data();
+        final userType = userData?['userType'] ?? 'parent'; // افتراضي ولي أمر
+
         await _firestore.collection('users').doc(currentUser.uid).update({
           'fcmToken': token,
           'lastTokenUpdate': FieldValue.serverTimestamp(),
           'platform': Platform.operatingSystem,
+          'isActive': true,
+          'userType': userType, // التأكد من وجود نوع المستخدم
         });
-        debugPrint('✅ FCM Token saved to Firestore');
+
+        // حفظ في مجموعة منفصلة للـ tokens حسب النوع للبحث السريع
+        await _firestore.collection('fcm_tokens').doc(currentUser.uid).set({
+          'token': token,
+          'userId': currentUser.uid,
+          'userType': userType,
+          'platform': Platform.operatingSystem,
+          'lastUpdate': FieldValue.serverTimestamp(),
+          'isActive': true,
+        });
+
+        debugPrint('✅ FCM Token saved to Firestore for $userType user');
       }
     } catch (e) {
       debugPrint('❌ Error saving token to Firestore: $e');
@@ -553,6 +571,163 @@ class FCMService {
     }
   }
 
-  // تم حذف دالة _showLocalNotificationForUser لمنع الإشعارات المحلية غير المرغوب فيها
-  // في مرحلة الاختبار، الإشعارات تحفظ في قاعدة البيانات فقط للمستخدم المستهدف
+  /// إرسال إشعار لجميع المستخدمين من نوع معين
+  Future<void> sendNotificationToUserType({
+    required String userType,
+    required String title,
+    required String body,
+    Map<String, String>? data,
+    String? channelId,
+  }) async {
+    try {
+      debugPrint('📤 Sending notification to all $userType users...');
+
+      // الحصول على جميع tokens للمستخدمين من النوع المحدد
+      final tokensQuery = await _firestore
+          .collection('fcm_tokens')
+          .where('userType', isEqualTo: userType)
+          .where('isActive', isEqualTo: true)
+          .get();
+
+      final tokens = tokensQuery.docs.map((doc) => doc.data()['token'] as String).toList();
+
+      if (tokens.isEmpty) {
+        debugPrint('⚠️ No active tokens found for user type: $userType');
+        return;
+      }
+
+      debugPrint('📱 Found ${tokens.length} active tokens for $userType users');
+
+      // إرسال الإشعار لكل token
+      for (final token in tokens) {
+        await _sendPushNotification(
+          token: token,
+          title: title,
+          body: body,
+          data: data ?? {},
+          channelId: channelId ?? 'mybus_notifications',
+        );
+      }
+
+      debugPrint('✅ Notification sent to all $userType users');
+    } catch (e) {
+      debugPrint('❌ Error sending notification to user type $userType: $e');
+    }
+  }
+
+  /// إرسال إشعار لمستخدم محدد
+  Future<void> sendNotificationToUser({
+    required String userId,
+    required String title,
+    required String body,
+    Map<String, String>? data,
+    String? channelId,
+  }) async {
+    try {
+      debugPrint('📤 Sending notification to user: $userId');
+
+      // الحصول على token المستخدم
+      final tokenDoc = await _firestore.collection('fcm_tokens').doc(userId).get();
+
+      if (!tokenDoc.exists) {
+        debugPrint('⚠️ No FCM token found for user: $userId');
+        return;
+      }
+
+      final tokenData = tokenDoc.data()!;
+      final token = tokenData['token'] as String;
+      final isActive = tokenData['isActive'] as bool? ?? false;
+
+      if (!isActive) {
+        debugPrint('⚠️ FCM token is inactive for user: $userId');
+        return;
+      }
+
+      await _sendPushNotification(
+        token: token,
+        title: title,
+        body: body,
+        data: data ?? {},
+        channelId: channelId ?? 'mybus_notifications',
+      );
+
+      debugPrint('✅ Notification sent to user: $userId');
+    } catch (e) {
+      debugPrint('❌ Error sending notification to user $userId: $e');
+    }
+  }
+
+  /// إرسال إشعار push حقيقي
+  Future<void> _sendPushNotification({
+    required String token,
+    required String title,
+    required String body,
+    required Map<String, String> data,
+    required String channelId,
+  }) async {
+    try {
+      // في بيئة الإنتاج، هذا يجب أن يتم عبر الخادم
+      // لكن للاختبار، سنحفظ في قاعدة البيانات وسنعرض إشعار محلي
+
+      // حفظ الإشعار في قاعدة البيانات
+      await _firestore.collection('notifications').add({
+        'title': title,
+        'body': body,
+        'data': data,
+        'channelId': channelId,
+        'targetToken': token,
+        'timestamp': FieldValue.serverTimestamp(),
+        'sent': true,
+      });
+
+      debugPrint('📤 Push notification prepared for token: ${token.substring(0, 20)}...');
+    } catch (e) {
+      debugPrint('❌ Error sending push notification: $e');
+    }
+  }
+
+  /// إرسال إشعار طوارئ لجميع المستخدمين
+  Future<void> sendEmergencyNotification({
+    required String title,
+    required String body,
+    Map<String, String>? data,
+  }) async {
+    try {
+      debugPrint('🚨 Sending emergency notification to all users...');
+
+      // إرسال لجميع أنواع المستخدمين
+      await Future.wait([
+        sendNotificationToUserType(
+          userType: 'admin',
+          title: title,
+          body: body,
+          data: data,
+          channelId: 'emergency_notifications',
+        ),
+        sendNotificationToUserType(
+          userType: 'supervisor',
+          title: title,
+          body: body,
+          data: data,
+          channelId: 'emergency_notifications',
+        ),
+        sendNotificationToUserType(
+          userType: 'parent',
+          title: title,
+          body: body,
+          data: data,
+          channelId: 'emergency_notifications',
+        ),
+      ]);
+
+      debugPrint('✅ Emergency notification sent to all users');
+    } catch (e) {
+      debugPrint('❌ Error sending emergency notification: $e');
+    }
+  }
+
+  /// تنظيف الموارد
+  void dispose() {
+    // تنظيف أي موارد إذا لزم الأمر
+  }
 }

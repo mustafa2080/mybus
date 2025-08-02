@@ -6,6 +6,7 @@ import '../../services/auth_service.dart';
 import '../../services/database_service.dart';
 import '../../services/storage_service.dart';
 import '../../services/notification_service.dart';
+import '../../services/notification_sender_service.dart';
 import '../../models/complaint_model.dart';
 import '../../models/student_model.dart';
 import '../../widgets/custom_button.dart';
@@ -23,6 +24,7 @@ class _AddComplaintScreenState extends State<AddComplaintScreen> {
   final AuthService _authService = AuthService();
   final DatabaseService _databaseService = DatabaseService();
   final StorageService _storageService = StorageService();
+  final NotificationSenderService _notificationSender = NotificationSenderService();
   final ImagePicker _imagePicker = ImagePicker();
 
   // Form controllers
@@ -570,15 +572,22 @@ class _AddComplaintScreenState extends State<AddComplaintScreen> {
       );
 
       // Save to database
-      await _databaseService.addComplaint(complaint);
+      final savedComplaint = await _databaseService.addComplaint(complaint);
 
-      // إرسال إشعار للإدارة مع الصوت
+      // إرسال إشعار للإدارة مع الصوت (النظام القديم)
       await NotificationService().notifyNewComplaintWithSound(
-        complaintId: complaint.id,
+        complaintId: savedComplaint.id,
         parentId: currentUser.uid,
         parentName: parentData['name'] ?? 'ولي أمر',
         subject: _titleController.text.trim(),
         category: _selectedType.toString().split('.').last,
+      );
+
+      // إرسال إشعار push للأدمن (النظام الجديد)
+      await _notificationSender.sendComplaintNotificationToAdmin(
+        complaintId: savedComplaint.id,
+        studentName: studentName ?? 'غير محدد',
+        complaintType: _getComplaintTypeText(_selectedType),
       );
 
       if (mounted) {
@@ -608,6 +617,26 @@ class _AddComplaintScreenState extends State<AddComplaintScreen> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  /// تحويل نوع الشكوى إلى نص عربي
+  String _getComplaintTypeText(ComplaintType type) {
+    switch (type) {
+      case ComplaintType.driver:
+        return 'شكوى من السائق';
+      case ComplaintType.supervisor:
+        return 'شكوى من المشرف';
+      case ComplaintType.bus:
+        return 'شكوى من الحافلة';
+      case ComplaintType.route:
+        return 'شكوى من الطريق';
+      case ComplaintType.schedule:
+        return 'شكوى من الجدول';
+      case ComplaintType.safety:
+        return 'شكوى أمان';
+      case ComplaintType.other:
+        return 'شكوى أخرى';
     }
   }
 }

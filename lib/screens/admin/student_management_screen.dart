@@ -4,6 +4,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:excel/excel.dart' as excel;
 import 'dart:io';
 import '../../services/database_service.dart';
+import '../../services/notification_sender_service.dart';
 import '../../models/student_model.dart';
 import '../../models/bus_model.dart';
 import '../../widgets/custom_button.dart';
@@ -37,6 +38,7 @@ class StudentManagementScreen extends StatefulWidget {
 
 class _StudentManagementScreenState extends State<StudentManagementScreen> {
   final DatabaseService _databaseService = DatabaseService();
+  final NotificationSenderService _notificationSender = NotificationSenderService();
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   StudentStatus? _selectedStatus;
@@ -1335,6 +1337,102 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('خطأ في حذف الطالب: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  /// تحديث حالة الطالب مع إرسال إشعار لولي الأمر
+  Future<void> _updateStudentStatus({
+    required StudentModel student,
+    required StudentStatus newStatus,
+    String? location,
+    String? notes,
+  }) async {
+    try {
+      // تحديث حالة الطالب في قاعدة البيانات
+      final updatedStudent = student.copyWith(
+        status: newStatus,
+        lastStatusUpdate: DateTime.now(),
+      );
+
+      await _databaseService.updateStudent(updatedStudent);
+
+      // إرسال إشعار لولي الأمر
+      if (student.parentId.isNotEmpty) {
+        String statusText;
+        switch (newStatus) {
+          case StudentStatus.boarded:
+            statusText = 'boarded';
+            break;
+          case StudentStatus.dropped:
+            statusText = 'dropped';
+            break;
+          case StudentStatus.absent:
+            statusText = 'absent';
+            break;
+          default:
+            statusText = newStatus.toString().split('.').last;
+        }
+
+        await _notificationSender.sendStudentStatusNotificationToParent(
+          parentId: student.parentId,
+          studentName: student.name,
+          status: statusText,
+          busNumber: student.busNumber,
+          location: location,
+        );
+      }
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('تم تحديث حالة الطالب ${student.name} وإرسال إشعار لولي الأمر'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ في تحديث حالة الطالب: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  /// إرسال رسالة إدارية لولي أمر محدد
+  Future<void> _sendMessageToParent({
+    required String parentId,
+    required String studentName,
+    required String title,
+    required String message,
+  }) async {
+    try {
+      await _notificationSender.sendAdminMessage(
+        title: title,
+        message: message,
+        targetUserId: parentId,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('تم إرسال الرسالة لولي أمر $studentName'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ في إرسال الرسالة: $e'),
             backgroundColor: Colors.red,
           ),
         );

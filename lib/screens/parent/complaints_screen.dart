@@ -2,6 +2,7 @@
 import 'package:go_router/go_router.dart';
 import '../../services/auth_service.dart';
 import '../../services/database_service.dart';
+import '../../services/notification_sender_service.dart';
 import '../../models/complaint_model.dart';
 import '../../widgets/custom_button.dart';
 import '../../widgets/responsive_grid_view.dart';
@@ -18,6 +19,7 @@ class ComplaintsScreen extends StatefulWidget {
 class _ComplaintsScreenState extends State<ComplaintsScreen> {
   final AuthService _authService = AuthService();
   final DatabaseService _databaseService = DatabaseService();
+  final NotificationSenderService _notificationSender = NotificationSenderService();
 
   @override
   Widget build(BuildContext context) {

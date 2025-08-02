@@ -5,6 +5,7 @@ import '../../models/absence_model.dart';
 import '../../models/supervisor_assignment_model.dart';
 import '../../services/database_service.dart';
 import '../../services/notification_service.dart';
+import '../../services/notification_sender_service.dart';
 import '../../services/auth_service.dart';
 
 class SupervisorAbsenceManagementScreen extends StatefulWidget {
@@ -17,6 +18,7 @@ class SupervisorAbsenceManagementScreen extends StatefulWidget {
 class _SupervisorAbsenceManagementScreenState extends State<SupervisorAbsenceManagementScreen> with TickerProviderStateMixin {
   final DatabaseService _databaseService = DatabaseService();
   final NotificationService _notificationService = NotificationService();
+  final NotificationSenderService _notificationSender = NotificationSenderService();
   final AuthService _authService = AuthService();
   
   late TabController _tabController;
@@ -607,6 +609,15 @@ class _SupervisorAbsenceManagementScreenState extends State<SupervisorAbsenceMan
         absenceDate: now,
         approvedBy: 'المشرف',
         approvedBySupervisorId: _authService.currentUser?.uid, // استبعاد المشرف الحالي
+      );
+
+      // إرسال إشعار push لولي الأمر (النظام الجديد)
+      await _notificationSender.sendStudentStatusNotificationToParent(
+        parentId: student.parentId,
+        studentName: student.name,
+        status: 'absent',
+        busNumber: student.busNumber,
+        location: 'تم تسجيل الغياب من قبل المشرف',
       );
     } catch (e) {
       // Close loading dialog
