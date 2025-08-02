@@ -12,6 +12,7 @@ import 'services/enhanced_notification_service.dart';
 import 'services/unified_notification_service.dart';
 import 'services/notification_dialog_service.dart';
 import 'services/admin_notification_service.dart';
+import 'services/parent_notification_service.dart';
 // تم حذف الخدمات المتكررة واستبدالها بالخدمة الموحدة
 import 'services/fcm_service.dart';
 import 'services/fcm_background_handler.dart';

@@ -3,7 +3,10 @@ import 'package:go_router/go_router.dart';
 import '../../services/notification_service.dart';
 import '../../services/database_service.dart';
 import '../../services/auth_service.dart';
+import '../../services/parent_notification_service.dart';
 import '../../models/notification_model.dart';
+import '../../models/parent_notification_model.dart';
+import '../../widgets/parent_notification_dialog.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -12,10 +15,38 @@ class NotificationsScreen extends StatefulWidget {
   State<NotificationsScreen> createState() => _NotificationsScreenState();
 }
 
-class _NotificationsScreenState extends State<NotificationsScreen> {
+class _NotificationsScreenState extends State<NotificationsScreen>
+    with SingleTickerProviderStateMixin {
   final NotificationService _notificationService = NotificationService();
   final DatabaseService _databaseService = DatabaseService();
   final AuthService _authService = AuthService();
+  final ParentNotificationService _parentNotificationService = ParentNotificationService();
+
+  late TabController _tabController;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _initializeParentNotifications();
+  }
+
+  /// تهيئة خدمة إشعارات ولي الأمر
+  Future<void> _initializeParentNotifications() async {
+    try {
+      await _parentNotificationService.initialize(context);
+      debugPrint('✅ تم تهيئة خدمة إشعارات ولي الأمر');
+    } catch (e) {
+      debugPrint('❌ خطأ في تهيئة خدمة إشعارات ولي الأمر: $e');
+    }
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    _parentNotificationService.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,16 +73,76 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             tooltip: 'تحديد الكل كمقروء',
           ),
         ],
+        bottom: TabBar(
+          controller: _tabController,
+          labelColor: Colors.white,
+          unselectedLabelColor: Colors.white70,
+          indicatorColor: Colors.white,
+          tabs: [
+            const Tab(
+              icon: Icon(Icons.notifications, size: 18),
+              text: 'الإشعارات العامة',
+            ),
+            Tab(
+              icon: Stack(
+                children: [
+                  const Icon(Icons.notifications_active, size: 18),
+                  StreamBuilder<int>(
+                    stream: _parentNotificationService.unreadCountStream,
+                    builder: (context, snapshot) {
+                      final count = snapshot.data ?? 0;
+                      if (count == 0) return const SizedBox.shrink();
+                      return Positioned(
+                        right: 0,
+                        top: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 12,
+                            minHeight: 12,
+                          ),
+                          child: Text(
+                            count > 99 ? '99+' : count.toString(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 8,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+              text: 'إشعاراتي',
+            ),
+          ],
+        ),
       ),
-      body: Column(
+      body: TabBarView(
+        controller: _tabController,
         children: [
-          // Unread Count Header
-          _buildUnreadCountHeader(),
-          
-          // Notifications List
-          Expanded(
-            child: _buildNotificationsList(),
+          // التاب الأول: الإشعارات العامة (النظام القديم)
+          Column(
+            children: [
+              // Unread Count Header
+              _buildUnreadCountHeader(),
+
+              // Notifications List
+              Expanded(
+                child: _buildNotificationsList(),
+              ),
+            ],
           ),
+
+          // التاب الثاني: الإشعارات المحلية الجديدة
+          _buildParentNotifications(),
         ],
       ),
     );
@@ -636,6 +727,450 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       }
     }
   }
+
+  /// بناء تاب الإشعارات المحلية لولي الأمر
+  Widget _buildParentNotifications() {
+    return Column(
+      children: [
+        // شريط الأدوات
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.blue[50],
+            border: Border(
+              bottom: BorderSide(color: Colors.blue[200]!),
+            ),
+          ),
+          child: Row(
+            children: [
+              // عداد الإشعارات
+              StreamBuilder<int>(
+                stream: _parentNotificationService.unreadCountStream,
+                builder: (context, snapshot) {
+                  final unreadCount = snapshot.data ?? 0;
+                  return Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: unreadCount > 0 ? const Color(0xFF1E88E5) : Colors.grey,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '$unreadCount غير مقروء',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  );
+                },
+              ),
+              const Spacer(),
+
+              // زر تحديد الكل كمقروء
+              TextButton.icon(
+                onPressed: () async {
+                  await _parentNotificationService.markAllAsRead();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('تم تحديد جميع الإشعارات كمقروءة'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                },
+                icon: const Icon(Icons.mark_email_read, size: 16),
+                label: const Text('تحديد الكل كمقروء'),
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFF1E88E5),
+                ),
+              ),
+
+              // زر مسح الكل
+              TextButton.icon(
+                onPressed: () => _showClearAllDialog(),
+                icon: const Icon(Icons.clear_all, size: 16),
+                label: const Text('مسح الكل'),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.red,
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // قائمة الإشعارات
+        Expanded(
+          child: StreamBuilder<List<ParentNotificationModel>>(
+            stream: _parentNotificationService.notificationsStream,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (snapshot.hasError) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.error, size: 64, color: Colors.red),
+                      const SizedBox(height: 16),
+                      Text('خطأ في تحميل الإشعارات: ${snapshot.error}'),
+                    ],
+                  ),
+                );
+              }
+
+              final notifications = snapshot.data ?? [];
+
+              if (notifications.isEmpty) {
+                return const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.notifications_off, size: 64, color: Colors.grey),
+                      SizedBox(height: 16),
+                      Text(
+                        'لا توجد إشعارات',
+                        style: TextStyle(fontSize: 18, color: Colors.grey),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'ستظهر الإشعارات الجديدة هنا',
+                        style: TextStyle(fontSize: 14, color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: notifications.length,
+                itemBuilder: (context, index) {
+                  final notification = notifications[index];
+                  return _buildParentNotificationCard(notification);
+                },
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  /// بناء بطاقة إشعار ولي الأمر
+  Widget _buildParentNotificationCard(ParentNotificationModel notification) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 12),
+      elevation: notification.isRead ? 1 : 3,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(
+          color: notification.isRead ? Colors.grey[300]! : _getParentNotificationColor(notification),
+          width: notification.isRead ? 1 : 2,
+        ),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => _showParentNotificationDetails(notification),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // الهيدر
+              Row(
+                children: [
+                  // أيقونة النوع
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: _getParentNotificationColor(notification).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      notification.typeIcon,
+                      style: const TextStyle(fontSize: 20),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+
+                  // معلومات الإشعار
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Text(
+                              notification.typeDescription,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: _getParentNotificationColor(notification),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(
+                                color: _getParentNotificationColor(notification),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                notification.priorityText,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          notification.title,
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: notification.isRead ? FontWeight.normal : FontWeight.bold,
+                            color: notification.isRead ? Colors.grey[700] : Colors.black87,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  // مؤشرات
+                  Column(
+                    children: [
+                      if (notification.isNew)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.green,
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Text(
+                            'جديد',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      const SizedBox(height: 4),
+                      if (!notification.isRead)
+                        Container(
+                          width: 8,
+                          height: 8,
+                          decoration: BoxDecoration(
+                            color: _getParentNotificationColor(notification),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 12),
+
+              // المحتوى
+              Text(
+                notification.body,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: notification.isRead ? Colors.grey[600] : Colors.black54,
+                  height: 1.4,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+
+              // معلومات إضافية
+              if (notification.isStudentRelated || notification.isBusRelated) ...[
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: Colors.grey[200]!),
+                  ),
+                  child: Row(
+                    children: [
+                      if (notification.studentName != null) ...[
+                        const Icon(Icons.person, size: 14, color: Colors.grey),
+                        const SizedBox(width: 4),
+                        Text(
+                          notification.studentName!,
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                        ),
+                      ],
+                      if (notification.studentName != null && notification.busNumber != null)
+                        const SizedBox(width: 12),
+                      if (notification.busNumber != null) ...[
+                        const Icon(Icons.directions_bus, size: 14, color: Colors.grey),
+                        const SizedBox(width: 4),
+                        Text(
+                          notification.busNumber!,
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: 12),
+
+              // الفوتر
+              Row(
+                children: [
+                  Icon(
+                    Icons.access_time,
+                    size: 14,
+                    color: Colors.grey[500],
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    notification.formattedTime,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey[500],
+                    ),
+                  ),
+                  const Spacer(),
+
+                  // أزرار الإجراءات
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (!notification.isRead)
+                        IconButton(
+                          onPressed: () => _parentNotificationService.markAsRead(notification.id),
+                          icon: const Icon(Icons.mark_email_read, size: 16),
+                          tooltip: 'تحديد كمقروء',
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                        ),
+                      if (notification.requiresAction)
+                        IconButton(
+                          onPressed: () {
+                            // يمكن إضافة منطق الإجراء هنا
+                          },
+                          icon: const Icon(Icons.touch_app, size: 16),
+                          tooltip: notification.actionText,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                        ),
+                      IconButton(
+                        onPressed: () => _deleteParentNotification(notification),
+                        icon: const Icon(Icons.delete, size: 16),
+                        tooltip: 'حذف',
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// الحصول على لون الإشعار حسب الأولوية
+  Color _getParentNotificationColor(ParentNotificationModel notification) {
+    switch (notification.priority) {
+      case ParentNotificationPriority.low:
+        return Colors.green;
+      case ParentNotificationPriority.normal:
+        return const Color(0xFF1E88E5);
+      case ParentNotificationPriority.high:
+        return Colors.orange;
+      case ParentNotificationPriority.urgent:
+        return Colors.red;
+    }
+  }
+
+  /// عرض تفاصيل الإشعار
+  void _showParentNotificationDetails(ParentNotificationModel notification) {
+    showDialog(
+      context: context,
+      builder: (context) => ParentNotificationDialog(
+        notification: notification,
+        onDismiss: () => Navigator.of(context).pop(),
+        onMarkAsRead: () => _parentNotificationService.markAsRead(notification.id),
+      ),
+    );
+  }
+
+  /// حذف إشعار ولي الأمر
+  void _deleteParentNotification(ParentNotificationModel notification) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('تأكيد الحذف'),
+        content: Text('هل تريد حذف الإشعار "${notification.title}"؟'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('إلغاء'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              await _parentNotificationService.deleteNotification(notification.id);
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('تم حذف الإشعار'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('حذف'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// عرض حوار مسح جميع الإشعارات
+  void _showClearAllDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('تأكيد المسح'),
+        content: const Text('هل تريد مسح جميع الإشعارات؟ هذا الإجراء لا يمكن التراجع عنه.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('إلغاء'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              await _parentNotificationService.clearAllNotifications();
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('تم مسح جميع الإشعارات'),
+                  backgroundColor: Colors.green,
+                ),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('مسح الكل'),
+          ),
+        ],
+      ),
+    );
+  }
 }
-
-
