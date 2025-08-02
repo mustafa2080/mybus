@@ -38,6 +38,11 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
     try {
       await _adminNotificationService.initialize(context);
       debugPrint('✅ تم تهيئة خدمة إشعارات الأدمن');
+
+      // تحديث الواجهة بعد التهيئة
+      if (mounted) {
+        setState(() {});
+      }
     } catch (e) {
       debugPrint('❌ خطأ في تهيئة خدمة إشعارات الأدمن: $e');
     }
@@ -66,6 +71,11 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: _refreshNotifications,
+            tooltip: 'تحديث الإشعارات',
+          ),
           IconButton(
             icon: const Icon(Icons.build),
             onPressed: _fixNotifications,
@@ -634,6 +644,37 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('خطأ في إرسال الإشعار: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  /// تحديث الإشعارات
+  Future<void> _refreshNotifications() async {
+    try {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('جاري تحديث الإشعارات...'),
+          backgroundColor: Colors.blue,
+          duration: Duration(seconds: 1),
+        ),
+      );
+
+      // إعادة تهيئة خدمة الإشعارات
+      await _initializeAdminNotifications();
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('تم تحديث الإشعارات بنجاح'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('خطأ في تحديث الإشعارات: $e'),
           backgroundColor: Colors.red,
         ),
       );
@@ -1449,20 +1490,38 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
               final notifications = snapshot.data ?? [];
 
               if (notifications.isEmpty) {
-                return const Center(
+                return Center(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.notifications_off, size: 64, color: Colors.grey),
-                      SizedBox(height: 16),
-                      Text(
+                      const Icon(Icons.notifications_off, size: 64, color: Colors.grey),
+                      const SizedBox(height: 16),
+                      const Text(
                         'لا توجد إشعارات',
                         style: TextStyle(fontSize: 18, color: Colors.grey),
                       ),
-                      SizedBox(height: 8),
-                      Text(
+                      const SizedBox(height: 8),
+                      const Text(
                         'ستظهر الإشعارات الجديدة هنا',
                         style: TextStyle(fontSize: 14, color: Colors.grey),
+                      ),
+                      const SizedBox(height: 24),
+                      ElevatedButton.icon(
+                        onPressed: () async {
+                          await _adminNotificationService.addTestNotifications();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('تم إضافة إشعارات تجريبية للاختبار'),
+                              backgroundColor: Colors.green,
+                            ),
+                          );
+                        },
+                        icon: const Icon(Icons.add),
+                        label: const Text('إضافة إشعارات تجريبية'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          foregroundColor: Colors.white,
+                        ),
                       ),
                     ],
                   ),

@@ -34,31 +34,51 @@ class AdminNotificationService {
   int _unreadCount = 0;
   
   // Stream controller للإشعارات
-  final StreamController<List<AdminNotificationModel>> _notificationsController = 
+  final StreamController<List<AdminNotificationModel>> _notificationsController =
       StreamController<List<AdminNotificationModel>>.broadcast();
-  
-  final StreamController<int> _unreadCountController = 
+
+  final StreamController<int> _unreadCountController =
       StreamController<int>.broadcast();
+
+  // متغير لتتبع حالة التهيئة
+  bool _isInitialized = false;
 
   /// تهيئة الخدمة
   Future<void> initialize(BuildContext context) async {
+    if (_isInitialized) {
+      // إذا كانت الخدمة مهيأة، أرسل البيانات الحالية للـ streams
+      _notificationsController.add(_localNotificationsList);
+      _unreadCountController.add(_unreadCount);
+      return;
+    }
+
     _context = context;
-    
+
     try {
       debugPrint('🔔 تهيئة خدمة إشعارات الأدمن...');
-      
+
       // تهيئة الإشعارات المحلية
       await _initializeLocalNotifications();
-      
+
       // تحميل الإشعارات المحفوظة
       await _loadSavedNotifications();
-      
+
       // إعداد معالجات الرسائل
       _setupMessageHandlers();
-      
+
+      // إرسال البيانات الأولية للـ streams
+      _notificationsController.add(_localNotificationsList);
+      _unreadCountController.add(_unreadCount);
+
+      _isInitialized = true;
       debugPrint('✅ تم تهيئة خدمة إشعارات الأدمن بنجاح');
+      debugPrint('📊 عدد الإشعارات المحملة: ${_localNotificationsList.length}');
+      debugPrint('📊 عدد الإشعارات غير المقروءة: $_unreadCount');
     } catch (e) {
       debugPrint('❌ خطأ في تهيئة خدمة إشعارات الأدمن: $e');
+      // في حالة الخطأ، أرسل قوائم فارغة
+      _notificationsController.add([]);
+      _unreadCountController.add(0);
     }
   }
 
@@ -367,6 +387,73 @@ class AdminNotificationService {
     await _saveToPreferences();
     _notificationsController.add(_localNotificationsList);
     _unreadCountController.add(_unreadCount);
+  }
+
+  /// إضافة إشعارات تجريبية للاختبار
+  Future<void> addTestNotifications() async {
+    if (_localNotificationsList.isNotEmpty) {
+      debugPrint('📝 الإشعارات موجودة بالفعل، لن يتم إضافة إشعارات تجريبية');
+      return;
+    }
+
+    final testNotifications = [
+      AdminNotificationModel(
+        id: 'test_1',
+        title: 'شكوى جديدة',
+        body: 'تم تقديم شكوى جديدة من ولي أمر الطالب أحمد محمد',
+        type: 'complaint',
+        priority: 'high',
+        timestamp: DateTime.now().subtract(const Duration(minutes: 5)),
+        isRead: false,
+        data: {'complaintId': 'comp_001', 'studentName': 'أحمد محمد'},
+      ),
+      AdminNotificationModel(
+        id: 'test_2',
+        title: 'طلب غياب جديد',
+        body: 'طلب غياب جديد للطالبة سارة علي يحتاج موافقة',
+        type: 'absence',
+        priority: 'medium',
+        timestamp: DateTime.now().subtract(const Duration(hours: 1)),
+        isRead: false,
+        data: {'absenceId': 'abs_001', 'studentName': 'سارة علي'},
+      ),
+      AdminNotificationModel(
+        id: 'test_3',
+        title: 'تقرير يومي',
+        body: 'تقرير الرحلات اليومية جاهز للمراجعة',
+        type: 'report',
+        priority: 'low',
+        timestamp: DateTime.now().subtract(const Duration(hours: 2)),
+        isRead: true,
+        data: {'reportType': 'daily', 'date': DateTime.now().toIso8601String()},
+      ),
+      AdminNotificationModel(
+        id: 'test_4',
+        title: 'تنبيه أمان',
+        body: 'تم الإبلاغ عن حادث بسيط في الحافلة رقم 123',
+        type: 'safety',
+        priority: 'high',
+        timestamp: DateTime.now().subtract(const Duration(hours: 3)),
+        isRead: false,
+        data: {'busNumber': '123', 'incidentType': 'minor'},
+      ),
+      AdminNotificationModel(
+        id: 'test_5',
+        title: 'مستخدم جديد',
+        body: 'تم تسجيل ولي أمر جديد في النظام',
+        type: 'user',
+        priority: 'low',
+        timestamp: DateTime.now().subtract(const Duration(hours: 4)),
+        isRead: true,
+        data: {'userId': 'user_001', 'userType': 'parent'},
+      ),
+    ];
+
+    for (final notification in testNotifications) {
+      await addNotification(notification);
+    }
+
+    debugPrint('✅ تم إضافة ${testNotifications.length} إشعار تجريبي');
   }
 
   // Getters للبيانات
