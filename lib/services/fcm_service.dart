@@ -7,6 +7,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'admin_notification_service.dart';
 import 'parent_notification_service.dart';
 import 'supervisor_notification_service.dart';
@@ -63,6 +64,9 @@ class FCMService {
 
       // 5. الاستماع لتحديثات Token
       _listenToTokenRefresh();
+
+      // 6. تحميل الإشعارات المحفوظة من الخلفية
+      await _loadBackgroundNotifications();
 
       _isInitialized = true;
       debugPrint('✅ FCM Service initialized successfully');
@@ -823,6 +827,52 @@ class FCMService {
     } catch (e) {
       debugPrint('❌ Error sending test notification: $e');
       rethrow;
+    }
+  }
+
+  /// تحميل الإشعارات المحفوظة من الخلفية
+  Future<void> _loadBackgroundNotifications() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final notifications = prefs.getStringList('background_notifications') ?? [];
+
+      if (notifications.isNotEmpty) {
+        debugPrint('📱 Found ${notifications.length} background notifications');
+
+        // عرض الإشعارات المحفوظة للمستخدم الحالي
+        for (final notificationJson in notifications) {
+          try {
+            final notificationData = jsonDecode(notificationJson) as Map<String, dynamic>;
+            final isRead = notificationData['read'] as bool? ?? false;
+
+            if (!isRead) {
+              // عرض الإشعار غير المقروء
+              await _displayLocalNotification(
+                title: notificationData['title'] ?? 'إشعار جديد',
+                body: notificationData['body'] ?? '',
+                data: Map<String, String>.from(notificationData['data'] ?? {}),
+                channelId: 'mybus_notifications',
+              );
+
+              // تحديث حالة الإشعار كمقروء
+              notificationData['read'] = true;
+              final updatedNotifications = notifications.map((n) {
+                final data = jsonDecode(n) as Map<String, dynamic>;
+                if (data['id'] == notificationData['id']) {
+                  return jsonEncode(notificationData);
+                }
+                return n;
+              }).toList();
+
+              await prefs.setStringList('background_notifications', updatedNotifications);
+            }
+          } catch (e) {
+            debugPrint('❌ Error processing background notification: $e');
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('❌ Error loading background notifications: $e');
     }
   }
 

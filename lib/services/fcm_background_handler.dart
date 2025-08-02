@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// معالج الرسائل في الخلفية
 /// يجب أن يكون دالة عامة (top-level function) وليس داخل كلاس
@@ -11,13 +13,17 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   // تهيئة Firebase إذا لم تكن مهيأة
   // await Firebase.initializeApp();
-  
+
   debugPrint('🔥 Background message received: ${message.messageId}');
   debugPrint('📱 Title: ${message.notification?.title}');
   debugPrint('📝 Body: ${message.notification?.body}');
   debugPrint('📊 Data: ${message.data}');
 
-  // عرض الإشعار محلياً في الخلفية
+  // حفظ الإشعار في قاعدة البيانات المحلية للتاريخ
+  await _saveNotificationToDatabase(message);
+
+  // عرض الإشعار يدوياً دائماً لضمان ظهوره
+  // لأن Firebase قد لا يعرضه تلقائياً عندما يوجد background handler
   await _showBackgroundNotification(message);
 }
 
@@ -87,8 +93,12 @@ Future<void> _showBackgroundNotification(RemoteMessage message) async {
       onlyAlertOnce: false,
       visibility: NotificationVisibility.public,
       ticker: title,
-      tag: 'mybus_user_$targetUserId', // تمييز الإشعارات بمعرف المستخدم
+      tag: 'mybus_background_${DateTime.now().millisecondsSinceEpoch}', // معرف فريد لكل إشعار
       largeIcon: const DrawableResourceAndroidBitmap('@drawable/ic_notification'),
+      // إضافة إعدادات إضافية لضمان الظهور
+      fullScreenIntent: false,
+      category: AndroidNotificationCategory.message,
+      additionalFlags: Int32List.fromList([4]), // FLAG_INSISTENT
     );
 
     // إعدادات الإشعار لـ iOS
@@ -321,5 +331,38 @@ class FCMHelper {
         },
       },
     };
+  }
+}
+
+/// حفظ الإشعار في قاعدة البيانات للتاريخ
+Future<void> _saveNotificationToDatabase(RemoteMessage message) async {
+  try {
+    debugPrint('💾 Saving notification to database: ${message.notification?.title}');
+
+    // حفظ الإشعار في SharedPreferences للاحتفاظ به
+    final prefs = await SharedPreferences.getInstance();
+    final notifications = prefs.getStringList('background_notifications') ?? [];
+
+    final notificationData = {
+      'id': message.messageId ?? DateTime.now().millisecondsSinceEpoch.toString(),
+      'title': message.notification?.title ?? 'إشعار جديد',
+      'body': message.notification?.body ?? '',
+      'data': message.data,
+      'timestamp': DateTime.now().toIso8601String(),
+      'read': false,
+    };
+
+    notifications.add(jsonEncode(notificationData));
+
+    // الاحتفاظ بآخر 50 إشعار فقط
+    if (notifications.length > 50) {
+      notifications.removeRange(0, notifications.length - 50);
+    }
+
+    await prefs.setStringList('background_notifications', notifications);
+    debugPrint('✅ Notification saved to local storage');
+
+  } catch (e) {
+    debugPrint('❌ Error saving notification to database: $e');
   }
 }
