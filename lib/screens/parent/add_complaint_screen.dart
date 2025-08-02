@@ -572,11 +572,11 @@ class _AddComplaintScreenState extends State<AddComplaintScreen> {
       );
 
       // Save to database
-      final savedComplaint = await _databaseService.addComplaint(complaint);
+      await _databaseService.addComplaint(complaint);
 
       // إرسال إشعار للإدارة مع الصوت (النظام القديم)
       await NotificationService().notifyNewComplaintWithSound(
-        complaintId: savedComplaint.id,
+        complaintId: complaint.id,
         parentId: currentUser.uid,
         parentName: parentData['name'] ?? 'ولي أمر',
         subject: _titleController.text.trim(),
@@ -585,7 +585,7 @@ class _AddComplaintScreenState extends State<AddComplaintScreen> {
 
       // إرسال إشعار push للأدمن (النظام الجديد)
       await _notificationSender.sendComplaintNotificationToAdmin(
-        complaintId: savedComplaint.id,
+        complaintId: complaint.id,
         studentName: studentName ?? 'غير محدد',
         complaintType: _getComplaintTypeText(_selectedType),
       );
@@ -623,18 +623,16 @@ class _AddComplaintScreenState extends State<AddComplaintScreen> {
   /// تحويل نوع الشكوى إلى نص عربي
   String _getComplaintTypeText(ComplaintType type) {
     switch (type) {
-      case ComplaintType.driver:
-        return 'شكوى من السائق';
-      case ComplaintType.supervisor:
-        return 'شكوى من المشرف';
-      case ComplaintType.bus:
-        return 'شكوى من الحافلة';
-      case ComplaintType.route:
-        return 'شكوى من الطريق';
-      case ComplaintType.schedule:
-        return 'شكوى من الجدول';
+      case ComplaintType.busService:
+        return 'شكوى خدمة الباص';
+      case ComplaintType.driverBehavior:
+        return 'شكوى سلوك السائق';
       case ComplaintType.safety:
         return 'شكوى أمان';
+      case ComplaintType.timing:
+        return 'شكوى التوقيت';
+      case ComplaintType.communication:
+        return 'شكوى التواصل';
       case ComplaintType.other:
         return 'شكوى أخرى';
     }

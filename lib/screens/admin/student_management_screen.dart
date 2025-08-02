@@ -1354,8 +1354,8 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
     try {
       // تحديث حالة الطالب في قاعدة البيانات
       final updatedStudent = student.copyWith(
-        status: newStatus,
-        lastStatusUpdate: DateTime.now(),
+        currentStatus: newStatus,
+        updatedAt: DateTime.now(),
       );
 
       await _databaseService.updateStudent(updatedStudent);
@@ -1364,14 +1364,14 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
       if (student.parentId.isNotEmpty) {
         String statusText;
         switch (newStatus) {
-          case StudentStatus.boarded:
-            statusText = 'boarded';
+          case StudentStatus.home:
+            statusText = 'home';
             break;
-          case StudentStatus.dropped:
-            statusText = 'dropped';
+          case StudentStatus.onBus:
+            statusText = 'onBus';
             break;
-          case StudentStatus.absent:
-            statusText = 'absent';
+          case StudentStatus.atSchool:
+            statusText = 'atSchool';
             break;
           default:
             statusText = newStatus.toString().split('.').last;
@@ -1381,7 +1381,7 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
           parentId: student.parentId,
           studentName: student.name,
           status: statusText,
-          busNumber: student.busNumber,
+          busNumber: student.busId, // استخدام busId بدلاً من busNumber
           location: location,
         );
       }

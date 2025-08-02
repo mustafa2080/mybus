@@ -51,12 +51,16 @@ class NotificationSenderService {
       String channelId = 'student_notifications';
       
       switch (status.toLowerCase()) {
-        case 'boarded':
+        case 'onbus':
           body = 'ركب $studentName الحافلة رقم $busNumber';
           if (location != null) body += ' من $location';
           break;
-        case 'dropped':
-          body = 'نزل $studentName من الحافلة رقم $busNumber';
+        case 'home':
+          body = 'وصل $studentName إلى المنزل من الحافلة رقم $busNumber';
+          if (location != null) body += ' في $location';
+          break;
+        case 'atschool':
+          body = 'وصل $studentName إلى المدرسة بالحافلة رقم $busNumber';
           if (location != null) body += ' في $location';
           break;
         case 'absent':

@@ -616,7 +616,7 @@ class _SupervisorAbsenceManagementScreenState extends State<SupervisorAbsenceMan
         parentId: student.parentId,
         studentName: student.name,
         status: 'absent',
-        busNumber: student.busNumber,
+        busNumber: student.busId, // استخدام busId بدلاً من busNumber
         location: 'تم تسجيل الغياب من قبل المشرف',
       );
     } catch (e) {
