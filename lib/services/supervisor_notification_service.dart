@@ -213,7 +213,7 @@ class SupervisorNotificationService {
       builder: (context) => SupervisorNotificationDialog(
         notification: notification,
         onDismiss: () => Navigator.of(context).pop(),
-        onMarkAsRead: () => _markAsRead(notification.id),
+        onMarkAsRead: () => markAsRead(notification.id),
       ),
     );
   }
@@ -336,7 +336,7 @@ class SupervisorNotificationService {
   }
 
   /// تحديد الإشعار كمقروء
-  Future<void> _markAsRead(String notificationId) async {
+  Future<void> markAsRead(String notificationId) async {
     final index = _localNotificationsList.indexWhere((n) => n.id == notificationId);
     if (index != -1 && !_localNotificationsList[index].isRead) {
       _localNotificationsList[index] = _localNotificationsList[index].copyWith(isRead: true);

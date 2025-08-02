@@ -7,6 +7,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/admin_notification_model.dart';
+import '../widgets/admin_notification_dialog.dart';
 import '../models/notification_model.dart';
 
 /// خدمة الإشعارات المتقدمة للأدمن
@@ -196,7 +197,7 @@ class AdminNotificationService {
       builder: (context) => AdminNotificationDialog(
         notification: notification,
         onDismiss: () => Navigator.of(context).pop(),
-        onMarkAsRead: () => _markAsRead(notification.id),
+        onMarkAsRead: () => markAsRead(notification.id),
       ),
     );
   }
@@ -319,7 +320,7 @@ class AdminNotificationService {
   }
 
   /// تحديد الإشعار كمقروء
-  Future<void> _markAsRead(String notificationId) async {
+  Future<void> markAsRead(String notificationId) async {
     final index = _localNotificationsList.indexWhere((n) => n.id == notificationId);
     if (index != -1 && !_localNotificationsList[index].isRead) {
       _localNotificationsList[index] = _localNotificationsList[index].copyWith(isRead: true);
