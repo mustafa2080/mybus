@@ -49,6 +49,7 @@ import '../screens/admin/surveys_reports_screen.dart';
 import '../screens/admin/absence_management_screen.dart';
 import '../screens/admin/supervisor_assignments_screen.dart';
 import '../screens/admin/parent_student_linking_screen.dart';
+import '../screens/admin/admin_profile_screen.dart';
 import '../utils/app_constants.dart';
 import '../models/student_model.dart';
 
@@ -392,6 +393,11 @@ class AppRoutes {
             path: 'parent-student-linking',
             name: 'parent-student-linking',
             builder: (context, state) => const ParentStudentLinkingScreen(),
+          ),
+          GoRoute(
+            path: 'profile',
+            name: 'admin-profile',
+            builder: (context, state) => const AdminProfileScreen(),
           ),
         ],
       ),

@@ -78,7 +78,7 @@ class AdminAppBar extends StatelessWidget implements PreferredSizeWidget {
   void _handleMenuSelection(BuildContext context, String value) {
     switch (value) {
       case 'profile':
-        _showProfileDialog(context);
+        context.push('/admin/profile');
         break;
       case 'settings':
         context.push('/admin/settings');
