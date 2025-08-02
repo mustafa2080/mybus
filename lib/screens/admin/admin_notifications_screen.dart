@@ -1492,7 +1492,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
         side: BorderSide(
-          color: notification.isRead ? Colors.grey[300]! : _getNotificationColor(notification),
+          color: notification.isRead ? Colors.grey[300]! : _getAdminNotificationColor(notification),
           width: notification.isRead ? 1 : 2,
         ),
       ),
@@ -1511,7 +1511,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                      color: _getNotificationColor(notification).withOpacity(0.1),
+                      color: _getAdminNotificationColor(notification).withOpacity(0.1),
                       borderRadius: BorderRadius.circular(8),
                     ),
                     child: Text(
@@ -1532,7 +1532,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
                               notification.typeDescription,
                               style: TextStyle(
                                 fontSize: 12,
-                                color: _getNotificationColor(notification),
+                                color: _getAdminNotificationColor(notification),
                                 fontWeight: FontWeight.w600,
                               ),
                             ),
@@ -1540,7 +1540,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                               decoration: BoxDecoration(
-                                color: _getNotificationColor(notification),
+                                color: _getAdminNotificationColor(notification),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: Text(
@@ -1594,7 +1594,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
                           width: 8,
                           height: 8,
                           decoration: BoxDecoration(
-                            color: _getNotificationColor(notification),
+                            color: _getAdminNotificationColor(notification),
                             shape: BoxShape.circle,
                           ),
                         ),
@@ -1668,7 +1668,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
   }
 
   /// الحصول على لون الإشعار حسب الأولوية
-  Color _getNotificationColor(AdminNotificationModel notification) {
+  Color _getAdminNotificationColor(AdminNotificationModel notification) {
     switch (notification.priority) {
       case NotificationPriority.low:
         return Colors.green;

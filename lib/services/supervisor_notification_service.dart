@@ -15,18 +15,18 @@ class SupervisorNotificationService {
   factory SupervisorNotificationService() => _instance;
   SupervisorNotificationService._internal();
 
-  final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _flutterLocalNotifications = FlutterLocalNotificationsPlugin();
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
-  
+
   // مفتاح حفظ الإشعارات المحلية
   static const String _notificationsKey = 'supervisor_local_notifications';
   static const String _unreadCountKey = 'supervisor_unread_count';
-  
+
   // Context للعرض
   BuildContext? _context;
-  
+
   // قائمة الإشعارات المحلية
-  List<SupervisorNotificationModel> _localNotifications = [];
+  List<SupervisorNotificationModel> _localNotificationsList = [];
   
   // عداد الإشعارات غير المقروءة
   int _unreadCount = 0;
@@ -74,7 +74,7 @@ class SupervisorNotificationService {
       iOS: iosSettings,
     );
     
-    await _localNotifications.initialize(
+    await _flutterLocalNotifications.initialize(
       initSettings,
       onDidReceiveNotificationResponse: _onNotificationTapped,
     );
@@ -91,7 +91,7 @@ class SupervisorNotificationService {
       showBadge: true,
     );
 
-    await _localNotifications
+    await _flutterLocalNotifications
         .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(androidChannel);
   }
@@ -221,23 +221,23 @@ class SupervisorNotificationService {
   /// حفظ الإشعار محلياً
   Future<void> _saveNotificationLocally(SupervisorNotificationModel notification) async {
     try {
-      _localNotifications.insert(0, notification);
-      
+      _localNotificationsList.insert(0, notification);
+
       // الاحتفاظ بآخر 100 إشعار فقط
-      if (_localNotifications.length > 100) {
-        _localNotifications = _localNotifications.take(100).toList();
+      if (_localNotificationsList.length > 100) {
+        _localNotificationsList = _localNotificationsList.take(100).toList();
       }
-      
+
       // زيادة عداد غير المقروءة
       _unreadCount++;
-      
+
       // حفظ في SharedPreferences
       await _saveToPreferences();
-      
+
       // إشعار المستمعين
-      _notificationsController.add(_localNotifications);
+      _notificationsController.add(_localNotificationsList);
       _unreadCountController.add(_unreadCount);
-      
+
       debugPrint('💾 تم حفظ الإشعار محلياً: ${notification.title}');
     } catch (e) {
       debugPrint('❌ خطأ في حفظ الإشعار: $e');
@@ -272,7 +272,7 @@ class SupervisorNotificationService {
       iOS: iosDetails,
     );
 
-    await _localNotifications.show(
+    await _flutterLocalNotifications.show(
       notification.id.hashCode,
       notification.title,
       notification.body,
@@ -304,17 +304,17 @@ class SupervisorNotificationService {
       final notificationsJson = prefs.getStringList(_notificationsKey) ?? [];
       final unreadCount = prefs.getInt(_unreadCountKey) ?? 0;
       
-      _localNotifications = notificationsJson
+      _localNotificationsList = notificationsJson
           .map((json) => SupervisorNotificationModel.fromMap(jsonDecode(json)))
           .toList();
-      
+
       _unreadCount = unreadCount;
-      
+
       // إشعار المستمعين
-      _notificationsController.add(_localNotifications);
+      _notificationsController.add(_localNotificationsList);
       _unreadCountController.add(_unreadCount);
-      
-      debugPrint('📂 تم تحميل ${_localNotifications.length} إشعار محفوظ');
+
+      debugPrint('📂 تم تحميل ${_localNotificationsList.length} إشعار محفوظ');
     } catch (e) {
       debugPrint('❌ خطأ في تحميل الإشعارات: $e');
     }
@@ -324,7 +324,7 @@ class SupervisorNotificationService {
   Future<void> _saveToPreferences() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final notificationsJson = _localNotifications
+      final notificationsJson = _localNotificationsList
           .map((notification) => jsonEncode(notification.toMap()))
           .toList();
       
@@ -337,56 +337,56 @@ class SupervisorNotificationService {
 
   /// تحديد الإشعار كمقروء
   Future<void> _markAsRead(String notificationId) async {
-    final index = _localNotifications.indexWhere((n) => n.id == notificationId);
-    if (index != -1 && !_localNotifications[index].isRead) {
-      _localNotifications[index] = _localNotifications[index].copyWith(isRead: true);
-      _unreadCount = (_unreadCount - 1).clamp(0, _localNotifications.length);
-      
+    final index = _localNotificationsList.indexWhere((n) => n.id == notificationId);
+    if (index != -1 && !_localNotificationsList[index].isRead) {
+      _localNotificationsList[index] = _localNotificationsList[index].copyWith(isRead: true);
+      _unreadCount = (_unreadCount - 1).clamp(0, _localNotificationsList.length);
+
       await _saveToPreferences();
-      _notificationsController.add(_localNotifications);
+      _notificationsController.add(_localNotificationsList);
       _unreadCountController.add(_unreadCount);
     }
   }
 
   /// تحديد جميع الإشعارات كمقروءة
   Future<void> markAllAsRead() async {
-    for (int i = 0; i < _localNotifications.length; i++) {
-      _localNotifications[i] = _localNotifications[i].copyWith(isRead: true);
+    for (int i = 0; i < _localNotificationsList.length; i++) {
+      _localNotificationsList[i] = _localNotificationsList[i].copyWith(isRead: true);
     }
     _unreadCount = 0;
-    
+
     await _saveToPreferences();
-    _notificationsController.add(_localNotifications);
+    _notificationsController.add(_localNotificationsList);
     _unreadCountController.add(_unreadCount);
   }
 
   /// حذف إشعار
   Future<void> deleteNotification(String notificationId) async {
-    final index = _localNotifications.indexWhere((n) => n.id == notificationId);
+    final index = _localNotificationsList.indexWhere((n) => n.id == notificationId);
     if (index != -1) {
-      if (!_localNotifications[index].isRead) {
-        _unreadCount = (_unreadCount - 1).clamp(0, _localNotifications.length);
+      if (!_localNotificationsList[index].isRead) {
+        _unreadCount = (_unreadCount - 1).clamp(0, _localNotificationsList.length);
       }
-      _localNotifications.removeAt(index);
-      
+      _localNotificationsList.removeAt(index);
+
       await _saveToPreferences();
-      _notificationsController.add(_localNotifications);
+      _notificationsController.add(_localNotificationsList);
       _unreadCountController.add(_unreadCount);
     }
   }
 
   /// مسح جميع الإشعارات
   Future<void> clearAllNotifications() async {
-    _localNotifications.clear();
+    _localNotificationsList.clear();
     _unreadCount = 0;
-    
+
     await _saveToPreferences();
-    _notificationsController.add(_localNotifications);
+    _notificationsController.add(_localNotificationsList);
     _unreadCountController.add(_unreadCount);
   }
 
   // Getters للبيانات
-  List<SupervisorNotificationModel> get notifications => List.unmodifiable(_localNotifications);
+  List<SupervisorNotificationModel> get notifications => List.unmodifiable(_localNotificationsList);
   int get unreadCount => _unreadCount;
   Stream<List<SupervisorNotificationModel>> get notificationsStream => _notificationsController.stream;
   Stream<int> get unreadCountStream => _unreadCountController.stream;
