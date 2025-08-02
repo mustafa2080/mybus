@@ -2359,4 +2359,28 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
       ),
     );
   }
+
+  /// الحصول على نص نوع الإشعار
+  String _getNotificationTypeText(NotificationType type) {
+    switch (type) {
+      case NotificationType.general:
+        return 'عام';
+      case NotificationType.emergency:
+        return 'طوارئ';
+      case NotificationType.system:
+        return 'نظام';
+      case NotificationType.student:
+        return 'طالب';
+      case NotificationType.bus:
+        return 'باص';
+      case NotificationType.parent:
+        return 'ولي أمر';
+      case NotificationType.supervisor:
+        return 'مشرف';
+      case NotificationType.admin:
+        return 'إداري';
+      default:
+        return 'غير محدد';
+    }
+  }
 }
