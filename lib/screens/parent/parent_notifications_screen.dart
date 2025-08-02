@@ -48,6 +48,12 @@ class _ParentNotificationsScreenState extends State<ParentNotificationsScreen> {
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
+          // زر إصلاح الإشعارات (للتطوير فقط)
+          IconButton(
+            icon: const Icon(Icons.build),
+            onPressed: _fixNotifications,
+            tooltip: 'إصلاح الإشعارات',
+          ),
           // زر اختبار الإشعارات (للتطوير فقط)
           IconButton(
             icon: const Icon(Icons.bug_report),
@@ -221,16 +227,8 @@ class _ParentNotificationsScreenState extends State<ParentNotificationsScreen> {
               
               const SizedBox(height: 12),
               
-              // Body
-              Text(
-                notification.body.isNotEmpty ? notification.body : 'لا يوجد محتوى للإشعار',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: notification.body.isNotEmpty ? Colors.grey[700] : Colors.red[400],
-                  height: 1.4,
-                  fontStyle: notification.body.isNotEmpty ? FontStyle.normal : FontStyle.italic,
-                ),
-              ),
+              // Body - عرض النص الكامل مع إمكانية التوسع
+              _buildNotificationBody(notification),
               
               // Student info if available
               if (notification.studentName != null) ...[
@@ -256,6 +254,269 @@ class _ParentNotificationsScreenState extends State<ParentNotificationsScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildNotificationBody(NotificationModel notification) {
+    // الحصول على النص الكامل من body أو message أو data
+    String fullText = '';
+
+    if (notification.body.isNotEmpty) {
+      fullText = notification.body;
+    } else if (notification.data != null && notification.data!['message'] != null) {
+      fullText = notification.data!['message'].toString();
+    } else if (notification.data != null && notification.data!['body'] != null) {
+      fullText = notification.data!['body'].toString();
+    } else {
+      fullText = 'لا يوجد محتوى للإشعار';
+    }
+
+    // إذا كان النص قصير، عرضه مباشرة
+    if (fullText.length <= 100) {
+      return Text(
+        fullText,
+        style: TextStyle(
+          fontSize: 14,
+          color: fullText != 'لا يوجد محتوى للإشعار' ? Colors.grey[700] : Colors.red[400],
+          height: 1.4,
+          fontStyle: fullText != 'لا يوجد محتوى للإشعار' ? FontStyle.normal : FontStyle.italic,
+        ),
+      );
+    }
+
+    // إذا كان النص طويل، عرضه مع إمكانية التوسع
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          fullText.length > 100 ? '${fullText.substring(0, 100)}...' : fullText,
+          style: TextStyle(
+            fontSize: 14,
+            color: Colors.grey[700],
+            height: 1.4,
+          ),
+        ),
+        if (fullText.length > 100) ...[
+          const SizedBox(height: 8),
+          GestureDetector(
+            onTap: () => _showFullNotificationDialog(notification, fullText),
+            child: Text(
+              'اضغط لعرض النص الكامل',
+              style: TextStyle(
+                fontSize: 12,
+                color: const Color(0xFF1E88E5),
+                fontWeight: FontWeight.w500,
+                decoration: TextDecoration.underline,
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  void _showFullNotificationDialog(NotificationModel notification, String fullText) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          title: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF1E88E5).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Icon(
+                  Icons.notifications_active,
+                  color: const Color(0xFF1E88E5),
+                  size: 24,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  notification.title,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF2D3748),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // النص الكامل
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey[200]!),
+                  ),
+                  child: Text(
+                    fullText,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      color: Color(0xFF2D3748),
+                      height: 1.6,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                // معلومات إضافية
+                Row(
+                  children: [
+                    Icon(Icons.access_time, size: 16, color: Colors.grey[600]),
+                    const SizedBox(width: 8),
+                    Text(
+                      notification.relativeTime,
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey[600],
+                      ),
+                    ),
+                  ],
+                ),
+
+                if (notification.studentName != null) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(Icons.person, size: 16, color: Colors.grey[600]),
+                      const SizedBox(width: 8),
+                      Text(
+                        'الطالب: ${notification.studentName}',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey[600],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text(
+                'إغلاق',
+                style: TextStyle(
+                  color: Color(0xFF1E88E5),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            if (!notification.isRead)
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _markAsRead(notification);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1E88E5),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+                child: const Text('تحديد كمقروء'),
+              ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _fixNotifications() async {
+    try {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('جاري إصلاح الإشعارات...'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+
+      await _databaseService.fixExistingNotifications();
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('تم إصلاح الإشعارات بنجاح'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ Error fixing notifications: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ في إصلاح الإشعارات'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _markAsRead(NotificationModel notification) async {
+    try {
+      await _databaseService.markNotificationAsRead(notification.id);
+      debugPrint('✅ Notification marked as read: ${notification.id}');
+    } catch (e) {
+      debugPrint('❌ Error marking notification as read: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ في تحديث حالة الإشعار'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _markAllAsRead() async {
+    try {
+      final parentId = _authService.currentUser?.uid ?? '';
+      if (parentId.isEmpty) return;
+
+      await _databaseService.markAllParentNotificationsAsRead(parentId);
+      debugPrint('✅ All notifications marked as read for parent: $parentId');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('تم تحديد جميع الإشعارات كمقروءة'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ Error marking all notifications as read: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ في تحديث الإشعارات'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   Color _getNotificationColor(NotificationType type) {

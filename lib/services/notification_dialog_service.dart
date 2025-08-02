@@ -141,16 +141,16 @@ class NotificationDialogService {
                   color: Colors.white.withOpacity(0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: Text(
-                  body,
-                  style: TextStyle(
-                    fontSize: 15,
-                    color: Colors.white.withOpacity(0.95),
-                    height: 1.5,
+                child: SingleChildScrollView(
+                  child: Text(
+                    body.isNotEmpty ? body : 'لا يوجد محتوى للإشعار',
+                    style: TextStyle(
+                      fontSize: 15,
+                      color: Colors.white.withOpacity(0.95),
+                      height: 1.5,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
-                  textAlign: TextAlign.center,
-                  maxLines: 4,
-                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               
@@ -310,7 +310,11 @@ class NotificationDialogService {
   void _showDialogWithContext(BuildContext context, RemoteMessage message) {
     try {
       final title = message.notification?.title ?? 'إشعار جديد';
-      final body = message.notification?.body ?? '';
+      // محاولة الحصول على النص من مصادر مختلفة
+      String body = message.notification?.body ?? '';
+      if (body.isEmpty) {
+        body = message.data['body'] ?? message.data['message'] ?? '';
+      }
       final notificationType = message.data['type'] ?? 'general';
 
       // تشغيل اهتزاز للفت الانتباه

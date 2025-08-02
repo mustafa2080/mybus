@@ -64,7 +64,7 @@ class NotificationModel {
     return NotificationModel(
       id: map['id'] ?? DateTime.now().millisecondsSinceEpoch.toString(),
       title: map['title'] ?? '',
-      body: map['body'] ?? map['message'] ?? '', // Support both 'body' and 'message'
+      body: _extractBody(map), // استخراج النص من مصادر متعددة
       recipientId: map['recipientId'] ?? map['userId'] ?? '', // Support both 'recipientId' and 'userId'
       studentId: map['studentId'],
       studentName: map['studentName'],
@@ -75,6 +75,31 @@ class NotificationModel {
       isRead: map['isRead'] ?? false,
       data: map['data'] != null ? Map<String, dynamic>.from(map['data']) : null,
     );
+  }
+
+  // Helper method to extract body text from multiple sources
+  static String _extractBody(Map<String, dynamic> map) {
+    // محاولة الحصول على النص من مصادر مختلفة
+    String body = '';
+
+    // أولاً: محاولة الحصول من body
+    if (map['body'] != null && map['body'].toString().isNotEmpty) {
+      body = map['body'].toString();
+    }
+    // ثانياً: محاولة الحصول من message
+    else if (map['message'] != null && map['message'].toString().isNotEmpty) {
+      body = map['message'].toString();
+    }
+    // ثالثاً: محاولة الحصول من data.body
+    else if (map['data'] != null && map['data']['body'] != null) {
+      body = map['data']['body'].toString();
+    }
+    // رابعاً: محاولة الحصول من data.message
+    else if (map['data'] != null && map['data']['message'] != null) {
+      body = map['data']['message'].toString();
+    }
+
+    return body;
   }
 
   // Helper method to parse NotificationType from string

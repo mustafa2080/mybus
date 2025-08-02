@@ -2370,6 +2370,11 @@ class DatabaseService {
     }
   }
 
+  // Mark all parent notifications as read (alias for markAllNotificationsAsRead)
+  Future<void> markAllParentNotificationsAsRead(String parentId) async {
+    return markAllNotificationsAsRead(parentId);
+  }
+
   // Get supervisor notifications
   Stream<List<NotificationModel>> getSupervisorNotifications(String supervisorId) {
     if (supervisorId.isEmpty) return Stream.value([]);
@@ -4904,6 +4909,52 @@ class DatabaseService {
     } catch (e) {
       debugPrint('❌ Error sending notification to parent: $e');
       throw Exception('فشل في إرسال الإشعار لولي الأمر: $e');
+    }
+  }
+
+  /// إصلاح الإشعارات الموجودة لضمان وجود النص في حقل body
+  Future<void> fixExistingNotifications() async {
+    try {
+      debugPrint('🔧 Starting to fix existing notifications...');
+
+      final snapshot = await _firestore
+          .collection('notifications')
+          .get();
+
+      final batch = _firestore.batch();
+      int fixedCount = 0;
+
+      for (final doc in snapshot.docs) {
+        final data = doc.data();
+        final currentBody = data['body'] ?? '';
+        final message = data['message'] ?? '';
+
+        // إذا كان body فارغ ولكن message موجود
+        if (currentBody.isEmpty && message.isNotEmpty) {
+          batch.update(doc.reference, {
+            'body': message,
+          });
+          fixedCount++;
+          debugPrint('🔧 Fixed notification ${doc.id}: moved message to body');
+        }
+        // إذا كان body موجود ولكن message أيضاً موجود ومختلف
+        else if (currentBody.isNotEmpty && message.isNotEmpty && currentBody != message) {
+          // نحتفظ بـ body الحالي ونحذف message لتجنب التضارب
+          batch.update(doc.reference, {
+            'message': FieldValue.delete(),
+          });
+          debugPrint('🔧 Cleaned notification ${doc.id}: removed duplicate message field');
+        }
+      }
+
+      if (fixedCount > 0) {
+        await batch.commit();
+        debugPrint('✅ Fixed $fixedCount notifications successfully');
+      } else {
+        debugPrint('✅ No notifications needed fixing');
+      }
+    } catch (e) {
+      debugPrint('❌ Error fixing notifications: $e');
     }
   }
 
