@@ -1,3 +1,28 @@
+// أنواع النسخ الاحتياطية
+enum BackupType {
+  manual,
+  automatic,
+  scheduled,
+  emergency,
+}
+
+// حالات النسخة الاحتياطية
+enum BackupStatus {
+  pending,
+  inProgress,
+  completed,
+  failed,
+  corrupted,
+}
+
+// مستويات الأولوية
+enum BackupPriority {
+  low,
+  normal,
+  high,
+  critical,
+}
+
 /// إعدادات النسخ الاحتياطي
 class BackupConfig {
   // إعدادات النسخ التلقائي
@@ -48,30 +73,7 @@ class BackupConfig {
   static const String backupCollectionName = 'backups';
   static const String backupMetadataCollection = 'backup_metadata';
   
-  // أنواع النسخ الاحتياطية
-  enum BackupType {
-    manual,
-    automatic,
-    scheduled,
-    emergency,
-  }
-  
-  // حالات النسخة الاحتياطية
-  enum BackupStatus {
-    pending,
-    inProgress,
-    completed,
-    failed,
-    corrupted,
-  }
-  
-  // مستويات الأولوية
-  enum BackupPriority {
-    low,
-    normal,
-    high,
-    critical,
-  }
+
   
   /// الحصول على وصف نوع النسخة
   static String getBackupTypeDescription(BackupType type) {

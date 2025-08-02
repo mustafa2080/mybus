@@ -29,6 +29,9 @@ class DatabaseService {
   final RateLimitService _rateLimitService = RateLimitService();
   final CacheService _cacheService = CacheService();
 
+  // Getter للوصول إلى Firestore من خارج الكلاس
+  FirebaseFirestore get firestore => _firestore;
+
   // Initialize Firestore settings for better performance
   DatabaseService() {
     _initializeFirestore();
