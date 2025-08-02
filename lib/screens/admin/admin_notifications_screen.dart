@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import '../../services/database_service.dart';
 import '../../services/auth_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/admin_notification_service.dart';
+import '../../services/fcm_service.dart';
 import '../../models/notification_model.dart';
 import '../../models/absence_model.dart';
 import '../../models/complaint_model.dart';
@@ -49,6 +51,9 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
 
         // تحديث الواجهة بعد التهيئة
         setState(() {});
+
+        // إضافة إشعارات تجريبية إذا لم تكن موجودة
+        await _addTestNotificationsIfNeeded();
       }
     } catch (e) {
       debugPrint('❌ خطأ في تهيئة خدمة إشعارات الأدمن: $e');
@@ -60,6 +65,24 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
       } catch (testError) {
         debugPrint('❌ فشل في إضافة الإشعارات التجريبية: $testError');
       }
+    }
+  }
+
+  /// إضافة إشعارات تجريبية إذا لم تكن موجودة
+  Future<void> _addTestNotificationsIfNeeded() async {
+    try {
+      // انتظار قليل للتأكد من اكتمال التهيئة
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      if (_adminNotificationService.notifications.isEmpty) {
+        debugPrint('📝 لا توجد إشعارات، سيتم إضافة إشعارات تجريبية...');
+        await _adminNotificationService.addTestNotifications();
+        debugPrint('✅ تم إضافة إشعارات تجريبية تلقائياً');
+      } else {
+        debugPrint('📊 يوجد ${_adminNotificationService.notifications.length} إشعار محفوظ');
+      }
+    } catch (e) {
+      debugPrint('❌ خطأ في إضافة الإشعارات التجريبية: $e');
     }
   }
 
@@ -114,8 +137,43 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
           indicatorColor: Colors.white,
           isScrollable: true,
           tabs: [
-            const Tab(
-              icon: Icon(Icons.notifications_active, size: 18),
+            Tab(
+              icon: Stack(
+                children: [
+                  const Icon(Icons.notifications_active, size: 18),
+                  StreamBuilder<int>(
+                    stream: _adminNotificationService.unreadCountStream,
+                    builder: (context, snapshot) {
+                      final count = snapshot.data ?? 0;
+                      if (count == 0) return const SizedBox.shrink();
+                      return Positioned(
+                        right: 0,
+                        top: 0,
+                        child: Container(
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(
+                            color: Colors.red,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          constraints: const BoxConstraints(
+                            minWidth: 12,
+                            minHeight: 12,
+                          ),
+                          child: Text(
+                            count > 99 ? '99+' : count.toString(),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 8,
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
               text: 'الإشعارات العامة',
             ),
             const Tab(
@@ -132,7 +190,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildGeneralNotifications(),
+          _buildAdminNotifications(), // استخدام إشعارات الأدمن بدلاً من العامة
           _buildComplaints(),
           _buildStatistics(),
         ],
@@ -2005,9 +2063,17 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
       await _adminNotificationService.initialize();
       debugPrint('✅ Service re-initialized');
 
-      // إضافة إشعار تجريبي
+      // إضافة إشعارات تجريبية
       await _adminNotificationService.addTestNotifications();
       debugPrint('✅ Test notifications added');
+
+      // إرسال إشعار FCM تجريبي أيضاً
+      final fcmService = Provider.of<FCMService>(context, listen: false);
+      await fcmService.sendTestNotification(
+        title: 'إشعار تجريبي من التشخيص',
+        body: 'هذا إشعار تجريبي للتأكد من عمل النظام',
+      );
+      debugPrint('✅ FCM test notification sent');
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
