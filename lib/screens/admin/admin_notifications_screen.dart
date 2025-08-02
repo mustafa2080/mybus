@@ -112,22 +112,10 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
               icon: Stack(
                 children: [
                   const Icon(Icons.notifications_active, size: 18),
-                  StreamBuilder<List<NotificationModel>>(
-                    stream: _notificationService.getNotificationsStream(),
+                  StreamBuilder<int>(
+                    stream: _adminNotificationService.unreadCountStream,
                     builder: (context, snapshot) {
-                      final allNotifications = snapshot.data ?? [];
-                      // حساب عدد الإشعارات الأساسية غير المقروءة
-                      final unreadAdminNotifications = allNotifications.where((notification) {
-                        return !notification.isRead && (
-                          notification.type == 'admin' ||
-                          notification.type == 'emergency' ||
-                          notification.type == 'system' ||
-                          notification.type == 'absence' ||
-                          notification.type == 'complaint' ||
-                          notification.type == 'bus_status' ||
-                          notification.type == 'student_status'
-                        );
-                      }).length;
+                      final unreadAdminNotifications = snapshot.data ?? 0;
 
                       if (unreadAdminNotifications == 0) return const SizedBox.shrink();
                       return Positioned(
@@ -2070,7 +2058,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
                 Text('خطأ في تحميل الإشعارات: ${snapshot.error}'),
                 const SizedBox(height: 16),
                 ElevatedButton.icon(
-                  onPressed: () => _createTestBasicNotifications(),
+                  onPressed: () => _debugAdminNotifications(),
                   icon: const Icon(Icons.refresh),
                   label: const Text('إنشاء إشعارات تجريبية'),
                 ),
@@ -2093,7 +2081,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
               const SizedBox(height: 20),
               // إضافة زر لإنشاء إشعارات تجريبية
               ElevatedButton.icon(
-                onPressed: () => _createTestBasicNotifications(),
+                onPressed: () => _debugAdminNotifications(),
                 icon: const Icon(Icons.add_circle),
                 label: const Text('إنشاء إشعارات أساسية تجريبية'),
                 style: ElevatedButton.styleFrom(
@@ -2119,8 +2107,8 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
 
   /// بناء الإشعارات الأساسية الحقيقية للأدمن
   Widget _buildRealAdminNotifications() {
-    return StreamBuilder<List<NotificationModel>>(
-      stream: _notificationService.getNotificationsStream(),
+    return StreamBuilder<List<AdminNotificationModel>>(
+      stream: _adminNotificationService.notificationsStream,
       builder: (context, snapshot) {
         debugPrint('🔍 RealAdminNotifications - Connection State: ${snapshot.connectionState}');
         debugPrint('🔍 RealAdminNotifications - Has Error: ${snapshot.hasError}');
@@ -2153,21 +2141,8 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
           );
         }
 
-        final allNotifications = snapshot.data ?? [];
-
-        // فلترة الإشعارات لعرض الإشعارات الأساسية للأدمن فقط
-        final adminNotifications = allNotifications.where((notification) {
-          // عرض الإشعارات المهمة للأدمن فقط
-          return notification.type == 'admin' ||
-                 notification.type == 'emergency' ||
-                 notification.type == 'system' ||
-                 notification.type == 'absence' ||
-                 notification.type == 'complaint' ||
-                 notification.type == 'bus_status' ||
-                 notification.type == 'student_status';
-        }).toList();
-
-        debugPrint('📊 Filtered ${adminNotifications.length} admin notifications from ${allNotifications.length} total');
+        final adminNotifications = snapshot.data ?? [];
+        debugPrint('📊 Loaded ${adminNotifications.length} admin notifications');
 
         if (adminNotifications.isEmpty) {
           return _buildEmptyState(
@@ -2182,7 +2157,7 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
           itemCount: adminNotifications.length,
           itemBuilder: (context, index) {
             final notification = adminNotifications[index];
-            return _buildBasicNotificationCard(notification);
+            return _buildAdminNotificationCard(notification);
           },
         );
       },
@@ -2234,237 +2209,9 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
     }
   }
 
-  /// بناء كارد الإشعار الأساسي
-  Widget _buildBasicNotificationCard(NotificationModel notification) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 12),
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () => _handleBasicNotificationTap(notification),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // العنوان والوقت
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // أيقونة نوع الإشعار
-                  Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: _getNotificationColor(notification.type).withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Icon(
-                      _getNotificationIcon(notification.type),
-                      color: _getNotificationColor(notification.type),
-                      size: 20,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  // العنوان والمحتوى
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          notification.title,
-                          style: const TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          notification.body,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey[600],
-                          ),
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ),
-                  ),
-                  // الوقت
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        DateFormat('HH:mm').format(notification.timestamp),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey[500],
-                        ),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        DateFormat('dd/MM').format(notification.timestamp),
-                        style: TextStyle(
-                          fontSize: 10,
-                          color: Colors.grey[400],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-              // نوع الإشعار
-              if (notification.type.isNotEmpty) ...[
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: _getNotificationColor(notification.type).withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: _getNotificationColor(notification.type).withOpacity(0.3),
-                    ),
-                  ),
-                  child: Text(
-                    _getNotificationTypeText(notification.type),
-                    style: TextStyle(
-                      fontSize: 10,
-                      color: _getNotificationColor(notification.type),
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 
-  /// معالجة النقر على الإشعار الأساسي
-  void _handleBasicNotificationTap(NotificationModel notification) {
-    debugPrint('🔔 تم النقر على إشعار: ${notification.title}');
 
-    // يمكن إضافة منطق للتنقل حسب نوع الإشعار
-    switch (notification.type) {
-      case 'absence':
-        // التنقل لصفحة طلبات الغياب
-        break;
-      case 'complaint':
-        // التنقل لصفحة الشكاوى
-        break;
-      case 'emergency':
-        // عرض تفاصيل الطوارئ
-        break;
-      default:
-        // عرض تفاصيل الإشعار
-        _showNotificationDetails(notification);
-    }
-  }
 
-  /// عرض تفاصيل الإشعار
-  void _showNotificationDetails(NotificationModel notification) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(notification.title),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(notification.body),
-            const SizedBox(height: 16),
-            Text(
-              'الوقت: ${DateFormat('dd/MM/yyyy HH:mm').format(notification.timestamp)}',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-              ),
-            ),
-            Text(
-              'النوع: ${_getNotificationTypeText(notification.type)}',
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey[600],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('إغلاق'),
-          ),
-        ],
-      ),
-    );
-  }
 
-  /// الحصول على أيقونة نوع الإشعار
-  IconData _getNotificationIcon(String type) {
-    switch (type) {
-      case 'admin':
-        return Icons.admin_panel_settings;
-      case 'emergency':
-        return Icons.emergency;
-      case 'system':
-        return Icons.settings;
-      case 'absence':
-        return Icons.person_off;
-      case 'complaint':
-        return Icons.report_problem;
-      case 'bus_status':
-        return Icons.directions_bus;
-      case 'student_status':
-        return Icons.school;
-      default:
-        return Icons.notifications;
-    }
-  }
 
-  /// الحصول على لون نوع الإشعار
-  Color _getNotificationColor(String type) {
-    switch (type) {
-      case 'admin':
-        return Colors.blue;
-      case 'emergency':
-        return Colors.red;
-      case 'system':
-        return Colors.orange;
-      case 'absence':
-        return Colors.purple;
-      case 'complaint':
-        return Colors.amber;
-      case 'bus_status':
-        return Colors.green;
-      case 'student_status':
-        return Colors.teal;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  /// الحصول على نص نوع الإشعار
-  String _getNotificationTypeText(String type) {
-    switch (type) {
-      case 'admin':
-        return 'إداري';
-      case 'emergency':
-        return 'طوارئ';
-      case 'system':
-        return 'نظام';
-      case 'absence':
-        return 'غياب';
-      case 'complaint':
-        return 'شكوى';
-      case 'bus_status':
-        return 'حالة الباص';
-      case 'student_status':
-        return 'حالة الطالب';
-      default:
-        return 'عام';
-    }
-  }
 }
