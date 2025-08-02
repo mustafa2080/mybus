@@ -216,7 +216,7 @@ class FCMService {
     final body = message.notification?.body ?? '';
     final channelId = message.data['channelId'] ?? 'mybus_notifications';
 
-    await _showLocalNotification(
+    await _displayLocalNotification(
       title: title,
       body: body,
       data: Map<String, String>.from(message.data),
@@ -255,12 +255,12 @@ class FCMService {
       } else {
         // للمستخدمين العاديين، عرض الإشعار العادي
         debugPrint('📱 Showing regular notification for user type: $userType');
-        await _showLocalNotification(message);
+        await _showNotificationFromMessage(message);
       }
     } catch (e) {
       debugPrint('❌ Error checking user type: $e');
       // في حالة الخطأ، عرض الإشعار العادي
-      await _showLocalNotification(message);
+      await _showNotificationFromMessage(message);
     }
   }
 
@@ -272,60 +272,23 @@ class FCMService {
     _handleNotificationNavigation(message);
   }
 
-  /// عرض إشعار محلي
-  Future<void> _showLocalNotification(RemoteMessage message) async {
+  /// عرض إشعار محلي من RemoteMessage
+  Future<void> _showNotificationFromMessage(RemoteMessage message) async {
     try {
       final String channelId = message.data['channelId'] ?? 'mybus_notifications';
       final String title = message.notification?.title ?? 'إشعار جديد';
       final String body = message.notification?.body ?? '';
-      
-      final AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-        channelId,
-        _getChannelName(channelId),
-        channelDescription: _getChannelDescription(channelId),
-        importance: Importance.max,
-        priority: Priority.high,
-        sound: const RawResourceAndroidNotificationSound('notification_sound'),
-        enableVibration: true,
-        playSound: true,
-        icon: '@drawable/ic_notification',
-        color: const Color(0xFFFF6B6B),
-        showWhen: true,
-        when: DateTime.now().millisecondsSinceEpoch,
-        autoCancel: true,
-        ongoing: false,
-        silent: false,
-        channelShowBadge: true,
-        onlyAlertOnce: false,
-        visibility: NotificationVisibility.public,
-        ticker: title,
+
+      await _displayLocalNotification(
+        title: title,
+        body: body,
+        data: Map<String, String>.from(message.data),
+        channelId: channelId,
       );
 
-      const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
-        presentAlert: true,
-        presentBadge: true,
-        presentSound: true,
-        sound: 'notification_sound.mp3',
-      );
-
-      final NotificationDetails details = NotificationDetails(
-        android: androidDetails,
-        iOS: iosDetails,
-      );
-
-      final int notificationId = DateTime.now().millisecondsSinceEpoch.remainder(100000);
-      
-      await _localNotifications.show(
-        notificationId,
-        title,
-        body,
-        details,
-        payload: jsonEncode(message.data),
-      );
-
-      debugPrint('✅ Local notification shown: $title');
+      debugPrint('✅ Notification from message shown: $title');
     } catch (e) {
-      debugPrint('❌ Error showing local notification: $e');
+      debugPrint('❌ Error showing notification from message: $e');
     }
   }
 
@@ -677,7 +640,7 @@ class FCMService {
       });
 
       // عرض إشعار محلي فوري (يظهر خارج التطبيق)
-      await _showLocalNotification(
+      await _displayLocalNotification(
         title: title,
         body: body,
         data: data,
@@ -691,7 +654,7 @@ class FCMService {
   }
 
   /// عرض إشعار محلي (يظهر خارج التطبيق)
-  Future<void> _showLocalNotification({
+  Future<void> _displayLocalNotification({
     required String title,
     required String body,
     required Map<String, String> data,
@@ -711,7 +674,7 @@ class FCMService {
         sound: const RawResourceAndroidNotificationSound('notification_sound'),
         enableVibration: true,
         playSound: true,
-        showBadge: true,
+        channelShowBadge: true, // استخدام channelShowBadge بدلاً من showBadge
         icon: '@drawable/ic_notification',
       );
 
