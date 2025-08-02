@@ -211,20 +211,19 @@ class FCMService {
     debugPrint('📱 Body: ${message.notification?.body}');
     debugPrint('📱 Data: ${message.data}');
 
-    // التحقق من المستخدم المستهدف قبل عرض الإشعار
-    final targetUserId = message.data['userId'] ?? message.data['recipientId'];
-    final currentUser = FirebaseAuth.instance.currentUser;
+    // عرض الإشعار مباشرة في المقدمة
+    final title = message.notification?.title ?? 'إشعار جديد';
+    final body = message.notification?.body ?? '';
+    final channelId = message.data['channelId'] ?? 'mybus_notifications';
 
-    if (targetUserId != null && currentUser?.uid == targetUserId) {
-      // عرض الإشعار فقط إذا كان المستخدم الحالي هو المستهدف
-      debugPrint('✅ Showing notification for target user: $targetUserId');
+    await _showLocalNotification(
+      title: title,
+      body: body,
+      data: Map<String, String>.from(message.data),
+      channelId: channelId,
+    );
 
-      // التحقق من نوع المستخدم
-      await _checkUserTypeAndShowNotification(message);
-    } else {
-      debugPrint('⚠️ Notification not for current user (${currentUser?.uid}), target: $targetUserId');
-      debugPrint('📤 Notification skipped - not for current user');
-    }
+    debugPrint('✅ Foreground notification shown');
   }
 
   /// التحقق من نوع المستخدم وعرض الإشعار المناسب
@@ -666,9 +665,6 @@ class FCMService {
     required String channelId,
   }) async {
     try {
-      // في بيئة الإنتاج، هذا يجب أن يتم عبر الخادم
-      // لكن للاختبار، سنحفظ في قاعدة البيانات وسنعرض إشعار محلي
-
       // حفظ الإشعار في قاعدة البيانات
       await _firestore.collection('notifications').add({
         'title': title,
@@ -680,9 +676,71 @@ class FCMService {
         'sent': true,
       });
 
-      debugPrint('📤 Push notification prepared for token: ${token.substring(0, 20)}...');
+      // عرض إشعار محلي فوري (يظهر خارج التطبيق)
+      await _showLocalNotification(
+        title: title,
+        body: body,
+        data: data,
+        channelId: channelId,
+      );
+
+      debugPrint('📤 Local notification shown for token: ${token.substring(0, 20)}...');
     } catch (e) {
       debugPrint('❌ Error sending push notification: $e');
+    }
+  }
+
+  /// عرض إشعار محلي (يظهر خارج التطبيق)
+  Future<void> _showLocalNotification({
+    required String title,
+    required String body,
+    required Map<String, String> data,
+    required String channelId,
+  }) async {
+    try {
+      // إنشاء معرف فريد للإشعار
+      final notificationId = DateTime.now().millisecondsSinceEpoch ~/ 1000;
+
+      // إعدادات Android
+      final androidDetails = AndroidNotificationDetails(
+        channelId,
+        _getChannelName(channelId),
+        channelDescription: _getChannelDescription(channelId),
+        importance: Importance.max,
+        priority: Priority.high,
+        sound: const RawResourceAndroidNotificationSound('notification_sound'),
+        enableVibration: true,
+        playSound: true,
+        showBadge: true,
+        icon: '@drawable/ic_notification',
+      );
+
+      // إعدادات iOS
+      const iosDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+        sound: 'default',
+      );
+
+      // إعدادات الإشعار
+      final notificationDetails = NotificationDetails(
+        android: androidDetails,
+        iOS: iosDetails,
+      );
+
+      // عرض الإشعار
+      await _localNotifications.show(
+        notificationId,
+        title,
+        body,
+        notificationDetails,
+        payload: jsonEncode(data),
+      );
+
+      debugPrint('✅ Local notification shown: $title');
+    } catch (e) {
+      debugPrint('❌ Error showing local notification: $e');
     }
   }
 
