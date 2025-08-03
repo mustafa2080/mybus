@@ -593,7 +593,7 @@ class AdminNotificationService {
             'notificationId': notification.id,
             'timestamp': notification.timestamp.toIso8601String(),
             'priority': notification.priority.toString(),
-            'category': notification.category,
+            'type': notification.type,
             'action': 'open_admin_notifications',
           },
         );
