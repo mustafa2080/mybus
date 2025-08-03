@@ -6,9 +6,11 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/admin_notification_model.dart';
 import '../widgets/admin_notification_dialog.dart';
 import '../models/notification_model.dart';
+import 'fcm_http_service.dart';
 
 /// خدمة الإشعارات المتقدمة للأدمن
 /// تعرض dialog جميل ثم تحفظ في قائمة الإشعارات المحلية
@@ -271,41 +273,78 @@ class AdminNotificationService {
     }
   }
 
-  /// عرض إشعار في شريط الإشعارات
+  /// عرض إشعار في شريط الإشعارات (محسن للظهور خارج التطبيق)
   Future<void> _showLocalNotification(AdminNotificationModel notification) async {
-    const androidDetails = AndroidNotificationDetails(
-      'admin_notifications',
-      'إشعارات الأدمن',
-      channelDescription: 'إشعارات خاصة بالأدمن',
-      importance: Importance.max,
-      priority: Priority.high,
-      sound: RawResourceAndroidNotificationSound('notification_sound'),
-      enableVibration: true,
-      playSound: true,
-      showWhen: true,
-      when: null,
-      icon: '@mipmap/ic_launcher',
-    );
+    try {
+      final int notificationId = DateTime.now().millisecondsSinceEpoch.remainder(100000);
 
-    const iosDetails = DarwinNotificationDetails(
-      presentAlert: true,
-      presentBadge: true,
-      presentSound: true,
-      sound: 'notification_sound.mp3',
-    );
+      // إعدادات Android محسنة للظهور خارج التطبيق
+      final androidDetails = AndroidNotificationDetails(
+        'admin_notifications',
+        'إشعارات الأدمن',
+        channelDescription: 'إشعارات خاصة بالأدمن',
+        importance: Importance.max,
+        priority: Priority.high,
+        sound: const RawResourceAndroidNotificationSound('notification_sound'),
+        enableVibration: true,
+        playSound: true,
+        channelShowBadge: true,
+        icon: '@mipmap/launcher_icon', // استخدام أيقونة التطبيق الرئيسية
+        largeIcon: const DrawableResourceAndroidBitmap('@mipmap/launcher_icon'),
+        color: const Color(0xFF1E88E5),
+        showWhen: true,
+        when: DateTime.now().millisecondsSinceEpoch,
+        autoCancel: true,
+        ongoing: false,
+        silent: false,
+        onlyAlertOnce: false,
+        visibility: NotificationVisibility.public,
+        ticker: '${notification.title} - ${notification.body}',
+        groupKey: 'com.mybus.admin_notifications',
+        // إضافة نمط النص الكبير
+        styleInformation: BigTextStyleInformation(
+          notification.body,
+          htmlFormatBigText: false,
+          contentTitle: notification.title,
+          htmlFormatContentTitle: false,
+          summaryText: 'كيدز باص - إدارة',
+          htmlFormatSummaryText: false,
+        ),
+        // إعدادات إضافية للظهور
+        category: AndroidNotificationCategory.message,
+        setAsGroupSummary: false,
+        groupAlertBehavior: GroupAlertBehavior.all,
+      );
 
-    const details = NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
-    );
+      // إعدادات iOS محسنة
+      const iosDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+        sound: 'notification_sound.mp3',
+        subtitle: 'كيدز باص - إدارة',
+        threadIdentifier: 'admin_notifications',
+        categoryIdentifier: 'admin_category',
+        badgeNumber: 1,
+      );
 
-    await _flutterLocalNotifications.show(
-      notification.id.hashCode,
-      notification.title,
-      notification.body,
-      details,
-      payload: jsonEncode(notification.toMap()),
-    );
+      final details = NotificationDetails(
+        android: androidDetails,
+        iOS: iosDetails,
+      );
+
+      await _flutterLocalNotifications.show(
+        notificationId,
+        notification.title,
+        notification.body,
+        details,
+        payload: jsonEncode(notification.toMap()),
+      );
+
+      debugPrint('✅ Enhanced admin notification shown: ${notification.title}');
+    } catch (e) {
+      debugPrint('❌ Error showing enhanced admin notification: $e');
+    }
   }
 
   /// معالجة النقر على الإشعار
@@ -515,10 +554,99 @@ class AdminNotificationService {
     debugPrint('✅ تم إضافة ${testNotifications.length} إشعار تجريبي');
   }
 
-  /// إضافة إشعار جديد يدوياً
+  /// إضافة إشعار جديد يدوياً (محسن للظهور خارج التطبيق)
   Future<void> addNotification(AdminNotificationModel notification) async {
     await _saveNotificationLocally(notification);
-    debugPrint('✅ تم إضافة إشعار جديد: ${notification.title}');
+
+    // عرض الإشعار في شريط الإشعارات (محسن)
+    await _showLocalNotification(notification);
+
+    // إرسال إشعار FCM حقيقي للأدمن
+    await _sendRealFCMNotification(notification);
+
+    debugPrint('✅ تم إضافة إشعار جديد محسن: ${notification.title}');
+  }
+
+  /// إرسال إشعار FCM حقيقي للأدمن
+  Future<void> _sendRealFCMNotification(AdminNotificationModel notification) async {
+    try {
+      // استخدام FCMHttpService لإرسال إشعار حقيقي
+      final fcmHttpService = FCMHttpService();
+
+      // الحصول على جميع الأدمن
+      final adminUsers = await _getAdminUsers();
+
+      if (adminUsers.isEmpty) {
+        debugPrint('⚠️ No admin users found for FCM notification');
+        return;
+      }
+
+      // إرسال الإشعار لجميع الأدمن
+      for (final adminId in adminUsers) {
+        await fcmHttpService.sendNotificationToUser(
+          userId: adminId,
+          title: notification.title,
+          body: notification.body,
+          channelId: 'admin_notifications',
+          data: {
+            'type': 'admin_notification',
+            'notificationId': notification.id,
+            'timestamp': notification.timestamp.toIso8601String(),
+            'priority': notification.priority.toString(),
+            'category': notification.category,
+            'action': 'open_admin_notifications',
+          },
+        );
+      }
+
+      debugPrint('✅ Real FCM notification sent to ${adminUsers.length} admins');
+    } catch (e) {
+      debugPrint('❌ Error sending real FCM notification: $e');
+    }
+  }
+
+  /// الحصول على قائمة معرفات المستخدمين الأدمن
+  Future<List<String>> _getAdminUsers() async {
+    try {
+      final usersQuery = await FirebaseFirestore.instance
+          .collection('users')
+          .where('role', isEqualTo: 'admin')
+          .get();
+
+      return usersQuery.docs.map((doc) => doc.id).toList();
+    } catch (e) {
+      debugPrint('❌ Error getting admin users: $e');
+      return [];
+    }
+  }
+
+  /// إرسال إشعار اختبار حقيقي للأدمن
+  Future<void> sendRealTestNotification() async {
+    try {
+      debugPrint('🧪 Sending real test notification to admins...');
+
+      final fcmHttpService = FCMHttpService();
+
+      // إرسال إشعار اختبار حقيقي للمستخدم الحالي
+      final success = await fcmHttpService.sendInstantTestNotification(
+        title: '🧪 إشعار اختبار حقيقي للأدمن',
+        body: 'هذا إشعار حقيقي يجب أن يظهر في شريط الإشعارات حتى لو كان التطبيق مغلق أو في الخلفية',
+        channelId: 'admin_notifications',
+        data: {
+          'type': 'admin_test',
+          'action': 'open_admin_notifications',
+          'priority': 'high',
+        },
+      );
+
+      if (success) {
+        debugPrint('✅ Real test notification sent successfully');
+      } else {
+        debugPrint('❌ Failed to send real test notification');
+      }
+    } catch (e) {
+      debugPrint('❌ Error sending real test notification: $e');
+    }
   }
 
   // Getters للبيانات

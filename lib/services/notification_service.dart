@@ -59,8 +59,8 @@ class NotificationService {
       // Handle foreground messages
       FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
 
-      // Handle background messages
-      FirebaseMessaging.onBackgroundMessage(_handleBackgroundMessage);
+      // Background messages are handled by the global handler in main.dart
+      // FirebaseMessaging.onBackgroundMessage can only be called once globally
     } catch (e) {
       debugPrint('Error initializing notifications: $e');
     }

@@ -1616,6 +1616,16 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
                               foregroundColor: Colors.white,
                             ),
                           ),
+                          const SizedBox(width: 12),
+                          ElevatedButton.icon(
+                            onPressed: () => _sendRealTestNotification(),
+                            icon: const Icon(Icons.notification_important),
+                            label: const Text('إشعار حقيقي'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              foregroundColor: Colors.white,
+                            ),
+                          ),
                         ],
                       ),
                     ],
@@ -2101,6 +2111,54 @@ class _AdminNotificationsScreenState extends State<AdminNotificationsScreen>
         );
       },
     );
+  }
+
+  /// إرسال إشعار اختبار حقيقي
+  Future<void> _sendRealTestNotification() async {
+    try {
+      debugPrint('🧪 Sending real test notification...');
+
+      // إرسال إشعار حقيقي عبر AdminNotificationService
+      await _adminNotificationService.sendRealTestNotification();
+
+      // إرسال إشعار حقيقي عبر FCMHttpService أيضاً
+      final fcmHttpService = FCMHttpService();
+      await fcmHttpService.sendInstantTestNotification(
+        title: '🧪 إشعار اختبار حقيقي من الأدمن',
+        body: 'هذا إشعار حقيقي يجب أن يظهر في شريط الإشعارات حتى لو كان التطبيق مغلق أو في الخلفية',
+        channelId: 'admin_notifications',
+        data: {
+          'type': 'admin_real_test',
+          'action': 'open_admin_notifications',
+          'priority': 'high',
+          'source': 'admin_screen',
+        },
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم إرسال إشعار حقيقي - تحقق من شريط الإشعارات'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 3),
+          ),
+        );
+      }
+
+      debugPrint('✅ Real test notification sent successfully');
+    } catch (e) {
+      debugPrint('❌ Error sending real test notification: $e');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('خطأ في إرسال الإشعار الحقيقي: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    }
   }
 
   /// تشخيص خدمة إشعارات الأدمن
