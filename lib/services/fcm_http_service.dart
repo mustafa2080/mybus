@@ -222,7 +222,7 @@ class FCMHttpService {
   }) async {
     try {
       // في بيئة التطوير، إرسال إشعار محلي + محاولة FCM حقيقي
-      if (_serverKey == 'YOUR_SERVER_KEY_HERE') {
+      if (_serviceAccountKey.contains('YOUR_PRIVATE_KEY_ID')) {
         debugPrint('🔥 FCM HTTP Service - Development Mode');
         debugPrint('📱 Sending local notification + attempting real FCM');
         debugPrint('🎯 Target user: ${data['userId'] ?? data['recipientId']}');
@@ -262,10 +262,9 @@ class FCMHttpService {
       }
 
       // في بيئة الإنتاج، إرسال حقيقي
-      final headers = {
-        'Content-Type': 'application/json',
-        'Authorization': 'key=$_serverKey',
-      };
+      // ملاحظة: يجب استخدام OAuth 2.0 token مع HTTP v1 API
+      debugPrint('⚠️ Production FCM requires OAuth 2.0 token - use Cloud Functions instead');
+      return false;
 
       // إعداد الإشعار مع الصورة والأيقونة
       final notificationPayload = {
