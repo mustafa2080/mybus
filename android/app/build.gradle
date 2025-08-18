@@ -7,7 +7,7 @@ plugins {
 
 android {
     namespace = "com.example.mybus"
-    compileSdk = 34
+    compileSdk = 33
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
@@ -52,7 +52,7 @@ android {
     defaultConfig {
         applicationId = "com.example.mybus"
         minSdk = 23
-        targetSdk = 34
+        targetSdk = 33
         versionCode = 1
         versionName = "1.0"
         multiDexEnabled = true
