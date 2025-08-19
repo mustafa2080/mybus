@@ -1,6 +1,15 @@
 buildscript {
     ext.kotlin_version = '1.9.10'
     repositories {
+        // إضافة مرايا محلية وبديلة أولاً
+        maven { url 'https://maven.aliyun.com/repository/google' }
+        maven { url 'https://maven.aliyun.com/repository/central' }
+        maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
+        maven { url 'https://repo1.maven.org/maven2/' }
+        maven { url 'https://jcenter.bintray.com/' }
+        maven { url 'https://jitpack.io' }
+
+        // المستودعات الرسمية كـ fallback
         google {
             content {
                 includeGroupByRegex("com\\.android.*")
@@ -9,12 +18,7 @@ buildscript {
             }
         }
         mavenCentral()
-        // إضافة gradlePluginPortal للاستقرار
         gradlePluginPortal()
-        // إضافة JitPack كـ fallback
-        maven { url 'https://jitpack.io' }
-        // إضافة Maven Central mirror
-        maven { url 'https://repo1.maven.org/maven2/' }
     }
 
     dependencies {
@@ -34,6 +38,15 @@ buildscript {
 
 allprojects {
     repositories {
+        // إضافة مرايا محلية وبديلة أولاً
+        maven { url 'https://maven.aliyun.com/repository/google' }
+        maven { url 'https://maven.aliyun.com/repository/central' }
+        maven { url 'https://maven.aliyun.com/repository/gradle-plugin' }
+        maven { url 'https://repo1.maven.org/maven2/' }
+        maven { url 'https://jcenter.bintray.com/' }
+        maven { url 'https://jitpack.io' }
+
+        // المستودعات الرسمية كـ fallback
         google {
             content {
                 includeGroupByRegex("com\\.android.*")
@@ -42,10 +55,6 @@ allprojects {
             }
         }
         mavenCentral()
-        // إضافة JitPack كـ fallback
-        maven { url 'https://jitpack.io' }
-        // إضافة Maven Central mirror
-        maven { url 'https://repo1.maven.org/maven2/' }
     }
 }
 
