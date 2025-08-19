@@ -242,7 +242,7 @@ class FirebaseSetup {
           'parentName': 'أحمد محمد',
           'parentPhone': '0501111111',
           'grade': 'الصف الأول',
-          'schoolName': 'مدرسة النور الابتدائية',
+          'schoolName': 'النيل الدوليه بطيبه',
           'busRoute': 'الخط الأول',
         },
         {
@@ -250,7 +250,7 @@ class FirebaseSetup {
           'parentName': 'علي حسن',
           'parentPhone': '0502222222',
           'grade': 'الصف الثاني',
-          'schoolName': 'مدرسة النور الابتدائية',
+          'schoolName': 'المستقبل بطيبه',
           'busRoute': 'الخط الأول',
         },
         {
@@ -258,7 +258,7 @@ class FirebaseSetup {
           'parentName': 'سالم عبدالله',
           'parentPhone': '0503333333',
           'grade': 'الصف الثالث',
-          'schoolName': 'مدرسة النور الابتدائية',
+          'schoolName': 'المستقبل الدوليه بالطود',
           'busRoute': 'الخط الثاني',
         },
         {
@@ -266,7 +266,7 @@ class FirebaseSetup {
           'parentName': 'خالد نور',
           'parentPhone': '0504444444',
           'grade': 'الصف الرابع',
-          'schoolName': 'مدرسة النور الابتدائية',
+          'schoolName': 'المدرسه التجريبى بطيبه',
           'busRoute': 'الخط الثاني',
         },
         {
@@ -274,7 +274,7 @@ class FirebaseSetup {
           'parentName': 'إبراهيم يوسف',
           'parentPhone': '0505555555',
           'grade': 'الصف الخامس',
-          'schoolName': 'مدرسة النور الابتدائية',
+          'schoolName': 'النيل الدوليه بطيبه',
           'busRoute': 'الخط الثالث',
         },
       ];

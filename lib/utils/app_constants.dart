@@ -91,7 +91,7 @@ class AppConstants {
   static const String notificationsEnabledKey = 'notifications_enabled';
 
   // Default Values
-  static const String defaultSchoolName = 'مدرسة النور';
+  static const String defaultSchoolName = 'النيل الدوليه بطيبه';
   static const String defaultBusRoute = 'الخط الأول';
   static const String defaultSupervisorName = 'المشرف';
 
