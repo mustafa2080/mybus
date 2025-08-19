@@ -8,6 +8,7 @@ plugins {
 android {
     namespace = "com.example.mybus"
     compileSdk = 35
+    compileSdkVersion = 35
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_1_8
