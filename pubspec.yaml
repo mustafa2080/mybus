@@ -73,6 +73,15 @@ flutter:
   assets:
     - assets/icons/app_icon.png
 
+  # Platform-specific configurations
+  platforms:
+    windows:
+      # Exclude plugins that don't support Windows
+      exclude:
+        - mobile_scanner
+        - permission_handler
+        - file_picker
+
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
 

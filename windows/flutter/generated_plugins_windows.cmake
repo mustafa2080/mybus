@@ -1,5 +1,5 @@
 #
-# Generated file, do not edit.
+# Generated file for Windows-specific plugins, do not edit.
 #
 
 list(APPEND FLUTTER_PLUGIN_LIST
@@ -27,6 +27,10 @@ foreach(plugin ${FLUTTER_PLUGIN_LIST})
 endforeach(plugin)
 
 foreach(ffi_plugin ${FLUTTER_FFI_PLUGIN_LIST})
-  add_subdirectory(flutter/ephemeral/.plugin_symlinks/${ffi_plugin}/windows plugins/${ffi_plugin})
-  list(APPEND PLUGIN_BUNDLED_LIBRARIES ${${ffi_plugin}_bundled_libraries})
+  if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/flutter/ephemeral/.plugin_symlinks/${ffi_plugin}/windows/CMakeLists.txt")
+    add_subdirectory(flutter/ephemeral/.plugin_symlinks/${ffi_plugin}/windows plugins/${ffi_plugin})
+    list(APPEND PLUGIN_BUNDLED_LIBRARIES ${${ffi_plugin}_bundled_libraries})
+  else()
+    message(STATUS "Skipping FFI plugin ${ffi_plugin} - not available for Windows")
+  endif()
 endforeach(ffi_plugin)
