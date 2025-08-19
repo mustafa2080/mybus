@@ -1,7 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import '../services/notification_dialog_service.dart';
+
+/// Fake classes for testing
+class FakeNotification {
+  final String? title;
+  final String? body;
+
+  FakeNotification({this.title, this.body});
+}
+
+class FakeRemoteMessage {
+  final FakeNotification? notification;
+  final Map<String, dynamic> data;
+
+  FakeRemoteMessage({this.notification, this.data = const {}});
+}
 
 /// مساعد لاختبار الإشعارات
 class NotificationTestHelper {

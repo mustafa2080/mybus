@@ -531,6 +531,8 @@ class _ParentNotificationsScreenState extends State<ParentNotificationsScreen> {
         return Colors.purple;
       case NotificationType.general:
         return Colors.grey;
+      default:
+        return Colors.grey;
     }
   }
 
@@ -545,6 +547,8 @@ class _ParentNotificationsScreenState extends State<ParentNotificationsScreen> {
       case NotificationType.tripEnded:
         return Icons.stop;
       case NotificationType.general:
+        return Icons.info;
+      default:
         return Icons.info;
     }
   }

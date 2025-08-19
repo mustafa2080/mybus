@@ -458,4 +458,43 @@ class FirebaseSetup {
    مشروع Firebase: mybus-5a992
     ''');
   }
+
+  // إنشاء حافلات تجريبية
+  static Future<void> _createSampleBuses() async {
+    try {
+      final buses = [
+        {
+          'id': 'bus_001',
+          'number': 'حافلة 001',
+          'driverName': 'أحمد محمد',
+          'driverPhone': '01234567890',
+          'capacity': 30,
+          'route': 'طريق المدارس الرئيسي',
+          'isActive': true,
+          'createdAt': FieldValue.serverTimestamp(),
+        },
+        {
+          'id': 'bus_002',
+          'number': 'حافلة 002',
+          'driverName': 'محمد علي',
+          'driverPhone': '01234567891',
+          'capacity': 25,
+          'route': 'طريق الأحياء الشمالية',
+          'isActive': true,
+          'createdAt': FieldValue.serverTimestamp(),
+        },
+      ];
+
+      for (final bus in buses) {
+        await FirebaseFirestore.instance
+            .collection('buses')
+            .doc(bus['id'] as String)
+            .set(bus);
+      }
+
+      print('✅ تم إنشاء الحافلات التجريبية بنجاح');
+    } catch (e) {
+      print('❌ خطأ في إنشاء الحافلات التجريبية: $e');
+    }
+  }
 }

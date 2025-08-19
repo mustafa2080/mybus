@@ -568,6 +568,8 @@ class _SupervisorNotificationsScreenState extends State<SupervisorNotificationsS
         return Icons.play_arrow;
       case NotificationType.tripEnded:
         return Icons.stop;
+      default:
+        return Icons.notifications;
     }
   }
 
