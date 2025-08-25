@@ -162,6 +162,34 @@ class _StudentActivityScreenState extends State<StudentActivityScreen> {
     );
   }
 
+  Widget _buildInfoRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.grey.shade600, size: 18),
+          const SizedBox(width: 8),
+          Text(
+            '$label:',
+            style: TextStyle(
+              color: Colors.grey.shade700,
+              fontWeight: FontWeight.bold,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(fontSize: 14),
+              textAlign: TextAlign.start,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildStudentInfoCard() {
     if (_student == null) {
       return Container(
@@ -198,59 +226,45 @@ class _StudentActivityScreenState extends State<StudentActivityScreen> {
           ),
         ],
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          StudentAvatar(
-            photoUrl: _student!.photoUrl,
-            studentName: _student!.name,
-            radius: 30,
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
+          Row(
+            children: [
+              StudentAvatar(
+                photoUrl: _student!.photoUrl,
+                studentName: _student!.name,
+                radius: 30,
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
                   _student!.name,
                   style: const TextStyle(
-                    fontSize: 20,
+                    fontSize: 22,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'الصف: ${_student!.grade}',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'خط الباص: ${_student!.busRoute}',
-                  style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 16,
-                  ),
-                ),
-              ],
-            ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.map_outlined, color: Color(0xFF1E88E5), size: 28),
+                tooltip: 'View on Map',
+                onPressed: () {
+                  if (_student != null) {
+                    context.goNamed(
+                      'student-location',
+                      pathParameters: {'studentId': _student!.id},
+                    );
+                  }
+                },
+              ),
+            ],
           ),
-          const Spacer(),
-          _buildCurrentStatusChip(_student!.currentStatus),
-          const SizedBox(width: 8),
-          IconButton(
-            icon: const Icon(Icons.map_outlined, color: Color(0xFF1E88E5)),
-            tooltip: 'View on Map',
-            onPressed: () {
-              if (_student != null) {
-                context.goNamed(
-                  'student-location',
-                  pathParameters: {'studentId': _student!.id},
-                );
-              }
-            },
-          ),
+          const Divider(height: 24),
+          _buildInfoRow(Icons.class_, 'الصف', _student!.grade),
+          if (_student!.busRoute.isNotEmpty)
+            _buildInfoRow(Icons.directions_bus, 'خط الباص', _student!.busRoute),
+          _buildInfoRow(Icons.info, 'الحالة', _student!.statusDisplayText),
         ],
       ),
     );

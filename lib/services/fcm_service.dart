@@ -248,11 +248,18 @@ class FCMService {
     debugPrint('📱 Body: ${message.notification?.body}');
     debugPrint('📱 Data: ${message.data}');
 
-    // With setForegroundNotificationPresentationOptions(alert: true),
-    // the system will display the notification for us.
-    // We can still listen to the message for in-app UI updates,
-    // like updating a notification badge count.
-    debugPrint('✅ Foreground notification received and will be displayed by the system.');
+    // Manually display a local notification to ensure it has the desired appearance and sound.
+    final title = message.notification?.title ?? 'إشعار جديد';
+    final body = message.notification?.body ?? '';
+    final channelId = message.data['channelId'] as String? ?? 'mybus_notifications';
+
+    await _displayLocalNotification(
+      title: title,
+      body: body,
+      data: Map<String, String>.from(message.data),
+      channelId: channelId,
+    );
+    debugPrint('✅ Manually displayed foreground notification.');
   }
 
   /// التحقق من نوع المستخدم وعرض الإشعار المناسب
@@ -684,12 +691,12 @@ class FCMService {
         channelDescription: _getChannelDescription(channelId),
         importance: Importance.max,
         priority: Priority.high,
-        sound: const RawResourceAndroidNotificationSound('notification_sound'),
+        sound: const RawResourceAndroidNotificationSound('default'),
         enableVibration: true,
         playSound: true,
         channelShowBadge: true,
-        icon: '@mipmap/launcher_icon', // أيقونة التطبيق
-        largeIcon: const DrawableResourceAndroidBitmap('@mipmap/launcher_icon'),
+        icon: '@mipmap/ic_launcher', // أيقونة التطبيق الرئيسية
+        largeIcon: const DrawableResourceAndroidBitmap('@mipmap/ic_launcher'),
         color: const Color(0xFF1E88E5),
         showWhen: true,
         when: DateTime.now().millisecondsSinceEpoch,
