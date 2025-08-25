@@ -96,15 +96,17 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
 
     for (final student in students) {
       if (student.currentStatus == StudentStatus.onBus) {
-        final studentRef = _databaseService.studentsCollection.doc(student.id);
+        final studentRef = FirebaseFirestore.instance.collection('students').doc(student.id);
         batch.update(studentRef, {
           'location': GeoPoint(locationData.latitude!, locationData.longitude!),
         });
       }
     }
 
-    await batch.commit();
-    debugPrint('Updated location for ${students.length} students on the bus.');
+    if (students.any((s) => s.currentStatus == StudentStatus.onBus)) {
+      await batch.commit();
+      debugPrint('Updated location for students on the bus.');
+    }
   }
 
   @override

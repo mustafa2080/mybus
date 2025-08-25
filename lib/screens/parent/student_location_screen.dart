@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/student_model.dart';
-import '../../services/database_service.dart';
 
 class StudentLocationScreen extends StatefulWidget {
   final String studentId;
@@ -17,7 +16,6 @@ class StudentLocationScreen extends StatefulWidget {
 }
 
 class _StudentLocationScreenState extends State<StudentLocationScreen> {
-  final DatabaseService _databaseService = DatabaseService();
   GoogleMapController? _mapController;
   StudentModel? _student;
   Marker? _studentMarker;
@@ -29,7 +27,16 @@ class _StudentLocationScreenState extends State<StudentLocationScreen> {
   }
 
   void _fetchStudentData() {
-    _databaseService.getStudentStream(widget.studentId).listen((student) {
+    FirebaseFirestore.instance
+        .collection('students')
+        .doc(widget.studentId)
+        .snapshots()
+        .map((snapshot) {
+      if (snapshot.exists) {
+        return StudentModel.fromMap(snapshot.data()!);
+      }
+      return null;
+    }).listen((student) {
       if (mounted && student != null) {
         setState(() {
           _student = student;
