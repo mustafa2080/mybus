@@ -557,38 +557,46 @@ class FCMService {
     String? channelId,
   }) async {
     try {
-      debugPrint('📤 Sending notification to all $userType users...');
+      debugPrint('📤 Queuing notifications for all $userType users...');
 
-      // الحصول على جميع tokens للمستخدمين من النوع المحدد
-      final tokensQuery = await _firestore
+      // Get all active users of a specific type
+      final usersQuery = await _firestore
           .collection('fcm_tokens')
           .where('userType', isEqualTo: userType)
           .where('isActive', isEqualTo: true)
           .get();
 
-      final tokens = tokensQuery.docs.map((doc) => doc.data()['token'] as String).toList();
-
-      if (tokens.isEmpty) {
-        debugPrint('⚠️ No active tokens found for user type: $userType');
+      if (usersQuery.docs.isEmpty) {
+        debugPrint('⚠️ No active users found for user type: $userType');
         return;
       }
 
-      debugPrint('📱 Found ${tokens.length} active tokens for $userType users');
+      debugPrint('👥 Found ${usersQuery.docs.length} active users of type $userType');
 
-      // إرسال الإشعار لكل token
-      for (final token in tokens) {
-        await _sendPushNotification(
-          token: token,
-          title: title,
-          body: body,
-          data: data ?? {},
-          channelId: channelId ?? 'mybus_notifications',
-        );
+      // Create a batch write to queue all notifications at once
+      final batch = _firestore.batch();
+
+      for (final userDoc in usersQuery.docs) {
+        final userId = userDoc.data()['userId'] as String?;
+        if (userId != null && userId.isNotEmpty) {
+          // Use the generic _sendPushNotification function for each user
+          await _sendPushNotification(
+            userId: userId,
+            title: title,
+            body: body,
+            data: data ?? {},
+            channelId: channelId ?? 'mybus_notifications',
+          );
+        }
       }
 
-      debugPrint('✅ Notification sent to all $userType users');
+      // While the above works, a more efficient way for bulk sending is a single
+      // trigger that a cloud function can then process. For now, we will stick
+      // to queuing one by one to use the existing cloud function structure.
+
+      debugPrint('✅ Notifications queued for all $userType users.');
     } catch (e) {
-      debugPrint('❌ Error sending notification to user type $userType: $e');
+      debugPrint('❌ Error queuing notifications for user type $userType: $e');
     }
   }
 
@@ -601,70 +609,61 @@ class FCMService {
     String? channelId,
   }) async {
     try {
-      debugPrint('📤 Sending notification to user: $userId');
-
-      // الحصول على token المستخدم
-      final tokenDoc = await _firestore.collection('fcm_tokens').doc(userId).get();
-
-      if (!tokenDoc.exists) {
-        debugPrint('⚠️ No FCM token found for user: $userId');
-        return;
-      }
-
-      final tokenData = tokenDoc.data()!;
-      final token = tokenData['token'] as String;
-      final isActive = tokenData['isActive'] as bool? ?? false;
-
-      if (!isActive) {
-        debugPrint('⚠️ FCM token is inactive for user: $userId');
-        return;
-      }
-
+      // The logic to fetch the token is now handled by the Cloud Function.
+      // We just need to queue the notification with the recipient's ID.
       await _sendPushNotification(
-        token: token,
+        userId: userId,
         title: title,
         body: body,
         data: data ?? {},
         channelId: channelId ?? 'mybus_notifications',
       );
-
-      debugPrint('✅ Notification sent to user: $userId');
     } catch (e) {
       debugPrint('❌ Error sending notification to user $userId: $e');
     }
   }
 
-  /// إرسال إشعار push حقيقي
+  /// إرسال إشعار push حقيقي عبر Cloud Function
   Future<void> _sendPushNotification({
-    required String token,
+    required String userId,
     required String title,
     required String body,
     required Map<String, String> data,
     required String channelId,
   }) async {
     try {
-      // حفظ الإشعار في قاعدة البيانات
+      debugPrint('📤 Queuing push notification for user: $userId');
+
+      // 1. إضافة الإشعار إلى قائمة الانتظار للمعالجة بواسطة Cloud Function
+      await _firestore.collection('fcm_queue').add({
+        'recipientId': userId,
+        'title': title,
+        'body': body,
+        'data': {
+          ...data,
+          'channelId': channelId, // Ensure channelId is in data payload
+        },
+        'status': 'pending',
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      // 2. (اختياري) حفظ نسخة من الإشعار في سجل الإشعارات العام (إذا كانت الإحصائيات أو السجل مطلوبًا)
       await _firestore.collection('notifications').add({
         'title': title,
         'body': body,
         'data': data,
         'channelId': channelId,
-        'targetToken': token,
+        'recipientId': userId, // Store recipientId instead of token
         'timestamp': FieldValue.serverTimestamp(),
-        'sent': true,
+        'sent': false, // Will be updated by a cloud function if needed
+        'source': 'client',
       });
 
-      // عرض إشعار محلي فوري (يظهر خارج التطبيق)
-      await _displayLocalNotification(
-        title: title,
-        body: body,
-        data: data,
-        channelId: channelId,
-      );
-
-      debugPrint('📤 Local notification shown for token: ${token.substring(0, 20)}...');
+      debugPrint('✅ Notification for user $userId queued successfully.');
+      // لا تقم بعرض إشعار محلي هنا. Cloud Function سترسل الإشعار الحقيقي.
+      // The real push notification will be sent by the Cloud Function.
     } catch (e) {
-      debugPrint('❌ Error sending push notification: $e');
+      debugPrint('❌ Error queuing push notification for user $userId: $e');
     }
   }
 
