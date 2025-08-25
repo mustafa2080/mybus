@@ -56,6 +56,9 @@ class _StudentsListScreenState extends State<StudentsListScreen> {
       }
 
       if (mounted) {
+        // Sort students by QR code
+        students.sort((a, b) => a.qrCode.compareTo(b.qrCode));
+
         setState(() {
           _students = students;
           _filteredStudents = students;
