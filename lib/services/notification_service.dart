@@ -173,6 +173,10 @@ class NotificationService {
     required DateTime timestamp,
   }) async {
     try {
+      if (student.parentId.isEmpty) {
+        debugPrint('⚠️ Cannot send notification for ${student.name} because parentId is missing.');
+        return;
+      }
       final notification = NotificationModel(
         id: _uuid.v4(),
         title: 'ركب ${student.name} الباص',
@@ -203,6 +207,10 @@ class NotificationService {
     required DateTime timestamp,
   }) async {
     try {
+      if (student.parentId.isEmpty) {
+        debugPrint('⚠️ Cannot send notification for ${student.name} because parentId is missing.');
+        return;
+      }
       final notification = NotificationModel(
         id: _uuid.v4(),
         title: 'نزل ${student.name} من الباص',

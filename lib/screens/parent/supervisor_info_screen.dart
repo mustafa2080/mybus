@@ -295,6 +295,39 @@ class _SupervisorInfoScreenState extends State<SupervisorInfoScreen> {
     );
   }
 
+  Widget _buildInfoRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: Colors.grey[600]),
+          const SizedBox(width: 8),
+          SizedBox(
+            width: 80,
+            child: Text(
+              '$label:',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey[700],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Color(0xFF2D3748),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildDirectionSupervisorSection({
     required StudentModel child,
     required TripDirection direction,
@@ -398,7 +431,7 @@ class _SupervisorInfoScreenState extends State<SupervisorInfoScreen> {
                 );
               }
 
-              return _buildCompactSupervisorInfo(assignment, color);
+              return _buildCompactSupervisorInfo(assignment, color, child.busRoute);
             },
           ),
         ],
@@ -406,7 +439,7 @@ class _SupervisorInfoScreenState extends State<SupervisorInfoScreen> {
     );
   }
 
-  Widget _buildCompactSupervisorInfo(SupervisorAssignmentModel assignment, Color color) {
+  Widget _buildCompactSupervisorInfo(SupervisorAssignmentModel assignment, Color color, String busRoute) {
     return FutureBuilder<UserModel?>(
       future: _databaseService.getUserById(assignment.supervisorId),
       builder: (context, userSnapshot) {
@@ -415,47 +448,24 @@ class _SupervisorInfoScreenState extends State<SupervisorInfoScreen> {
         final supervisorPhone = supervisor?.phone ?? 'غير متوفر';
 
         return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(Icons.person, color: color, size: 16),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    supervisorName,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                    ),
-                  ),
+            _buildInfoRow(Icons.person, 'المشرف', supervisorName),
+            if (busRoute.isNotEmpty)
+              _buildInfoRow(Icons.route, 'خط السير', busRoute),
+            if (supervisorPhone != 'غير متوفر')
+              _buildInfoRow(Icons.phone, 'الهاتف', supervisorPhone),
+
+            if (supervisorPhone != 'غير متوفر')
+              Align(
+                alignment: Alignment.bottomRight,
+                child: IconButton(
+                  icon: Icon(Icons.call, color: Colors.green[600], size: 24),
+                  onPressed: () => _makePhoneCall(supervisorPhone),
+                  padding: EdgeInsets.zero,
+                  constraints: const BoxConstraints(minWidth: 48, minHeight: 48),
                 ),
-              ],
-            ),
-            if (supervisorPhone != 'غير متوفر') ...[
-              const SizedBox(height: 4),
-              Row(
-                children: [
-                  Icon(Icons.phone, color: color, size: 16),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      supervisorPhone,
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.blue[700],
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    icon: Icon(Icons.call, color: Colors.green[600], size: 18),
-                    onPressed: () => _makePhoneCall(supervisorPhone),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-                  ),
-                ],
               ),
-            ],
           ],
         );
       },
