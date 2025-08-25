@@ -15,14 +15,25 @@ class ParentNotificationsScreen extends StatefulWidget {
 class _ParentNotificationsScreenState extends State<ParentNotificationsScreen> {
   final DatabaseService _databaseService = DatabaseService();
   final AuthService _authService = AuthService();
+  late Stream<List<NotificationModel>> _notificationsStream;
 
   @override
   void initState() {
     super.initState();
+    _initializeStream();
     // Mark all notifications as read when opening the screen
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _markAllAsRead();
     });
+  }
+
+  void _initializeStream() {
+    final userId = _authService.currentUser?.uid;
+    if (userId != null) {
+      _notificationsStream = _databaseService.getParentNotifications(userId);
+    } else {
+      _notificationsStream = Stream.value([]);
+    }
   }
 
   Future<void> _markAllAsRead() async {
@@ -77,7 +88,7 @@ class _ParentNotificationsScreenState extends State<ParentNotificationsScreen> {
         ],
       ),
       body: StreamBuilder<List<NotificationModel>>(
-        stream: _databaseService.getParentNotifications(_authService.currentUser?.uid ?? ''),
+        stream: _notificationsStream,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
