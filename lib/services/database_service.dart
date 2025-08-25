@@ -2456,30 +2456,15 @@ class DatabaseService {
         .limit(50)
         .snapshots()
         .map((snapshot) {
-          final notifications = <NotificationModel>[];
-          for (final doc in snapshot.docs) {
+          return snapshot.docs.map((doc) {
             try {
-              final data = doc.data();
-              debugPrint('🔍 Raw notification data for ${doc.id}:');
-              debugPrint('   - title: "${data['title']}"');
-              debugPrint('   - body: "${data['body']}"');
-              debugPrint('   - message: "${data['message']}"');
-              debugPrint('   - recipientId: "${data['recipientId']}"');
-              debugPrint('   - type: "${data['type']}"');
-
-              final notification = NotificationModel.fromMap(data);
-              debugPrint('🔍 Parsed notification:');
-              debugPrint('   - title: "${notification.title}"');
-              debugPrint('   - body: "${notification.body}"');
-              debugPrint('   - body length: ${notification.body.length}');
-
-              notifications.add(notification);
+              return NotificationModel.fromMap(doc.data());
             } catch (e) {
               debugPrint('❌ Error parsing notification ${doc.id}: $e');
+              // Return null for documents that fail to parse
+              return null;
             }
-          }
-          debugPrint('📱 Parent notifications loaded: ${notifications.length}');
-          return notifications;
+          }).where((notification) => notification != null).cast<NotificationModel>().toList();
         });
   }
 

@@ -50,6 +50,13 @@ class FCMService {
     try {
       debugPrint('🔥 Initializing FCM Service...');
 
+      // Set foreground notification presentation options
+      await _firebaseMessaging.setForegroundNotificationPresentationOptions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+
       // 1. تهيئة Flutter Local Notifications
       await _initializeLocalNotifications();
 
@@ -241,19 +248,11 @@ class FCMService {
     debugPrint('📱 Body: ${message.notification?.body}');
     debugPrint('📱 Data: ${message.data}');
 
-    // عرض الإشعار مباشرة في المقدمة
-    final title = message.notification?.title ?? 'إشعار جديد';
-    final body = message.notification?.body ?? '';
-    final channelId = message.data['channelId'] ?? 'mybus_notifications';
-
-    await _displayLocalNotification(
-      title: title,
-      body: body,
-      data: Map<String, String>.from(message.data),
-      channelId: channelId,
-    );
-
-    debugPrint('✅ Foreground notification shown');
+    // With setForegroundNotificationPresentationOptions(alert: true),
+    // the system will display the notification for us.
+    // We can still listen to the message for in-app UI updates,
+    // like updating a notification badge count.
+    debugPrint('✅ Foreground notification received and will be displayed by the system.');
   }
 
   /// التحقق من نوع المستخدم وعرض الإشعار المناسب
