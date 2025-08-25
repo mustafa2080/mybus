@@ -236,7 +236,21 @@ class _StudentActivityScreenState extends State<StudentActivityScreen> {
               ],
             ),
           ),
+          const Spacer(),
           _buildCurrentStatusChip(_student!.currentStatus),
+          const SizedBox(width: 8),
+          IconButton(
+            icon: const Icon(Icons.map_outlined, color: Color(0xFF1E88E5)),
+            tooltip: 'View on Map',
+            onPressed: () {
+              if (_student != null) {
+                context.goNamed(
+                  'student-location',
+                  pathParameters: {'studentId': _student!.id},
+                );
+              }
+            },
+          ),
         ],
       ),
     );

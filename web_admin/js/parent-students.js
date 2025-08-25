@@ -390,6 +390,18 @@ class ParentStudentsManager {
         if (confirmApproveBtn) {
             confirmApproveBtn.addEventListener('click', () => this.confirmApproveStudent());
         }
+
+        // Excel import buttons
+        const importBtn = document.getElementById('importExcelBtn');
+        const fileInput = document.getElementById('excelFile');
+
+        if (importBtn) {
+            importBtn.addEventListener('click', () => fileInput.click());
+        }
+
+        if (fileInput) {
+            fileInput.addEventListener('change', (event) => this.handleExcelImport(event));
+        }
     }
 
     applyFilters() {
@@ -719,6 +731,107 @@ class ParentStudentsManager {
         toast.addEventListener('hidden.bs.toast', () => {
             document.body.removeChild(toast);
         });
+    }
+}
+
+// Global functions
+function refreshParentStudents() {
+    if (window.parentStudentsManager) {
+        window.parentStudentsManager.loadStudents();
+    }
+}
+
+    async handleExcelImport(event) {
+        const file = event.target.files[0];
+        if (!file) {
+            return;
+        }
+
+        this.showLoadingState();
+
+        const reader = new FileReader();
+        reader.onload = async (e) => {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const firstSheetName = workbook.SheetNames[0];
+                const worksheet = workbook.Sheets[firstSheetName];
+                const json = XLSX.utils.sheet_to_json(worksheet);
+
+                if (json.length === 0) {
+                    this.showError('ملف Excel فارغ أو غير صحيح');
+                    this.hideLoadingState();
+                    return;
+                }
+
+                await this.importStudentsToFirestore(json);
+
+            } catch (error) {
+                console.error('❌ Error processing Excel file:', error);
+                this.showError('فشل في معالجة ملف Excel');
+                this.hideLoadingState();
+            } finally {
+                // Reset file input
+                event.target.value = '';
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    }
+
+    async importStudentsToFirestore(studentsData) {
+        if (typeof db === 'undefined') {
+            this.showError('Firebase غير متصل. لا يمكن الاستيراد.');
+            this.hideLoadingState();
+            return;
+        }
+
+        const batch = db.batch();
+        let importedCount = 0;
+        let skippedCount = 0;
+
+        for (const student of studentsData) {
+            // Basic validation
+            if (!student.name || !student.parentPhone) {
+                skippedCount++;
+                continue;
+            }
+
+            const newStudentRef = db.collection('students').doc();
+            const qrCode = `STU-${newStudentRef.id.substring(0, 6).toUpperCase()}`;
+
+            batch.set(newStudentRef, {
+                name: student.name || '',
+                parentName: student.parentName || '',
+                parentPhone: String(student.parentPhone) || '',
+                parentEmail: student.parentEmail || '',
+                grade: student.grade || 'غير محدد',
+                schoolName: student.schoolName || 'مدرسة افتراضية',
+                busRoute: student.busRoute || 'غير محدد',
+                qrCode: student.qrCode || qrCode,
+                address: student.address || '',
+                notes: student.notes || '',
+                photoUrl: null,
+                parentId: '', // Should be linked later
+                busId: '',
+                currentStatus: 'home',
+                approvalStatus: 'approved', // Automatically approved
+                isActive: true,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp(),
+            });
+            importedCount++;
+        }
+
+        try {
+            await batch.commit();
+            this.showSuccess(`تم استيراد ${importedCount} طالب بنجاح. تم تخطي ${skippedCount} طالب.`);
+            await this.loadStudents(); // Refresh the list
+        } catch (error) {
+            console.error('❌ Error importing students to Firestore:', error);
+            this.showError('فشل في حفظ الطلاب في قاعدة البيانات');
+        } finally {
+            this.hideLoadingState();
+        }
     }
 }
 

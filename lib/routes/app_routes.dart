@@ -13,6 +13,7 @@ import '../screens/test_notifications_screen.dart';
 import '../screens/common/notifications_screen.dart' as common_notifications;
 import '../screens/common/error_screen.dart';
 import '../screens/parent/student_activity_screen.dart';
+import '../screens/parent/student_location_screen.dart';
 import '../screens/parent/bus_info_screen.dart';
 import '../screens/parent/complaints_screen.dart';
 import '../screens/parent/add_complaint_screen.dart';
@@ -178,6 +179,16 @@ class AppRoutes {
               final studentId = state.pathParameters['studentId']!;
               return StudentActivityScreen(studentId: studentId);
             },
+            routes: [
+              GoRoute(
+                path: 'location',
+                name: 'student-location',
+                builder: (context, state) {
+                  final studentId = state.pathParameters['studentId']!;
+                  return StudentLocationScreen(studentId: studentId);
+                },
+              ),
+            ],
           ),
           GoRoute(
             path: 'bus-info/:studentId',

@@ -10,6 +10,7 @@ import '../../models/absence_model.dart';
 import '../../models/bus_model.dart';
 import '../../models/student_model.dart';
 import '../../models/supervisor_assignment_model.dart';
+import 'package:location/location.dart';
 import '../../widgets/curved_app_bar.dart';
 import '../../widgets/animated_background.dart';
 import '../../widgets/responsive_widgets.dart';
@@ -29,6 +30,7 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
   final AuthService _authService = AuthService();
   final DatabaseService _databaseService = DatabaseService();
   final NotificationService _notificationService = NotificationService();
+  final Location _locationService = Location();
 
   final bool _isLoading = false;
   late Stream<List<StudentModel>> _studentsOnBusStream;
@@ -56,6 +58,53 @@ class _SupervisorHomeScreenState extends State<SupervisorHomeScreen>
 
     // تكرار النبضة
     _pulseController.repeat(reverse: true);
+
+    _initLocationTracking();
+  }
+
+  Future<void> _initLocationTracking() async {
+    bool serviceEnabled;
+    PermissionStatus permissionGranted;
+
+    serviceEnabled = await _locationService.serviceEnabled();
+    if (!serviceEnabled) {
+      serviceEnabled = await _locationService.requestService();
+      if (!serviceEnabled) {
+        return; // Services are not enabled, handle this case.
+      }
+    }
+
+    permissionGranted = await _locationService.hasPermission();
+    if (permissionGranted == PermissionStatus.denied) {
+      permissionGranted = await _locationService.requestPermission();
+      if (permissionGranted != PermissionStatus.granted) {
+        return; // Permissions are not granted, handle this case.
+      }
+    }
+
+    _locationService.onLocationChanged.listen((LocationData currentLocation) {
+      _updateStudentsLocation(currentLocation);
+    });
+  }
+
+  Future<void> _updateStudentsLocation(LocationData locationData) async {
+    final supervisorId = _authService.currentUser?.uid ?? '';
+    if (supervisorId.isEmpty) return;
+
+    final students = await _loadSupervisorStudents(supervisorId);
+    final batch = FirebaseFirestore.instance.batch();
+
+    for (final student in students) {
+      if (student.currentStatus == StudentStatus.onBus) {
+        final studentRef = _databaseService.studentsCollection.doc(student.id);
+        batch.update(studentRef, {
+          'location': GeoPoint(locationData.latitude!, locationData.longitude!),
+        });
+      }
+    }
+
+    await batch.commit();
+    debugPrint('Updated location for ${students.length} students on the bus.');
   }
 
   @override

@@ -21,6 +21,7 @@ class StudentModel {
   final String? photoUrl; // URL of student's photo
   final String address; // Student's address
   final String notes; // Additional notes about the student
+  final GeoPoint? location; // Student's current location
   final StudentStatus currentStatus;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -41,6 +42,7 @@ class StudentModel {
     this.photoUrl, // Optional photo URL
     this.address = '', // Default empty address
     this.notes = '', // Default empty notes
+    this.location, // Can be null
     this.currentStatus = StudentStatus.home,
     required this.createdAt,
     required this.updatedAt,
@@ -64,6 +66,7 @@ class StudentModel {
       'photoUrl': photoUrl,
       'address': address,
       'notes': notes,
+      'location': location,
       'currentStatus': currentStatus.toString().split('.').last,
       'createdAt': Timestamp.fromDate(createdAt),
       'updatedAt': Timestamp.fromDate(updatedAt),
@@ -88,6 +91,7 @@ class StudentModel {
       photoUrl: map['photoUrl'],
       address: map['address'] ?? '',
       notes: map['notes'] ?? '',
+      location: map['location'] as GeoPoint?,
       currentStatus: _parseStudentStatus(map['currentStatus']),
       createdAt: _parseTimestamp(map['createdAt']),
       updatedAt: _parseTimestamp(map['updatedAt']),
@@ -150,6 +154,7 @@ class StudentModel {
     String? photoUrl,
     String? address,
     String? notes,
+    GeoPoint? location,
     StudentStatus? currentStatus,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -170,6 +175,7 @@ class StudentModel {
       photoUrl: photoUrl ?? this.photoUrl,
       address: address ?? this.address,
       notes: notes ?? this.notes,
+      location: location ?? this.location,
       currentStatus: currentStatus ?? this.currentStatus,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
