@@ -36,6 +36,8 @@ exports.sendPushNotification = functions.firestore
         notification: {
           title: title,
           body: body,
+          // The image must be a public URL. Replace this placeholder with your own hosted image.
+          imageUrl: 'https://i.imgur.com/KV2p9AL.png',
         },
         data: {
           ...notificationData,
