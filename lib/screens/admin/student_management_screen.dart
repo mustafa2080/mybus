@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:excel/excel.dart' as excel;
 import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../../services/database_service.dart';
 import '../../services/notification_sender_service.dart';
 import '../../models/student_model.dart';
@@ -1599,7 +1600,7 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
         allowMultiple: false,
       );
 
-      if (result != null && result.files.single.path != null) {
+      if (result != null) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('جاري معالجة ملف Excel...'),
@@ -1607,11 +1608,22 @@ class _StudentManagementScreenState extends State<StudentManagementScreen> {
           ),
         );
 
-        // قراءة ملف Excel
-        final file = File(result.files.single.path!);
-        final bytes = await file.readAsBytes();
-        final excelFile = excel.Excel.decodeBytes(bytes);
+        Uint8List? fileBytes;
+        if (kIsWeb) {
+          fileBytes = result.files.single.bytes;
+        } else {
+          final file = File(result.files.single.path!);
+          fileBytes = await file.readAsBytes();
+        }
 
+        if (fileBytes == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('لم يتم قراءة الملف بنجاح'), backgroundColor: Colors.red),
+          );
+          return;
+        }
+
+        final excelFile = excel.Excel.decodeBytes(fileBytes);
         List<Map<String, String>> studentsData = [];
 
         // قراءة البيانات من أول ورقة عمل

@@ -466,6 +466,9 @@ class _AllStudentsScreenState extends State<AllStudentsScreen> {
                 final allStudents = snapshot.data ?? [];
                 final filteredStudents = _filterStudents(allStudents);
 
+                // Sort students by QR code
+                filteredStudents.sort((a, b) => a.qrCode.compareTo(b.qrCode));
+
                 if (filteredStudents.isEmpty) {
                   return Center(
                     child: Container(
